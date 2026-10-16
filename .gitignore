@@ -1,0 +1,60 @@
+# ── Secretos y configuración local ─────────────────────────
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+!**/testdata/**/*.pem
+
+# ── Claude Code (personal, no compartir) ───────────────────
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/worktrees/
+
+# ── Node / NestJS / Frontend ───────────────────────────────
+node_modules/
+dist/
+.angular/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+
+# ── Python / Django ────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+staticfiles/
+media/
+db.sqlite3
+
+# ── Java / Spring ──────────────────────────────────────────
+target/
+build/
+.gradle/
+!.mvn/wrapper/maven-wrapper.jar
+
+# ── Go ─────────────────────────────────────────────────────
+/services/*/bin/
+*.exe
+*.test
+*.out
+
+# ── Archivos subidos en desarrollo (imágenes de propiedades)
+uploads/
+storage/
+
+# ── IDEs y sistema operativo ───────────────────────────────
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# ── Logs y datos de contenedores ───────────────────────────
+*.log
+infra/data/
