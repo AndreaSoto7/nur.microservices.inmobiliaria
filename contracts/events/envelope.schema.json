@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inmobiliaria.local/contracts/events/envelope.schema.json",
+  "title": "EventEnvelope",
+  "description": "Envoltorio común para todos los eventos de integración publicados en Kafka.",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "eventVersion",
+    "occurredAt",
+    "producer",
+    "aggregateType",
+    "aggregateId",
+    "correlationId",
+    "payload"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid", "description": "Identificador único del evento; usado para idempotencia." },
+    "eventType": { "type": "string", "pattern": "^[A-Z][A-Za-z]+$", "examples": ["PropertyPublished"] },
+    "eventVersion": { "type": "integer", "minimum": 1 },
+    "occurredAt": { "type": "string", "format": "date-time", "description": "Momento del hecho en UTC (ISO-8601)." },
+    "producer": {
+      "type": "string",
+      "enum": ["identity-service", "listing-service", "visit-service", "search-service", "notification-service"]
+    },
+    "aggregateType": { "type": "string", "examples": ["Property", "Visit", "User", "Inquiry"] },
+    "aggregateId": { "type": "string", "format": "uuid", "description": "También es la clave del mensaje en Kafka." },
+    "correlationId": { "type": "string", "description": "Propagado desde el header X-Correlation-Id." },
+    "causationId": { "type": ["string", "null"], "description": "eventId del evento que causó este, si aplica." },
+    "payload": { "type": "object", "description": "Validado por el schema específico del evento." }
+  },
+  "additionalProperties": false
+}
