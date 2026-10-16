@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inmobiliaria.local/contracts/events/listing/property-published.v1.schema.json",
+  "title": "PropertyPublished v1 (payload)",
+  "description": "Una propiedad quedó visible en el catálogo. Lleva el estado necesario para que search y visit no necesiten llamar a listing por HTTP.",
+  "type": "object",
+  "required": [
+    "propertyId",
+    "agentId",
+    "title",
+    "propertyType",
+    "operationType",
+    "price",
+    "location",
+    "bedrooms",
+    "bathrooms",
+    "areaM2",
+    "features",
+    "status",
+    "publishedAt"
+  ],
+  "properties": {
+    "propertyId": { "type": "string", "format": "uuid" },
+    "agentId": { "type": "string", "format": "uuid" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 150 },
+    "description": { "type": "string", "maxLength": 5000 },
+    "propertyType": { "type": "string", "enum": ["HOUSE", "APARTMENT"] },
+    "operationType": { "type": "string", "enum": ["SALE", "RENT"] },
+    "price": {
+      "type": "object",
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": { "type": "number", "exclusiveMinimum": 0 },
+        "currency": { "type": "string", "enum": ["USD", "BOB"] }
+      }
+    },
+    "location": {
+      "type": "object",
+      "required": ["zone"],
+      "properties": {
+        "zone": { "type": "string" },
+        "address": { "type": "string" },
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "bedrooms": { "type": "integer", "minimum": 0 },
+    "bathrooms": { "type": "integer", "minimum": 0 },
+    "areaM2": { "type": "number", "exclusiveMinimum": 0 },
+    "features": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[A-Z_]+$" },
+      "uniqueItems": true,
+      "examples": [["GARAGE", "GARDEN", "POOL", "COMMON_AREAS"]]
+    },
+    "coverImageUrl": { "type": ["string", "null"] },
+    "imageUrls": { "type": "array", "items": { "type": "string" } },
+    "status": { "type": "string", "const": "PUBLISHED" },
+    "publishedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true,
+  "examples": [
+    {
+      "propertyId": "3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01",
+      "agentId": "8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "title": "Casa con jardín en Equipetrol",
+      "description": "Casa de dos plantas con jardín y garaje para dos autos.",
+      "propertyType": "HOUSE",
+      "operationType": "SALE",
+      "price": { "amount": 185000.0, "currency": "USD" },
+      "location": { "zone": "Equipetrol", "address": "Calle 7 Oeste #120", "latitude": -17.7633, "longitude": -63.1956 },
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "areaM2": 240.5,
+      "features": ["GARAGE", "GARDEN"],
+      "coverImageUrl": "/media/properties/3f6c2a7e/cover.webp",
+      "imageUrls": ["/media/properties/3f6c2a7e/1.webp"],
+      "status": "PUBLISHED",
+      "publishedAt": "2026-10-16T14:30:00Z"
+    }
+  ]
+}
