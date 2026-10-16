@@ -1,0 +1,27 @@
+# Normaliza finales de línea para que Windows, macOS y Linux no generen diffs falsos.
+* text=auto eol=lf
+
+# Scripts de Windows necesitan CRLF
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
+
+# Wrappers que deben ejecutarse en Linux/Docker
+mvnw   text eol=lf
+gradlew text eol=lf
+*.sh   text eol=lf
+
+# Lockfiles: no intentar merge línea a línea (regenerarlos ante conflicto)
+package-lock.json  merge=binary linguist-generated
+go.sum             linguist-generated
+
+# Binarios
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.pdf  binary
+*.jar  binary
+*.zip  binary
