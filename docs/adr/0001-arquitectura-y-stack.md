@@ -43,8 +43,8 @@ El enunciado exige microservicios con API Gateway, DDD y arquitectura limpia, pe
 
 ## Pendiente de decidir (un ADR nuevo por cada uno)
 
-- [ ] Tecnología del **API Gateway**. Opciones: Spring Cloud Gateway, Traefik, Nginx o KrakenD.
-- [ ] Ubicación de **Favoritos**: servicio propio o dentro de listing o visit.
-- [ ] **Frontend**. Las clases usan Angular para Smart/Dumb.
+- [x] Tecnología del **API Gateway** → [0002](0002-gateway-go-balanceador-consul.md): gateway propio en Go, con balanceador de carga y service discovery en Consul.
+- [x] Ubicación de **Favoritos** → [0003](0003-favoritos-en-listing.md): dentro de listing-service.
+- [x] **Frontend** → [0004](0004-frontend-react.md): React + Vite + TypeScript.
 - [ ] Base de datos de **search** (PostgreSQL vs. OpenSearch) y de **notification** (PostgreSQL vs. MongoDB).
 - [ ] **Versiones exactas** de Python/Django, Java/Spring Boot, Node/NestJS y Go.
