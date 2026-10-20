@@ -7,15 +7,24 @@ Plataforma donde agentes publican casas y departamentos (venta o alquiler) y los
 | Servicio | Stack | Responsable | Puerto | Base de datos | Responsabilidad |
 |---|---|---|---|---|---|
 | `identity-service` | Django + DRF | _(completar)_ | 8001 | PostgreSQL | Registro, login, usuarios, roles, emisión de JWT |
-| `listing-service` | Spring Boot | _(completar)_ | 8002 | PostgreSQL | Propiedades, galería, características, estados (lado comando) |
+| `listing-service` | Spring Boot | _(completar)_ | 8002 | PostgreSQL | Propiedades, galería, características, estados (lado comando) y favoritos |
 | `visit-service` | NestJS | _(completar)_ | 8003 | PostgreSQL | Consultas, leads, solicitudes y programación de visitas, seguimiento |
 | `search-service` | Go | _(completar)_ | 8004 | por decidir (ADR) | Catálogo de solo lectura con filtros (lado query de CQRS) |
 | `notification-service` | Go | _(completar)_ | 8005 | por decidir (ADR) | Avisos ante solicitudes, visitas y cambios de estado |
-| `gateway` | por decidir (ADR) | _(completar)_ | 8080 | — | Único punto de entrada, JWT, CORS, rate limit |
-| `frontend` | por decidir (ADR) | _(completar)_ | 4200 | — | UI para interesados y agentes |
+| `gateway` | Go (propio) | _(completar)_ | 8080 | — | Único punto de entrada: ruteo, JWT, CORS, rate limit, balanceo de carga y cliente de service discovery |
+| `frontend` | React + Vite + TypeScript | _(completar)_ | 5173 | — | UI para interesados y agentes |
 | Kafka (KRaft) | — | — | 9092 · UI 8090 | — | Bus de eventos entre servicios |
+| Consul (modo dev) | — | — | UI 8500 | — | Service discovery: registro de servicios y health checks |
 
-Puertos de PostgreSQL en el host: 5433 a 5437 (uno por servicio), para no chocar con un Postgres local en 5432.
+**Puertos en el host** (ADR 0002):
+- **Uso normal y demo** (`infra/docker-compose.yml`): solo se publican el gateway (8080), el frontend (5173), la UI de Consul (8500) y la UI de Kafka (8090). Los servicios usan su puerto **dentro de la red de Docker** y se descubren por Consul. Así se pueden escalar con `--scale`.
+- **Depuración** (`infra/docker-compose.debug.yml`): se publican además los servicios (8001–8005), los PostgreSQL (5433–5437, uno por servicio, para no chocar con un Postgres local en 5432) y Kafka (9092). Este override no se combina con `--scale`.
+- **Ningún servicio usa `container_name`**, porque impide escalar.
+
+**Service discovery** (ADR 0002): cada servicio se registra solo en Consul al arrancar:
+- Lo hace con la IP de su contenedor y un ID único por réplica (`<servicio>-<hostname>`).
+- Expone `GET /health`, que Consul revisa cada 10 s.
+- El gateway reparte las requests entre las réplicas sanas (round robin).
 
 ## Estructura del monorepo
 
@@ -52,14 +61,19 @@ docs/              # enunciado, ADRs, registro de patrones de diseño
 - **Dinero:** `{ "amount": 125000.00, "currency": "USD" }`. En el dominio nunca se usa float (BigDecimal, Decimal o enteros en centavos).
 - **JSON:** camelCase en todas las APIs y eventos (en Django se configura un renderer camelCase). Los enums van en `UPPER_SNAKE_CASE`.
 - **Errores HTTP:** RFC 9457 `application/problem+json` (ver la rule `api-rest`).
-- **Auth:** identity emite un JWT RS256 con los claims `sub`, `email` y `roles`. Roles: `CLIENT`, `AGENT`, `ADMIN`. Cada servicio valida el token con el JWKS de identity.
+- **Auth:**
+  - identity emite un JWT RS256 de 15 min, con refresh token.
+  - Claims: `sub` (UUID del usuario), `email`, `roles`, `iss=identity-service` y `aud=inmobiliaria`.
+  - Roles: `CLIENT`, `AGENT`, `ADMIN`.
+  - Cada servicio valida firma, `exp`, `iss` y `aud` con el JWKS de identity.
+  - El gateway valida antes, como defensa temprana: reenvía `Authorization` intacto y borra cualquier `X-User-*` que llegue del cliente.
 - **Trazabilidad:** el header `X-Correlation-Id` se propaga en HTTP y en los eventos. Los logs son JSON estructurado y no llevan datos personales ni tokens.
 
 ## Lenguaje ubicuo
 
 | Español | En código | Valores / notas |
 |---|---|---|
-| Propiedad | `Property` | Aggregate root en listing |
+| Propiedad | `Property` | Aggregate root en listing. En el event storming le dijimos "Listing": es lo mismo; en código siempre `Property`. |
 | Tipo de inmueble | `PropertyType` | `HOUSE`, `APARTMENT` |
 | Operación | `OperationType` | `SALE`, `RENT` |
 | Estado de publicación | `PropertyStatus` | `DRAFT`, `PUBLISHED`, `PAUSED`, `RESERVED`, `SOLD`, `RENTED` |
@@ -69,7 +83,7 @@ docs/              # enunciado, ADRs, registro de patrones de diseño
 | Consulta | `Inquiry` | Mensaje de un interesado sobre una propiedad |
 | Interesado / oportunidad | `Lead` | Seguimiento comercial de un cliente con una propiedad |
 | Visita | `Visit` | `REQUESTED`, `SCHEDULED`, `COMPLETED`, `CANCELLED`, `REJECTED` |
-| Favorito | `Favorite` | Propiedad guardada por un usuario |
+| Favorito | `Favorite` | Propiedad guardada por un usuario. Aggregate propio en listing, separado de `Property` (ADR 0003). |
 | Notificación | `Notification` | Aviso para un usuario |
 
 ## Flujo de trabajo Git
@@ -118,13 +132,18 @@ docs/              # enunciado, ADRs, registro de patrones de diseño
 
 ## Decisiones pendientes (registrar en `docs/adr/` cuando se tomen)
 
-- Tecnología del API Gateway.
-- Dónde vive **Favoritos**: servicio propio o dentro de listing o visit.
-- Framework del frontend (las clases usan Angular para Smart/Dumb).
 - Base de datos de search-service y notification-service.
 - Versiones exactas de cada stack.
+- Linter y formateador de Java en listing-service (Spotless o Checkstyle).
+- Librerías de router y de datos del frontend (se completan en el ADR 0004).
+
+Ya decididas: gateway en Go con Consul ([0002](docs/adr/0002-gateway-go-balanceador-consul.md)), Favoritos en listing ([0003](docs/adr/0003-favoritos-en-listing.md)) y frontend en React ([0004](docs/adr/0004-frontend-react.md)).
 
 ## Comandos
 
-- **Infraestructura:** `docker compose -f infra/docker-compose.yml up -d` (cuando exista).
+Cuando exista `infra/`:
+
+- **Infraestructura:** `docker compose -f infra/docker-compose.yml up -d`.
+- **Demo de balanceo:** `docker compose -f infra/docker-compose.yml up -d --scale listing-service=3`.
+- **Depuración con puertos publicados:** `docker compose -f infra/docker-compose.yml -f infra/docker-compose.debug.yml up -d`.
 - **Por servicio:** ver la rule del stack correspondiente en `.claude/rules/stack-*.md`.
