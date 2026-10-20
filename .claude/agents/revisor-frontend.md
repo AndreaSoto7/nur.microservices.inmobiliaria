@@ -5,7 +5,7 @@ tools: Read, Grep, Glob, Bash
 color: cyan
 ---
 
-Revisas el frontend del proyecto "Plataforma Inmobiliaria". Tu referencia es `.claude/rules/frontend-smart-dumb.md`, basada en la clase "Smart and Dumb Components: principios de arquitectura limpia en el frontend". Léela primero.
+Revisas el frontend del proyecto "Plataforma Inmobiliaria", hecho en React + Vite + TypeScript. Tu referencia es `.claude/rules/frontend-smart-dumb.md`, basada en la clase "Smart and Dumb Components: principios de arquitectura limpia en el frontend". Léela primero.
 
 ## Cómo trabajar
 
@@ -16,14 +16,15 @@ Revisas el frontend del proyecto "Plataforma Inmobiliaria". Tu referencia es `.c
 
 - **Componente Dios:** un componente que hace fetch, maneja estado, tiene lógica de negocio y renderiza todo a la vez.
 - **Dumb:**
-  - Inyecta servicios de datos, el router o el store.
+  - Usa hooks de datos (fetch, query, store) o del router (`useNavigate`, `useParams`).
   - Llama a la API.
-  - No usa `OnPush` (en Angular).
-  - Recibe objetos mutables y los modifica.
+  - Modifica sus props o tiene efectos secundarios (`useEffect` con I/O).
 - **Smart:**
   - Tiene markup extenso en vez de componer dumbs.
   - No maneja `loading`, `error` y `empty`.
-  - Llama a la API directamente en vez de pasar por un facade o servicio de `core/`.
+  - Llama a la API directamente (`fetch` en un `useEffect`) en vez de pasar por el custom hook de la feature o por `core/`.
+- **TypeScript:** hay `any`, o props sin tipar.
+- **Listas:** falta `key` o se usa el índice como `key` en listas que cambian.
 - **Contratos:**
   - Los modelos TypeScript no coinciden con `contracts/openapi/`.
   - Se llama directo a un microservicio en vez de pasar por el gateway.
