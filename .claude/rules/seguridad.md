@@ -43,6 +43,17 @@ paths:
 
 ## Gateway
 
-- CORS restringido a los orígenes del frontend.
-- Rate limit en login y registro.
-- Solo el gateway expone puertos públicos en producción. En desarrollo los servicios exponen puertos para depurar.
+Detalle en la rule `stack-gateway`.
+
+- **CORS** restringido a los orígenes del frontend (`http://localhost:5173` en desarrollo).
+- **Rate limit** en login y registro, por IP de conexión (`RemoteAddr`), sin confiar en un `X-Forwarded-For` que manda el cliente.
+- **JWT:**
+  - Valida el JWT como defensa temprana y **reenvía `Authorization` intacto**: cada servicio vuelve a validar.
+  - **Borra cualquier `X-User-*`** que llegue del cliente.
+- **Timeouts** de servidor y hacia los servicios. Límite de tamaño de body.
+
+## Puertos y Consul
+
+- **Compose base:** solo el gateway, el frontend, la UI de Consul y la UI de Kafka publican puertos en el host. Los servicios y las bases publican solo en `infra/docker-compose.debug.yml`.
+- **Consul en modo dev no tiene ACL.** Es aceptable en local, pero el puerto 8500 no se expone fuera del entorno de desarrollo.
+- **El registro en Consul** no lleva secretos en `Tags` ni `Meta`.

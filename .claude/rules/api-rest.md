@@ -21,14 +21,16 @@ Una API profesional se entiende rápido, falla de forma clara y se puede operar 
 
 ### Mapa de rutas del gateway
 
-| Prefijo | Servicio |
+El destino es el nombre del servicio en Consul. El gateway elige una réplica sana con round robin (ver la rule `stack-gateway`).
+
+| Prefijo | Servicio en Consul |
 |---|---|
-| `/api/v1/auth/**`, `/api/v1/users/**` | identity |
-| `/api/v1/properties/**` | listing (comandos y detalle para el agente) |
-| `/api/v1/search/**` | search (catálogo público y filtros) |
-| `/api/v1/inquiries/**`, `/api/v1/visits/**`, `/api/v1/leads/**` | visit |
-| `/api/v1/favorites/**` | por decidir (ADR) |
-| `/api/v1/notifications/**` | notification |
+| `/api/v1/auth/**`, `/api/v1/users/**` | `identity-service` |
+| `/api/v1/properties/**` | `listing-service` (comandos y detalle para el agente) |
+| `/api/v1/favorites/**` | `listing-service` (ADR 0003) |
+| `/api/v1/search/**` | `search-service` (catálogo público y filtros) |
+| `/api/v1/inquiries/**`, `/api/v1/visits/**`, `/api/v1/leads/**` | `visit-service` |
+| `/api/v1/notifications/**` | `notification-service` |
 
 ## Métodos HTTP con su semántica real
 
@@ -118,7 +120,7 @@ GET /api/v1/search/properties?zone=equipetrol&type=HOUSE&operation=SALE
 
 ## OpenAPI, ejemplos y observabilidad
 
-- `contracts/openapi/<servicio>.yaml` (OpenAPI 3.1) es la fuente de verdad. Cada operación tiene `operationId`, ejemplos de request y response, y errores documentados.
+- `contracts/openapi/<servicio>-service.yaml` (OpenAPI 3.1; por ejemplo, `listing-service.yaml`) es la fuente de verdad. Cada operación tiene `operationId`, ejemplos de request y response, y errores documentados.
 - Cada servicio sirve su documentación en `/docs` y expone `GET /health` (liveness) y `GET /health/ready` (readiness).
 - Propaga `X-Correlation-Id`; si no llega, lo genera el gateway. Loguea método, ruta, status, duración y correlationId.
 

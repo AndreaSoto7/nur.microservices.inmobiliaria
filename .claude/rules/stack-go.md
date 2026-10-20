@@ -8,6 +8,8 @@ paths:
 
 Son dos servicios independientes, cada uno con su propio `go.mod`, su propia base de datos y su propio consumer group. No comparten paquetes entre sí.
 
+El gateway también está en Go, pero tiene su propia rule (`stack-gateway`), porque no tiene dominio ni base de datos.
+
 ## Estructura
 
 ```
@@ -19,7 +21,8 @@ services/<servicio>/
     infrastructure/
       postgres/                 # repositorios (pgx)
       kafka/                    # consumers (+ DLQ), mappers de eventos de integración
-    interfaces/http/            # handlers, DTOs, middleware (JWT, correlation-id, problem+json)
+      consul/                   # registro y baja en Consul (rule service-discovery)
+    interfaces/http/            # handlers, DTOs, middleware (JWT, correlation-id, problem+json), /health y /health/ready
   go.mod  go.sum  .env.example  Dockerfile
 ```
 
@@ -36,7 +39,15 @@ Módulo: `github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/<servic
   - Logs: `log/slog` en JSON.
   - Base de datos: `pgx`.
   - Kafka: `github.com/segmentio/kafka-go` (Go puro, sin CGO, funciona igual en Windows).
-- **Graceful shutdown** con `signal.NotifyContext`: cierra el HTTP server y los consumers.
+- **Graceful shutdown** con `signal.NotifyContext`: se da de baja en Consul y después cierra el HTTP server y los consumers.
+
+## Registro en Consul
+
+Sigue el contrato de la rule `service-discovery`.
+
+- En `main`, primero se abre el listener (`net.Listen`) y se sirve en una goroutine. Recién después se registra, para que el primer health check encuentre el servidor arriba.
+- La IP del contenedor se obtiene con `os.Hostname()` + `net.LookupHost`, salvo que `SERVICE_ADDRESS` venga lleno.
+- El registro y la baja son un `PUT` con `net/http` y `encoding/json`. No hace falta el SDK de Consul.
 
 ## search-service (modelo de lectura, CQRS)
 

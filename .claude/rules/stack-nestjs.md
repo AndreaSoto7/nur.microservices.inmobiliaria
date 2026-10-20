@@ -12,7 +12,8 @@ Es el servicio de **leads y visitas**: consultas de interesados, solicitudes de 
 ```
 src/
   main.ts  app.module.ts
-  shared/                       # filtro de excepciones problem+json, correlation-id middleware, auth guard (JWKS)
+  shared/                       # filtro de excepciones problem+json, correlation-id middleware, auth guard (JWKS), health
+    discovery/                  # registro y baja en Consul (rule service-discovery)
   visits/
     domain/                     # Visit (aggregate), VisitStatus, VisitId, Schedule (VO), eventos, VisitRepository (interfaz + token)
     application/
@@ -41,6 +42,16 @@ test/
 - **Idempotencia:** un interceptor de `Idempotency-Key` en `POST /inquiries` y `POST /visits`.
 - **OpenAPI:** `@nestjs/swagger` en `/docs`. Debe coincidir con `contracts/openapi/visit-service.yaml`.
 - **Eventos que produce:** `InquiryReceived`, `VisitRequested`, `VisitScheduled`, `VisitRejected`, `VisitCancelled` y `VisitCompleted`.
+
+## Registro en Consul
+
+Sigue el contrato de la rule `service-discovery`.
+
+- Un `ConsulRegistrationService` en `shared/discovery/` hace el `PUT` de registro con el `fetch` nativo de Node. No hace falta una librería de Consul.
+- **Registro:** en `main.ts`, **después** de `await app.listen(...)`.
+- **Baja:** `app.enableShutdownHooks()`, y el servicio implementa `OnApplicationShutdown` para darse de baja.
+- **IP del contenedor:** `os.hostname()` + `dns.promises.lookup`, salvo que `SERVICE_ADDRESS` venga lleno.
+- **Health:** `GET /health` y `GET /health/ready` en un controlador de `shared/`, fuera del prefijo `/api/v1`. Para `ready` se puede usar `@nestjs/terminus`.
 
 ## Comandos
 

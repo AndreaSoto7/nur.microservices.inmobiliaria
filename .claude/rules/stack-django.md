@@ -18,7 +18,8 @@ services/identity-service/
       persistence/        # models.py (Django ORM), repositories, mappers, migrations/
       messaging/          # outbox + productor Kafka
       security/           # emisión JWT RS256, JWKS
-    presentation/         # views (DRF APIView/ViewSet), serializers, urls, exception handler
+      discovery/          # registro y baja en Consul (rule service-discovery)
+    presentation/         # views (DRF APIView/ViewSet), serializers, urls, exception handler, /health
   tests/  domain/ application/ integration/
   requirements.txt  requirements-dev.txt  .env.example  Dockerfile
 ```
@@ -37,6 +38,19 @@ Django tiende a MVC/MTV. Aquí el **modelo de Django es persistencia** (`infrast
 - **Configuración:** `django-environ`. `DEBUG=False` por defecto; `SECRET_KEY` y credenciales solo desde el entorno.
 - **Kafka:** `confluent-kafka`. El relay de outbox corre como management command (`python manage.py run_outbox_relay`).
 - **Eventos que produce:** `UserRegistered` en `identity.user.events`.
+
+## Registro en Consul
+
+Sigue el contrato de la rule `service-discovery`.
+
+- Las funciones `register()` y `deregister()` viven en `identity/infrastructure/discovery/consul.py` y hacen el `PUT` con `urllib.request` o `httpx`.
+- **Con gunicorn** (contenedor), el registro va **una sola vez por contenedor**, no una vez por worker:
+  - Hook `when_ready` → registro.
+  - Hook `on_exit` → baja.
+  - Los dos hooks van en `config/gunicorn.conf.py`.
+- **Con `runserver`** (desarrollo) no se registra, salvo que se active con una variable de entorno. Así el autoreload no duplica registros.
+- **IP del contenedor:** `socket.gethostbyname(socket.gethostname())`, salvo que `SERVICE_ADDRESS` venga lleno.
+- **Health:** `GET /health` y `GET /health/ready` en `presentation/`, fuera del prefijo `/api/v1`.
 
 ## Migraciones (evitar conflictos)
 
