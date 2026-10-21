@@ -30,5 +30,5 @@
     "causationId": { "type": ["string", "null"], "description": "eventId del evento que causó este, si aplica." },
     "payload": { "type": "object", "description": "Validado por el schema específico del evento." }
   },
-  "additionalProperties": false
+  "additionalProperties": true
 }
