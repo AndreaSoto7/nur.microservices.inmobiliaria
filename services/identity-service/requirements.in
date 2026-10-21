@@ -1,0 +1,10 @@
+# Dependencias directas de producción. requirements.txt se genera con:
+#   uv pip compile requirements.in -o requirements.txt --python-version 3.13
+Django>=5.2,<5.3
+djangorestframework
+djangorestframework-camel-case
+PyJWT[crypto]
+drf-spectacular
+django-environ
+psycopg[binary]
+gunicorn
