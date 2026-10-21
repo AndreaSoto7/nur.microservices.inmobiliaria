@@ -1,0 +1,373 @@
+openapi: 3.1.0
+info:
+  title: identity-service
+  version: 1.0.0
+  description: |
+    Registro, autenticación y emisión de JWT RS256 de la Plataforma Inmobiliaria.
+
+    - Los clientes llaman siempre a través del gateway (`http://localhost:8080`).
+    - Los tokens se validan en el resto de servicios con el JWKS publicado aquí.
+    - Claims del access token: `sub` (UUID del usuario), `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`. Dura 15 minutos.
+    - Los errores siguen RFC 9457 (`application/problem+json`).
+servers:
+  - url: http://localhost:8080
+    description: API Gateway (desarrollo)
+tags:
+  - name: auth
+    description: Registro, login y claves públicas
+  - name: health
+    description: Liveness y readiness (no se exponen por el gateway)
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags: [auth]
+      operationId: registerUser
+      summary: Registrar un usuario
+      description: |
+        Crea un usuario con rol `CLIENT` (por defecto) o `AGENT`.
+        El rol `ADMIN` no se puede obtener por registro público.
+        Endpoint público.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUserRequest'
+            examples:
+              client:
+                value:
+                  email: ana.perez@example.com
+                  password: S3gura-2026
+                  fullName: Ana Pérez
+              agent:
+                value:
+                  email: carlos.agente@example.com
+                  password: S3gura-2026
+                  fullName: Carlos Rojas
+                  role: AGENT
+      responses:
+        '201':
+          description: Usuario creado. Devuelve solo su ID (CQRS).
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterUserResponse'
+              example:
+                id: 6f1c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: El email ya está registrado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://inmobiliaria.local/problems/user-email-already-registered
+                title: Email ya registrado
+                status: 409
+                detail: Ya existe un usuario con ese email.
+                instance: /api/v1/auth/register
+                code: USER_EMAIL_ALREADY_REGISTERED
+                correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Iniciar sesión
+      description: |
+        Valida email y contraseña y devuelve un par de tokens.
+        Un email inexistente y una contraseña incorrecta dan el mismo error, para no revelar qué emails están registrados.
+        Endpoint público. El gateway le aplica rate limit.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: ana.perez@example.com
+              password: S3gura-2026
+      responses:
+        '200':
+          description: Credenciales válidas.
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+              example:
+                accessToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+                refreshToken: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+                tokenType: Bearer
+                expiresIn: 900
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Email o contraseña incorrectos.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://inmobiliaria.local/problems/auth-invalid-credentials
+                title: Credenciales inválidas
+                status: 401
+                detail: Email o contraseña incorrectos.
+                instance: /api/v1/auth/login
+                code: AUTH_INVALID_CREDENTIALS
+                correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+
+  /api/v1/auth/.well-known/jwks.json:
+    get:
+      tags: [auth]
+      operationId: getJwks
+      summary: Claves públicas para validar los JWT
+      description: |
+        JSON Web Key Set con la clave pública RS256.
+        Lo consumen el gateway y todos los servicios. Endpoint público.
+      responses:
+        '200':
+          description: JWKS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Jwks'
+              example:
+                keys:
+                  - kty: RSA
+                    use: sig
+                    alg: RS256
+                    kid: 3c9d7f0a51e2b8c4
+                    n: 0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw
+                    e: AQAB
+
+  /health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Liveness
+      description: Lo usa Consul cada 10 s. No revisa dependencias.
+      servers:
+        - url: http://identity-service:8001
+          description: Red interna de Docker (no pasa por el gateway)
+      responses:
+        '200':
+          description: El proceso está vivo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: UP
+
+  /health/ready:
+    get:
+      tags: [health]
+      operationId: getReadiness
+      summary: Readiness
+      description: Revisa la conexión a la base de datos.
+      servers:
+        - url: http://identity-service:8001
+          description: Red interna de Docker (no pasa por el gateway)
+      responses:
+        '200':
+          description: Listo para atender.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: UP
+        '503':
+          description: Alguna dependencia no responde.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: DOWN
+
+components:
+  parameters:
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: Si no llega, lo genera el gateway (o el servicio). Se devuelve en la respuesta.
+      schema:
+        type: string
+
+  headers:
+    CorrelationId:
+      description: El mismo valor recibido, o uno generado.
+      schema:
+        type: string
+
+  responses:
+    ValidationError:
+      description: Request mal formado o con campos inválidos.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          examples:
+            invalidFields:
+              value:
+                type: https://inmobiliaria.local/problems/validation-error
+                title: Datos inválidos
+                status: 400
+                detail: Uno o más campos no son válidos.
+                instance: /api/v1/auth/register
+                code: VALIDATION_ERROR
+                correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+                errors:
+                  - field: email
+                    message: Introduzca una dirección de correo electrónico válida.
+            weakPassword:
+              value:
+                type: https://inmobiliaria.local/problems/user-weak-password
+                title: Contraseña débil
+                status: 400
+                detail: La contraseña debe tener entre 8 y 128 caracteres.
+                instance: /api/v1/auth/register
+                code: USER_WEAK_PASSWORD
+                correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+            roleNotAllowed:
+              value:
+                type: https://inmobiliaria.local/problems/user-role-not-allowed
+                title: Rol no permitido
+                status: 400
+                detail: Solo se puede registrar con rol CLIENT o AGENT.
+                instance: /api/v1/auth/register
+                code: USER_ROLE_NOT_ALLOWED
+                correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+
+  schemas:
+    RegisterUserRequest:
+      type: object
+      required: [email, password, fullName]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 128
+          writeOnly: true
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 150
+        role:
+          type: string
+          enum: [CLIENT, AGENT]
+          default: CLIENT
+
+    RegisterUserResponse:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          writeOnly: true
+
+    TokenPair:
+      type: object
+      required: [accessToken, refreshToken, tokenType, expiresIn]
+      properties:
+        accessToken:
+          type: string
+          description: JWT RS256 con `sub`, `email`, `roles`, `iss`, `aud`, `exp`.
+        refreshToken:
+          type: string
+          description: JWT de refresco. El endpoint para usarlo se agrega en una versión compatible posterior.
+        tokenType:
+          type: string
+          const: Bearer
+        expiresIn:
+          type: integer
+          description: Segundos de vida del access token.
+          example: 900
+
+    Jwks:
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            type: object
+            required: [kty, use, alg, kid, n, e]
+            properties:
+              kty: { type: string, const: RSA }
+              use: { type: string, const: sig }
+              alg: { type: string, const: RS256 }
+              kid: { type: string }
+              n: { type: string }
+              e: { type: string }
+
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN]
+
+    Problem:
+      type: object
+      description: RFC 9457 con las extensiones del proyecto (`code`, `correlationId`, `errors`).
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        code:
+          type: string
+          description: Estable, en UPPER_SNAKE_CASE.
+          examples: [VALIDATION_ERROR, USER_EMAIL_ALREADY_REGISTERED, AUTH_INVALID_CREDENTIALS]
+        correlationId: { type: string }
+        errors:
+          type: array
+          description: Solo en errores de validación.
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: string }
+              message: { type: string }
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
