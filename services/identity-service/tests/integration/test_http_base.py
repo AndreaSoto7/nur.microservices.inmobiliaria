@@ -39,3 +39,18 @@ def test_ruta_inexistente_responde_problem_json(client):
     assert body["code"] == "NOT_FOUND"
     assert body["correlationId"] == "c-1"
     assert body["instance"] == "/api/v1/no-existe"
+
+
+def test_readiness_responde_down_si_falta_la_clave_de_firma(client, settings):
+    from identity import container
+
+    settings.JWT_PRIVATE_KEY = ""
+    settings.JWT_PRIVATE_KEY_PATH = ""
+    container.signing_key.cache_clear()
+    try:
+        response = client.get("/health/ready")
+    finally:
+        container.signing_key.cache_clear()
+
+    assert response.status_code == 503
+    assert response.json() == {"status": "DOWN"}

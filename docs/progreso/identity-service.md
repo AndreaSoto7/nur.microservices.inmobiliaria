@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Login: `AuthenticateUserQuery` sin enumeración de emails, `POST /api/v1/auth/login` y JWKS | #15 |
 | feat | Firma JWT RS256 con `kid` y `typ`, JWKS, refresh con `aud` propio y validación de la configuración JWT | #14 |
 | feat | Registro de usuario, API: repositorio Django, hasher, `POST /api/v1/auth/register` y errores problem+json | #13 |
 | feat | Registro de usuario, dominio: agregado `User` inmutable y `RegisterUserCommand` (entró a `main` junto con el #7) | #8 |
@@ -16,9 +17,10 @@
 
 ## Pendientes
 
-- [ ] Login con JWT RS256 (`kid`) y JWKS
+- [x] Login con JWT RS256 (`kid`) y JWKS
 - [ ] Refresh token (`POST /api/v1/auth/refresh`) con rotación y revocación
 - [ ] `GET /api/v1/users/me`
+- [ ] Re-hashear la contraseña al iniciar sesión cuando Django suba las iteraciones de PBKDF2 (como efecto aparte, fuera de la consulta)
 - [ ] Publicar `UserRegistered` con outbox y relay a Kafka. Necesita `infra/` con Kafka, el schema del evento en `contracts/events/` y definir la unidad de trabajo (usuario + outbox en la misma transacción)
 
 **Depende de otros**

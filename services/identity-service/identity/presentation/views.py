@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
@@ -9,17 +9,31 @@ from rest_framework.views import APIView
 
 from identity import container
 from identity.application.commands.register_user import RegisterUserCommand
+from identity.application.queries.authenticate_user import AuthenticateUserQuery
 from identity.presentation.serializers import (
+    JwksSerializer,
+    LoginRequestSerializer,
     ProblemSerializer,
     RegisterUserRequestSerializer,
     RegisterUserResponseSerializer,
+    TokenPairSerializer,
 )
 
 _PROBLEM = "application/problem+json"
+# Las respuestas con tokens no se guardan en cachés (RFC 6749, sección 5.1).
+_NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
+# El JWKS sí se puede cachear un rato: cambia solo al rotar la clave (el kid avisa).
+JWKS_MAX_AGE_SECONDS = 300
+
+
+def _response_header(name: str, description: str) -> OpenApiParameter:
+    return OpenApiParameter(
+        name, str, location=OpenApiParameter.HEADER, response=[200], description=description
+    )
 
 
 class RegisterUserView(APIView):
-    """POST /api/v1/auth/register (operationId registerUser). Público."""
+    """POST /api/v1/auth/register. Público."""
 
     # El default del servicio es denegar: los endpoints públicos lo declaran explícitamente.
     authentication_classes: ClassVar[list] = []
@@ -28,6 +42,7 @@ class RegisterUserView(APIView):
     @extend_schema(
         operation_id="registerUser",
         tags=["auth"],
+        summary="Registrar un usuario",
         request=RegisterUserRequestSerializer,
         responses={
             201: RegisterUserResponseSerializer,
@@ -53,3 +68,58 @@ class RegisterUserView(APIView):
             )
         )
         return Response({"id": str(user_id)}, status=status.HTTP_201_CREATED)
+
+
+class LoginView(APIView):
+    """POST /api/v1/auth/login. Público; el gateway le aplica rate limit."""
+
+    authentication_classes: ClassVar[list] = []
+    permission_classes: ClassVar[list] = [AllowAny]
+
+    @extend_schema(
+        operation_id="login",
+        tags=["auth"],
+        summary="Iniciar sesión",
+        request=LoginRequestSerializer,
+        parameters=[
+            _response_header("Cache-Control", "no-store"),
+            _response_header("Pragma", "no-cache"),
+        ],
+        responses={
+            200: TokenPairSerializer,
+            (400, _PROBLEM): OpenApiResponse(ProblemSerializer, description="VALIDATION_ERROR"),
+            (401, _PROBLEM): OpenApiResponse(
+                ProblemSerializer, description="AUTH_INVALID_CREDENTIALS"
+            ),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        serializer = LoginRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        tokens = container.authenticate_user_handler().handle(
+            AuthenticateUserQuery(
+                email=serializer.validated_data["email"],
+                password=serializer.validated_data["password"],
+            )
+        )
+        return Response(TokenPairSerializer(tokens).data, headers=_NO_STORE)
+
+
+class JwksView(APIView):
+    """GET /api/v1/auth/.well-known/jwks.json. Público: lo consumen el gateway y los servicios."""
+
+    authentication_classes: ClassVar[list] = []
+    permission_classes: ClassVar[list] = [AllowAny]
+
+    @extend_schema(
+        operation_id="getJwks",
+        tags=["auth"],
+        summary="Claves públicas para validar los JWT",
+        responses={200: JwksSerializer},
+        parameters=[_response_header("Cache-Control", f"public, max-age={JWKS_MAX_AGE_SECONDS}")],
+    )
+    def get(self, request: Request) -> Response:
+        return Response(
+            container.public_jwks(),
+            headers={"Cache-Control": f"public, max-age={JWKS_MAX_AGE_SECONDS}"},
+        )

@@ -2,8 +2,10 @@
 
 from django.urls import path
 
-from identity.presentation.views import RegisterUserView
+from identity.presentation.views import JwksView, LoginView, RegisterUserView
 
 urlpatterns = [
     path("auth/register", RegisterUserView.as_view(), name="auth-register"),
+    path("auth/login", LoginView.as_view(), name="auth-login"),
+    path("auth/.well-known/jwks.json", JwksView.as_view(), name="auth-jwks"),
 ]
