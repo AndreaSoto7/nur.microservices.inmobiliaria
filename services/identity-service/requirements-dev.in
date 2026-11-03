@@ -1,0 +1,7 @@
+# Dependencias de desarrollo y tests. requirements-dev.txt se genera con:
+#   uv pip compile requirements-dev.in -o requirements-dev.txt --python-version 3.13
+-c requirements.txt
+-r requirements.in
+pytest
+pytest-django
+ruff

@@ -1,0 +1,17 @@
+# Solo configuración de herramientas. Las dependencias están en requirements*.in / requirements*.txt.
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["identity/infrastructure/persistence/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "DJ", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+pythonpath = ["."]
+testpaths = ["tests"]

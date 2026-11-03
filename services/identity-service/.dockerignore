@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+keys/
+tests/
+requirements*.in
+requirements-dev.txt
+Dockerfile
+.dockerignore
+README.md
