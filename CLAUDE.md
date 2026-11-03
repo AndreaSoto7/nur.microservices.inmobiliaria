@@ -75,6 +75,7 @@ docs/              # enunciado, ADRs, registro de patrones de diseño
 ## Flujo de trabajo Git
 
 - `main` está protegida: solo entra código por PR, con 1 aprobación y **squash merge**.
+- **Otra persona aprueba y el autor mergea su propio PR.** Nadie mergea PRs ajenos. Los PRs encadenados se mergean en orden. Guía paso a paso: [`docs/flujo-de-revision.md`](docs/flujo-de-revision.md).
 - **Ramas:** `<tipo>/<scope>-<descripcion-corta>`, por ejemplo `feat/listing-publicar-propiedad` o `fix/visit-validar-fecha`.
 - **Commits:** Conventional Commits, `tipo(scope): descripción en español`.
   - Tipos: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`.
