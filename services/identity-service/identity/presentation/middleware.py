@@ -25,11 +25,11 @@ class CorrelationIdMiddleware:
     def __call__(self, request: HttpRequest) -> HttpResponse:
         incoming = request.headers.get(CORRELATION_HEADER, "")
         value = incoming if _VALID_CORRELATION_ID.fullmatch(incoming) else str(uuid.uuid4())
-        token = correlation_id.set(value)
-        try:
-            response = self.get_response(request)
-        finally:
-            correlation_id.reset(token)
+        # No se resetea al terminar: Django escribe el log de django.request ("Bad Request") después
+        # de salir de los middlewares, y ese log también debe llevar el correlationId. Cada request
+        # pisa el valor al entrar, así que no se filtra a la siguiente.
+        correlation_id.set(value)
+        response = self.get_response(request)
         response[CORRELATION_HEADER] = value
         return response
 
