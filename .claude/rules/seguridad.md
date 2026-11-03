@@ -14,7 +14,13 @@ paths:
 
 - identity firma los JWT con **RS256**. La clave privada solo la tiene identity; el resto valida con la clave pública publicada en el JWKS.
 - El access token dura 15 min, con refresh token. Claims: `sub` (UUID del usuario), `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`.
-- Cada servicio valida firma, `exp`, `iss` y `aud`. Nunca confíes en headers como `X-User-Id` que lleguen de fuera del gateway.
+- Cada servicio valida:
+  - la firma con el JWKS, eligiendo la clave por `kid`;
+  - `alg=RS256` fijo (se rechazan `none` y `HS256`);
+  - `exp`, `iss=identity-service` y `aud=inmobiliaria`;
+  - el header `typ=at+jwt` (RFC 9068).
+- El refresh token tiene `aud=identity-service` y `typ=rt+jwt`, así que ningún servicio lo acepta como access token. Solo identity lo acepta.
+- Nunca confíes en headers como `X-User-Id` que lleguen de fuera del gateway.
 - Las contraseñas se guardan con el hasher de Django (PBKDF2 o Argon2). Nunca en texto plano ni con hashes propios.
 
 ## Autorización (mínimo privilegio)
@@ -43,6 +49,17 @@ paths:
 
 ## Gateway
 
-- CORS restringido a los orígenes del frontend.
-- Rate limit en login y registro.
-- Solo el gateway expone puertos públicos en producción. En desarrollo los servicios exponen puertos para depurar.
+Detalle en la rule `stack-gateway`.
+
+- **CORS** restringido a los orígenes del frontend (`http://localhost:5173` en desarrollo).
+- **Rate limit** en login y registro, por IP de conexión (`RemoteAddr`), sin confiar en un `X-Forwarded-For` que manda el cliente.
+- **JWT:**
+  - Valida el JWT como defensa temprana y **reenvía `Authorization` intacto**: cada servicio vuelve a validar.
+  - **Borra cualquier `X-User-*`** que llegue del cliente.
+- **Timeouts** de servidor y hacia los servicios. Límite de tamaño de body.
+
+## Puertos y Consul
+
+- **Compose base:** solo el gateway, el frontend, la UI de Consul y la UI de Kafka publican puertos en el host. Los servicios y las bases publican solo en `infra/docker-compose.debug.yml`.
+- **Consul en modo dev no tiene ACL.** Es aceptable en local, pero el puerto 8500 no se expone fuera del entorno de desarrollo.
+- **El registro en Consul** no lleva secretos en `Tags` ni `Meta`.

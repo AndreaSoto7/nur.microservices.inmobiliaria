@@ -18,7 +18,8 @@ services/identity-service/
       persistence/        # models.py (Django ORM), repositories, mappers, migrations/
       messaging/          # outbox + productor Kafka
       security/           # emisión JWT RS256, JWKS
-    presentation/         # views (DRF APIView/ViewSet), serializers, urls, exception handler
+      discovery/          # registro y baja en Consul (rule service-discovery)
+    presentation/         # views (DRF APIView/ViewSet), serializers, urls, exception handler, /health
   tests/  domain/ application/ integration/
   requirements.txt  requirements-dev.txt  .env.example  Dockerfile
 ```
@@ -28,15 +29,31 @@ Django tiende a MVC/MTV. Aquí el **modelo de Django es persistencia** (`infrast
 ## Decisiones técnicas
 
 - **Usuario propio desde el día 1:** `AUTH_USER_MODEL` con PK UUID, en `infrastructure/persistence`. Cambiarlo después de migrar es muy costoso.
-- **JWT:** `djangorestframework-simplejwt` configurado con `ALGORITHM="RS256"`, `SIGNING_KEY` y `VERIFYING_KEY` leídos del entorno.
+- **JWT:** se emiten con **PyJWT** (`PyJWT[crypto]`), detrás del puerto `TokenIssuer`.
+  - No se usa `djangorestframework-simplejwt`, porque no pone `kid` en el header y el JWKS lo necesita para elegir la clave. Además identity solo emite tokens y no los valida con DRF.
+  - La clave privada RS256 sale de `JWT_PRIVATE_KEY_PATH` (archivo montado) o de `JWT_PRIVATE_KEY`. El `kid` es la huella RFC 7638 de la clave.
   - Endpoint JWKS: `GET /api/v1/auth/.well-known/jwks.json`.
-  - Claims extra: `roles`, `email`.
+  - Claims del access token: `sub`, `email`, `roles`, `iss`, `aud=inmobiliaria`, `iat`, `exp` y `jti`. El header lleva `typ=at+jwt`.
+  - El refresh token usa `aud=identity-service` y `typ=rt+jwt`: ningún otro servicio lo acepta.
 - **JSON en camelCase:** `djangorestframework-camel-case` (parser y renderer) en `REST_FRAMEWORK`.
 - **Errores:** `EXCEPTION_HANDLER` propio que devuelve `application/problem+json` (ver la rule `api-rest`).
 - **OpenAPI:** `drf-spectacular`. Se exporta a `contracts/openapi/identity-service.yaml` y Swagger UI queda en `/docs`.
 - **Configuración:** `django-environ`. `DEBUG=False` por defecto; `SECRET_KEY` y credenciales solo desde el entorno.
 - **Kafka:** `confluent-kafka`. El relay de outbox corre como management command (`python manage.py run_outbox_relay`).
 - **Eventos que produce:** `UserRegistered` en `identity.user.events`.
+
+## Registro en Consul
+
+Sigue el contrato de la rule `service-discovery`.
+
+- Las funciones `register()` y `deregister()` viven en `identity/infrastructure/discovery/consul.py` y hacen el `PUT` con `urllib.request` o `httpx`.
+- **Con gunicorn** (contenedor), el registro va **una sola vez por contenedor**, no una vez por worker:
+  - Hook `when_ready` → registro.
+  - Hook `on_exit` → baja.
+  - Los dos hooks van en `config/gunicorn.conf.py`.
+- **Con `runserver`** (desarrollo) no se registra, salvo que se active con una variable de entorno. Así el autoreload no duplica registros.
+- **IP del contenedor:** `socket.gethostbyname(socket.gethostname())`, salvo que `SERVICE_ADDRESS` venga lleno.
+- **Health:** `GET /health` y `GET /health/ready` en `presentation/`, fuera del prefijo `/api/v1`.
 
 ## Migraciones (evitar conflictos)
 

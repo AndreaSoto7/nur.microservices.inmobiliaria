@@ -33,6 +33,8 @@ Lanza **en un solo mensaje** los agentes que correspondan. A cada uno pásale la
 | Controladores, DTOs, rutas o `contracts/openapi/` | `revisor-api-rest` |
 | `contracts/events/` o código de productores y consumidores | `guardian-contratos` |
 | Auth, config, uploads, `infra/`, Dockerfiles o `.env.example` | `revisor-seguridad` |
+| Cualquier archivo en `gateway/` | `revisor-seguridad` y `revisor-api-rest` (usan la rule `stack-gateway`) |
+| Registro en Consul o health checks (`**/discovery/**`, `**/consul/**`, `infra/`) | `revisor-seguridad` (contra la rule `service-discovery`) |
 | `frontend/` | `revisor-frontend` |
 
 ## 4. Informe

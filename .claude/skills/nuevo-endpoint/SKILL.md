@@ -23,7 +23,7 @@ Define y muestra al usuario:
 
 ## 2. Contrato
 
-- Edita `contracts/openapi/<servicio>.yaml` con `operationId`, schemas reutilizables en `components`, ejemplos de request y response, y respuestas de error con `application/problem+json`.
+- Edita `contracts/openapi/<servicio>-service.yaml` (por ejemplo, `listing-service.yaml`) con `operationId`, schemas reutilizables en `components`, ejemplos de request y response, y respuestas de error con `application/problem+json`.
 - Si el frontend u otro servicio consume este endpoint, sugiere que el contrato vaya en su propio commit o PR para que lo revisen.
 
 ## 3. Implementación

@@ -1,6 +1,6 @@
 ---
 name: aplicar-patron
-description: Elige, implementa y justifica un patrón de diseño (Factory Method, Builder, Singleton, Adapter, Decorator, Facade, Observer, Strategy, Command, State, Specification, Repository) para un problema concreto del proyecto, y lo registra en docs/patrones-de-diseno.md para la defensa. Úsala cuando haya un problema de diseño o cuando se pida aplicar un patrón.
+description: Elige, implementa y justifica un patrón de diseño (Factory Method, Builder, Singleton, Adapter, Decorator, Facade, Proxy, Observer, Strategy, Command, Chain of Responsibility, Mediator, State, Specification, Repository, Circuit Breaker, Service Registry) para un problema concreto del proyecto, y lo registra en docs/patrones-de-diseno.md para la defensa. Úsala cuando haya un problema de diseño o cuando se pida aplicar un patrón.
 argument-hint: "[problema o patrón] [servicio]"
 ---
 
@@ -27,7 +27,7 @@ Recomienda una y espera la confirmación si la decisión no es obvia.
 
 ## 3. Implementar de forma idiomática
 
-- Usa las herramientas del stack: DI de Spring o Nest, interfaces implícitas de Go, protocolos o ABC de Python, `input()`/`output()` de Angular.
+- Usa las herramientas del stack: DI de Spring o Nest, interfaces implícitas de Go, protocolos o ABC de Python, props, callbacks y custom hooks de React.
 - Respeta las capas. Los puertos van en `domain` o `application`; los adaptadores, en `infrastructure`.
 - Agrega tests que demuestren el beneficio. Por ejemplo: una estrategia nueva se agrega sin tocar el código existente.
 

@@ -38,4 +38,7 @@ paths:
 | listing (Spring) | JUnit 5, AssertJ, Mockito, `@WebMvcTest`, `@DataJpaTest` → `./mvnw test` | Spotless (si se adopta) |
 | visit (NestJS) | Jest → `npm run test` | ESLint + Prettier → `npm run lint` |
 | search, notification (Go) | `go test ./...` (table-driven) | `gofmt`, `go vet`, `golangci-lint run` |
-| frontend | Runner del framework elegido | Linter del framework |
+| gateway (Go) | `go test ./...` con `net/http/httptest`: servicios falsos y discovery falso, sin Consul real | `gofmt`, `go vet`, `golangci-lint run` |
+| frontend (React) | Vitest + React Testing Library → `npm run test` | ESLint + Prettier → `npm run lint` |
+
+Ningún test depende de que Consul esté corriendo. El registro en Consul se prueba contra un servidor HTTP falso que verifica el body del `PUT`.

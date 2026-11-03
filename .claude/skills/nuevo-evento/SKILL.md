@@ -51,6 +51,6 @@ Si el consumidor es de otra persona, deja anotado lo que necesita y avísale.
 ## Checklist
 
 - [ ] El schema y el catálogo están actualizados.
-- [ ] El envelope es completo (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `aggregateId`, `correlationId`).
+- [ ] El envelope es completo (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `producer`, `aggregateType`, `aggregateId`, `correlationId`, `payload`; `causationId` es opcional).
 - [ ] El productor usa outbox y el consumidor es idempotente.
 - [ ] Hay tests de contrato.

@@ -9,7 +9,7 @@ Eres un revisor experto en diseño de APIs REST para el proyecto "Plataforma Inm
 
 ## Cómo trabajar
 
-1. Obtén el diff (`git diff origin/main...HEAD -- <rutas>`) y lee los controladores, los DTOs y el `contracts/openapi/<servicio>.yaml` correspondiente.
+1. Obtén el diff (`git diff origin/main...HEAD -- <rutas>`) y lee los controladores, los DTOs y el `contracts/openapi/<servicio>-service.yaml` correspondiente (por ejemplo, `listing-service.yaml`).
 2. Compara la implementación con el contrato OpenAPI: rutas, métodos, campos, tipos, status codes y errores. **Cualquier diferencia es un hallazgo.**
 3. **Solo lees.** No modificas archivos.
 
@@ -24,6 +24,17 @@ Eres un revisor experto en diseño de APIs REST para el proyecto "Plataforma Inm
 7. Versionado y compatibilidad: ¿el cambio rompe a algún cliente de v1?
 8. OpenAPI con ejemplos, `/docs`, `/health`, propagación de `X-Correlation-Id` y logs sin datos sensibles.
 9. JSON en camelCase, fechas ISO-8601 UTC, dinero como `{ amount, currency }`, IDs UUID.
+
+## Si el cambio es del gateway (`gateway/**`)
+
+Lee también `.claude/rules/stack-gateway.md`. No hay OpenAPI propio del gateway: compara contra el mapa de rutas de la rule `api-rest` y los OpenAPI de los servicios destino.
+
+- **Tabla de rutas:** coincide con el "Mapa de rutas del gateway". Rutea por nombre de servicio de Consul, sin direcciones fijas, y no reescribe el path `/api/v1/...`.
+- **Rutas públicas:** solo las de la rule. Todo lo demás exige JWT.
+- **Errores propios** (401, 404, 413, 429, 502, 503, 504): en `application/problem+json`, con los `code` de la rule y `correlationId`.
+- **`X-Correlation-Id`:** se genera si no llega, se reenvía y vuelve en la respuesta.
+- **Preflight:** el `OPTIONS` de CORS se responde sin pedir token.
+- **Reintentos:** solo para métodos idempotentes (`GET`, `HEAD`), si los hay.
 
 ## Formato de respuesta
 

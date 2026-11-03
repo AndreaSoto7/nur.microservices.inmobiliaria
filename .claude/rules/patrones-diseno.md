@@ -36,7 +36,10 @@ Un patrón se usa porque resuelve un problema concreto del dominio, nunca "para 
   - En el front: ingredientes extra sin modificar la clase base, como en el ejercicio Burger Factory.
 - **Facade:**
   - El API Gateway es una fachada sobre los microservicios.
-  - En el frontend, un *facade service* oculta el store o los servicios HTTP a los componentes smart.
+  - En el frontend, un custom hook por feature (`useCatalog`) oculta las llamadas HTTP y el estado a los componentes smart.
+- **Proxy:**
+  - El reverse proxy del gateway (`httputil.ReverseProxy`) se interpone entre el cliente y el servicio.
+  - Controla el acceso (auth, rate limit) y elige la réplica, sin que el cliente sepa cuántas hay ni dónde están.
 
 ### De comportamiento
 
@@ -48,7 +51,12 @@ Un patrón se usa porque resuelve un problema concreto del dominio, nunca "para 
   - Canales de notificación (`EmailChannel`, `InAppChannel`, `LogChannel`).
   - Estrategias de ordenamiento o ranking del catálogo.
   - Cálculo de precio mostrado (venta vs. alquiler mensual).
+  - Algoritmo de balanceo del gateway (`RoundRobin` hoy; otro algoritmo es otra implementación y no toca el proxy).
 - **Command:** cada comando de CQRS (`ScheduleVisitCommand`) es un objeto que encapsula la intención y lo ejecuta su handler a través del `CommandBus`.
+- **Chain of Responsibility:**
+  - La cadena de middlewares del gateway: recover → correlation-id → logging → CORS → borrado de `X-User-*` → rate limit → auth → proxy.
+  - Cada eslabón decide si corta la request (401, 429) o la pasa al siguiente.
+  - En Go cada middleware además es un Decorator de `http.Handler`. Lo que la vuelve una cadena es que cualquier eslabón puede cortar.
 
 ### Arquitectónicos y de dominio (también cuentan y deben justificarse)
 
@@ -58,6 +66,14 @@ Un patrón se usa porque resuelve un problema concreto del dominio, nunca "para 
 - **Mediator:** `CommandBus` y `QueryBus` desacoplan controladores de handlers.
 - **Outbox:** publicación confiable de eventos.
 - **API Gateway** y **Database per Service:** patrones de microservicios.
+- **Service Registry + Self-Registration:**
+  - Consul es el registro de servicios.
+  - Cada servicio se registra solo al arrancar y se da de baja al apagarse.
+  - El gateway descubre las réplicas sanas consultando el registro (rule `service-discovery`).
+- **Circuit Breaker:**
+  - El gateway marca como caída una réplica que falla y deja de enviarle tráfico por un tiempo.
+  - Después la vuelve a probar (medio abierto).
+  - Es un respaldo de los health checks de Consul.
 - **Smart/Dumb Components:** frontend (ver la rule `frontend-smart-dumb`).
 
 ## Reglas

@@ -35,6 +35,32 @@ Eres el revisor de seguridad del proyecto "Plataforma Inmobiliaria". Tu referenc
   - CORS abierto (`*`) con credenciales.
   - Falta rate limit en login.
 
+### Gateway (`gateway/**`, rule `stack-gateway`)
+
+- **Headers de identidad:** se borran los `X-User-*` que llegan del cliente antes de reenviar.
+- **JWT:**
+  - Se validan firma, `exp`, `iss` y `aud`.
+  - El algoritmo está fijado a RS256: se rechazan `none` y `HS256`.
+  - `Authorization` se reenvía intacto, sin reemplazarlo por headers propios.
+- **Rate limit:** el de login y registro usa `r.RemoteAddr`, no un `X-Forwarded-For` que manda el cliente.
+- **CORS:** orígenes desde variable de entorno. Nunca `*` con credenciales. El preflight no exige token.
+- **Timeouts:**
+  - Del servidor: `ReadHeaderTimeout`, `ReadTimeout`, `WriteTimeout` e `IdleTimeout`.
+  - Hacia los servicios: `ResponseHeaderTimeout`.
+  - Un servidor sin `ReadHeaderTimeout` es vulnerable a Slowloris.
+- **Límite de body** con `http.MaxBytesReader`.
+- **Reintentos:** no se reintentan `POST`, `PUT`, `PATCH` ni `DELETE` en otra réplica (podrían duplicar efectos).
+- **Errores del destino:** no se filtran direcciones internas ni mensajes del servicio en los 502/503/504.
+- **Logs:** no llevan `Authorization`, tokens ni bodies.
+
+### Service discovery (rule `service-discovery`)
+
+- **Registro:** usa la IP del contenedor (nunca `localhost`) y un ID por réplica. No lleva secretos en `Tags` ni `Meta`.
+- **Exposición de Consul:**
+  - Consul en modo dev no tiene ACL: está bien en local, pero el puerto 8500 nunca se expone fuera del entorno de desarrollo.
+  - Los servicios no publican puertos en el compose base (solo en `docker-compose.debug.yml`).
+  - Ningún servicio usa `container_name`.
+
 ## Formato de respuesta
 
 Hallazgos por severidad (🔴 crítico, 🟡 medio, 🔵 bajo), cada uno con `archivo:línea`, el riesgo concreto (qué podría hacer un atacante) y la corrección. Si no hay hallazgos, dilo claramente.
