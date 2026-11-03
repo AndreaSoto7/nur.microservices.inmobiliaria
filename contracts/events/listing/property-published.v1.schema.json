@@ -23,8 +23,8 @@
     "imageUrls"
   ],
   "properties": {
-    "propertyId": { "type": "string", "format": "uuid", "description": "Igual al aggregateId del envelope." },
-    "agentId": { "type": "string", "format": "uuid" },
+    "propertyId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "Igual al aggregateId del envelope." },
+    "agentId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
     "title": { "type": "string", "minLength": 1, "maxLength": 150 },
     "description": { "type": "string", "maxLength": 5000 },
     "propertyType": { "type": "string", "enum": ["HOUSE", "APARTMENT"] },
@@ -34,7 +34,7 @@
       "required": ["amount", "currency"],
       "properties": {
         "amount": { "type": "number", "exclusiveMinimum": 0, "description": "Máximo 2 decimales. Para RENT es el precio mensual. El consumidor lo decodifica sin pérdida (decimal o json.Number), nunca a float64." },
-        "currency": { "type": "string", "enum": ["USD", "BOB"] }
+        "currency": { "type": "string", "const": "BOB", "description": "Moneda única de la plataforma." }
       }
     },
     "location": {
@@ -56,8 +56,8 @@
       "uniqueItems": true,
       "examples": [["GARAGE", "GARDEN", "POOL", "COMMON_AREAS"]]
     },
-    "coverImageUrl": { "type": ["string", "null"], "description": "Ruta relativa al gateway: /api/v1/properties/{propertyId}/images/{imageId} (GET público). null si no hay imágenes." },
-    "imageUrls": { "type": "array", "items": { "type": "string" }, "description": "Rutas relativas al gateway, con el mismo formato que coverImageUrl. Lista vacía si no hay imágenes." },
+    "coverImageUrl": { "type": ["string", "null"], "pattern": "^/api/v1/properties/[0-9a-fA-F-]{36}/images/[0-9a-fA-F-]{36}$", "description": "Ruta relativa al gateway: /api/v1/properties/{propertyId}/images/{imageId} (GET público). null si no hay imágenes." },
+    "imageUrls": { "type": "array", "items": { "type": "string", "pattern": "^/api/v1/properties/[0-9a-fA-F-]{36}/images/[0-9a-fA-F-]{36}$" }, "description": "Rutas relativas al gateway, con el mismo formato que coverImageUrl. Lista vacía si no hay imágenes." },
     "status": { "type": "string", "const": "PUBLISHED" },
     "publishedAt": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$", "description": "Fecha de la primera publicación. No cambia al reanudar ni al liberar una reserva." }
   },
@@ -70,7 +70,7 @@
       "description": "Casa de dos plantas con jardín y garaje para dos autos.",
       "propertyType": "HOUSE",
       "operationType": "SALE",
-      "price": { "amount": 185000.0, "currency": "USD" },
+      "price": { "amount": 1285000.0, "currency": "BOB" },
       "location": { "zone": "Equipetrol", "address": "Calle 7 Oeste #120", "latitude": -17.7633, "longitude": -63.1956 },
       "bedrooms": 3,
       "bathrooms": 2,

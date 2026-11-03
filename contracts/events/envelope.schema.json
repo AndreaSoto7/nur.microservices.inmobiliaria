@@ -27,7 +27,7 @@
     "aggregateType": { "type": "string", "examples": ["Property", "Visit", "User", "Inquiry"] },
     "aggregateId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "También es la clave del mensaje en Kafka." },
     "correlationId": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$", "description": "Propagado desde el header X-Correlation-Id." },
-    "causationId": { "type": ["string", "null"], "description": "eventId del evento que causó este, si aplica." },
+    "causationId": { "type": ["string", "null"], "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "eventId del evento que causó este, si aplica." },
     "payload": { "type": "object", "description": "Validado por el schema específico del evento." }
   },
   "additionalProperties": true
