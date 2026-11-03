@@ -4,7 +4,7 @@ Esta es la fuente de verdad de los eventos entre servicios. Si un evento no est�
 
 ## Convenciones
 
-- **Envelope común:** [`envelope.schema.json`](envelope.schema.json).
+- **Envelope común:** [`envelope.schema.json`](envelope.schema.json). Acepta campos adicionales (`additionalProperties: true`): agregar un campo opcional al envelope no rompe a los consumidores, que deben ignorar los campos que no conocen.
 - **Payload:** `<servicio>/<evento-kebab>.v<N>.schema.json` (JSON Schema 2020-12).
 - **Topic:** `<servicio>.<aggregate>.events`. Clave del mensaje: `aggregateId`.
 - **DLQ:** `<topic>.dlq`. Consumer group: el nombre del servicio consumidor.

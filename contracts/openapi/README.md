@@ -1,6 +1,6 @@
 # Contratos HTTP (OpenAPI 3.1)
 
-Hay un archivo por servicio, `<servicio>.yaml`, y es la fuente de verdad de su API pública (expuesta vía gateway).
+Hay un archivo por servicio, `<servicio>-service.yaml` (por ejemplo, `listing-service.yaml`), y es la fuente de verdad de su API pública (expuesta vía gateway). El gateway no tiene OpenAPI propio: solo rutea a estas APIs.
 
 | Archivo | Dueño |
 |---|---|
