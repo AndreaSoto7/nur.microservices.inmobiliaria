@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Firma JWT RS256 con `kid` y `typ`, JWKS, refresh con `aud` propio y validación de la configuración JWT | este PR |
 | feat | Registro de usuario, API: repositorio Django, hasher, `POST /api/v1/auth/register` y errores problem+json | #13 |
 | feat | Registro de usuario, dominio: agregado `User` inmutable y `RegisterUserCommand` (entró a `main` junto con el #7) | #8 |
 | chore | Scaffold: capas, health, registro en Consul, problem+json, correlation-id y Dockerfile | #7 |
