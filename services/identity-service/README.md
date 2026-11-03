@@ -63,6 +63,7 @@ uv venv --python 3.13 .venv          # o: python3.13 -m venv .venv
 source .venv/bin/activate            # Windows: .venv\Scripts\activate
 uv pip install -r requirements-dev.txt   # o: pip install -r requirements-dev.txt
 cp .env.example .env                 # y ajusta DATABASE_URL
+mkdir -p keys && openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out keys/jwt-private.pem
 python manage.py migrate
 python manage.py runserver 8001
 ```
@@ -84,6 +85,22 @@ docker build -t identity-service .
 ```
 
 Al arrancar, el contenedor aplica las migraciones y levanta gunicorn en el puerto 8001.
+
+## Autenticación (JWT RS256)
+
+| Endpoint | Qué hace |
+|---|---|
+| `POST /api/v1/auth/register` | Crea un usuario `CLIENT` (por defecto) o `AGENT`. Responde `201 { id }` |
+| `POST /api/v1/auth/login` | Valida credenciales y devuelve `{ accessToken, refreshToken, tokenType, expiresIn }`, con `Cache-Control: no-store` |
+| `GET /api/v1/auth/.well-known/jwks.json` | Clave pública para validar los tokens (cacheable 5 min) |
+
+- **Access token** (15 min): `sub`, `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`, `iat`, `exp`, `jti`, `tokenType=access`. Header con `alg=RS256`, `kid` y `typ=at+jwt` (RFC 9068).
+- **Cómo lo validan el gateway y los servicios:** firma con el JWKS, `iss=identity-service`, `aud=inmobiliaria`, `exp` y `typ=at+jwt`.
+- **Refresh token** (7 días): solo `sub`, `iss`, `iat`, `exp`, `jti` y `tokenType=refresh`, con `aud=identity-service` y `typ=rt+jwt`. Por eso **ningún otro servicio lo acepta como access token**. El endpoint para usarlo llega en otro PR.
+- **`kid`**: huella RFC 7638 de la clave pública. Si se rota la clave, cambia el `kid`, y el gateway y los servicios saben que deben volver a pedir el JWKS.
+- **Clave privada**: solo la tiene identity (`JWT_PRIVATE_KEY_PATH`). Sin clave, `/health/ready` responde `DOWN`.
+- **Rotar la clave**: exige reiniciar identity, y los tokens firmados con la clave anterior dejan de validar (hasta 15 min los access y 7 días los refresh). Publicar varias claves en el JWKS se agrega solo si hace falta (YAGNI).
+- **Login**: un email inexistente, una contraseña incorrecta y un usuario inactivo dan el mismo `401 AUTH_INVALID_CREDENTIALS`, y tardan lo mismo (se verifica contra un hash ficticio). Así no se puede averiguar qué emails existen.
 
 ## Variables de entorno
 
