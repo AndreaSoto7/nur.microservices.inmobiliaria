@@ -66,7 +66,7 @@
 ### Balanceador dentro del gateway
 
 - **Round robin** entre las réplicas sanas que devuelve Consul.
-- **Respaldo:** si una réplica falla (error de conexión o timeout), el gateway la marca como caída por un tiempo, aunque Consul todavía no lo haya detectado (Circuit Breaker por réplica).
+- **Respaldo:** si una réplica falla (error de transporte del destino, no del cliente), el gateway la marca como caída por un tiempo, aunque Consul todavía no lo haya detectado (Circuit Breaker por réplica).
 - **Strategy:** el algoritmo va detrás de una interfaz, para poder cambiarlo (por ejemplo, por menor cantidad de conexiones) sin tocar el proxy.
 - **Demo:** `listing-service` se escala a 3 réplicas.
 
@@ -108,7 +108,7 @@
 ### Qué se pierde o qué riesgo se asume
 
 - El gateway es un punto único de falla. Se acepta en un proyecto académico.
-- **Consul en modo dev guarda todo en memoria.** Si se reinicia, los servicios deben volver a registrarse: se reinician o reintentan el registro.
+- **Consul en modo dev guarda todo en memoria.** Si se reinicia, los servicios vuelven a registrarse solos, porque repiten el registro cada 60 s.
 - **Llamadas HTTP síncronas que este ADR autoriza** (regla de oro 2):
   - De los servicios y el gateway hacia la API de Consul.
   - Del gateway hacia los servicios.

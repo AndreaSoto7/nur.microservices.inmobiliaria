@@ -57,7 +57,7 @@ Eres el revisor de seguridad del proyecto "Plataforma Inmobiliaria". Tu referenc
 
 - **Registro:** usa la IP del contenedor (nunca `localhost`) y un ID por réplica. No lleva secretos en `Tags` ni `Meta`.
 - **Exposición de Consul:**
-  - Consul en modo dev no tiene ACL: está bien en local, pero el puerto 8500 nunca se expone fuera del entorno de desarrollo.
+  - Consul en modo dev no tiene ACL. Rechaza cualquier publicación de 8500, 8090 o del override de depuración que no use `127.0.0.1`.
   - Los servicios no publican puertos en el compose base (solo en `docker-compose.debug.yml`).
   - Ningún servicio usa `container_name`.
 

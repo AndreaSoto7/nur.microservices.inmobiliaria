@@ -17,8 +17,8 @@ Plataforma donde agentes publican casas y departamentos (venta o alquiler) y los
 | Consul (modo dev) | — | — | UI 8500 | — | Service discovery: registro de servicios y health checks |
 
 **Puertos en el host** (ADR 0002):
-- **Uso normal y demo** (`infra/docker-compose.yml`): solo se publican el gateway (8080), el frontend (5173), la UI de Consul (8500) y la UI de Kafka (8090). Los servicios usan su puerto **dentro de la red de Docker** y se descubren por Consul. Así se pueden escalar con `--scale`.
-- **Depuración** (`infra/docker-compose.debug.yml`): se publican además los servicios (8001–8005), los PostgreSQL (5433–5437, uno por servicio, para no chocar con un Postgres local en 5432) y Kafka (9092). Este override no se combina con `--scale`.
+- **Uso normal y demo** (`infra/docker-compose.yml`): solo se publican el gateway (8080) y el frontend (5173), más la UI de Consul (8500) y la UI de Kafka (8090) **solo en `127.0.0.1`**. Los servicios usan su puerto **dentro de la red de Docker** y se descubren por Consul. Así se pueden escalar con `--scale`.
+- **Depuración** (`infra/docker-compose.debug.yml`): se publican además, **solo en `127.0.0.1`**, los servicios (8001–8005), los PostgreSQL (5433–5437, uno por servicio, para no chocar con un Postgres local en 5432) y Kafka (9092). Este override no se combina con `--scale`.
 - **Ningún servicio usa `container_name`**, porque impide escalar.
 
 **Service discovery** (ADR 0002): cada servicio se registra solo en Consul al arrancar:
@@ -58,14 +58,14 @@ docs/              # enunciado, ADRs, patrones de diseño, progreso por servicio
 - **Idioma:** código, endpoints, eventos, tablas y columnas en inglés. Documentación, PRs, issues y la descripción de los commits en español.
 - **IDs:** UUID como string, generados por el dominio. Nunca se exponen IDs autoincrementales.
 - **Fechas:** ISO-8601 en UTC (`2026-10-16T14:30:00Z`).
-- **Dinero:** `{ "amount": 125000.00, "currency": "USD" }`. En el dominio nunca se usa float (BigDecimal, Decimal o enteros en centavos).
+- **Dinero:** `{ "amount": 125000.00, "currency": "BOB" }`. La plataforma maneja una sola moneda, **BOB**. En el dominio nunca se usa float (BigDecimal, Decimal o enteros en centavos).
 - **JSON:** camelCase en todas las APIs y eventos (en Django se configura un renderer camelCase). Los enums van en `UPPER_SNAKE_CASE`.
 - **Errores HTTP:** RFC 9457 `application/problem+json` (ver la rule `api-rest`).
 - **Auth:**
   - identity emite un JWT RS256 de 15 min, con refresh token.
   - Claims: `sub` (UUID del usuario), `email`, `roles`, `iss=identity-service` y `aud=inmobiliaria`.
   - Roles: `CLIENT`, `AGENT`, `ADMIN`.
-  - Cada servicio valida firma, `exp`, `iss` y `aud` con el JWKS de identity.
+  - Cada servicio valida firma, `exp`, `iss`, `aud` y el header `typ=at+jwt` con el JWKS de identity.
   - El gateway valida antes, como defensa temprana: reenvía `Authorization` intacto y borra cualquier `X-User-*` que llegue del cliente.
 - **Trazabilidad:** el header `X-Correlation-Id` se propaga en HTTP y en los eventos. Los logs son JSON estructurado y no llevan datos personales ni tokens.
 

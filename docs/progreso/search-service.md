@@ -21,7 +21,6 @@
 **Catálogo (lado query de CQRS)**
 
 - [ ] Proyección del catálogo: consumir `listing.property.events` con upsert por `propertyId`, idempotente
-- [ ] Decidir cómo filtrar por precio con dos monedas: hoy `minPrice`, `maxPrice` y `sort=price` no distinguen USD de BOB
 - [ ] Comparar `zone` sin distinguir mayúsculas
 - [ ] Buscar con filtros: zona, tipo, operación, precio, dormitorios y características, con paginación y orden
 - [ ] Detalle de una propiedad

@@ -48,6 +48,7 @@ Sigue el contrato de la rule `service-discovery`.
 - En `main`, primero se abre el listener (`net.Listen`) y se sirve en una goroutine. Recién después se registra, para que el primer health check encuentre el servidor arriba.
 - La IP del contenedor se obtiene con `os.Hostname()` + `net.LookupHost`, salvo que `SERVICE_ADDRESS` venga lleno.
 - El registro y la baja son un `PUT` con `net/http` y `encoding/json`. No hace falta el SDK de Consul.
+- Una goroutine con `time.Ticker` repite el registro cada 60 s. Al apagar, se detiene antes de la baja.
 
 ## search-service (modelo de lectura, CQRS)
 

@@ -40,11 +40,11 @@ Módulo: `github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway`. Las co
 
 - La tabla de rutas es la de la rule `api-rest` ("Mapa de rutas del gateway"). El destino es un **nombre de servicio de Consul** (`listing-service`), nunca una dirección fija.
 - El path se reenvía **sin reescribirlo**: el servicio recibe `/api/v1/...` igual que el cliente.
-- **Rutas públicas** (sin JWT). Las de auth se comparan **de forma exacta**, no por prefijo, y se rechazan los paths con `..` o `//`. Así `/api/v1/auth/../users/x` no se salta el JWT.
+- **Rutas públicas** (sin JWT). Las de auth se comparan **de forma exacta**, por método y path, no por prefijo. Los paths con segmentos `..` o vacíos (`//`) se rechazan con 400, evaluando por segmentos sobre `r.URL.Path` ya decodificado, para que `%2e%2e` tampoco pase. Así `/api/v1/auth/../users/x` no se salta el JWT.
   - `GET /api/v1/search/**`
   - `GET /api/v1/properties/{propertyId}/images/{imageId}`
-  - Registro, login y refresh de `/api/v1/auth/**`
-  - El JWKS (`/api/v1/auth/.well-known/jwks.json`)
+  - `POST /api/v1/auth/register`, `POST /api/v1/auth/login` y `POST /api/v1/auth/refresh`
+  - `GET /api/v1/auth/.well-known/jwks.json`
   - `GET /health`
 - El resto exige `Authorization: Bearer`.
 - Prefijo desconocido → 404 problem+json.
@@ -61,7 +61,7 @@ Cada middleware recibe un `http.Handler` y devuelve otro (`func(http.Handler) ht
 6. **Rate limit:** token bucket por IP y ruta en login y registro (`golang.org/x/time/rate`).
    - La IP sale de `r.RemoteAddr` con `net.SplitHostPort` (sin el puerto; con él, cada conexión tendría su propio límite), no de un `X-Forwarded-For` enviado por el cliente.
    - Las entradas viejas del mapa expiran.
-   - Comprobar en los logs qué IP ve el gateway: en algunos entornos de Docker todos los clientes llegan con la misma IP, y el límite pasaría a ser global.
+   - Comprobar una vez, de forma puntual, qué IP ve el gateway: en algunos entornos de Docker todos los clientes llegan con la misma IP, y el límite pasaría a ser global. La IP no se loguea de forma permanente (es un dato personal).
 7. **Auth:** en las rutas protegidas valida firma RS256, `exp`, `iss` y `aud`.
    - Fija el algoritmo y los claims: `jwt.WithValidMethods(["RS256"])`, `WithExpirationRequired()`, `WithIssuer` y `WithAudience`. Rechaza `none` y `HS256`.
    - Exige `typ=at+jwt` en el header. Así un refresh token, que tiene `aud=identity-service` y `typ=rt+jwt`, nunca pasa.
@@ -70,16 +70,20 @@ Cada middleware recibe un `http.Handler` y devuelve otro (`func(http.Handler) ht
 
 ## Proxy (patrón Proxy)
 
-- Se usa `httputil.ReverseProxy` con la función `Rewrite` (no `Director`). Allí se elige la réplica y se llama a `SetURL()` y `SetXForwarded()`.
+- Se usa `httputil.ReverseProxy` con la función `Rewrite` (no `Director`), que llama a `SetURL()` y `SetXForwarded()`.
+- **La réplica se elige antes de `ServeHTTP`** y se pasa por el contexto: `Rewrite` no puede responder, así que el 503 por falta de réplicas se resuelve antes.
 - **Timeouts:**
   - Del servidor: `ReadHeaderTimeout` (evita Slowloris), `ReadTimeout`, `WriteTimeout` e `IdleTimeout`.
   - Hacia el destino: un `http.Transport` con `ResponseHeaderTimeout`.
-- **Límite de body por ruta** con `http.MaxBytesReader`: 64 KB en `/api/v1/auth/**` y el de `MAX_BODY_BYTES` para las subidas de imágenes (5 MB por imagen según la rule `seguridad`). El body se reenvía en streaming: no se carga entero en memoria.
-- **Lecturas lentas:** deadline corto en `/api/v1/auth/**` con `http.ResponseController.SetReadDeadline`. Si no, dos clientes que nunca terminan de enviar el body bloquearían a identity.
+- **Límite de body por ruta** con `http.MaxBytesReader`: 64 KB en `/api/v1/auth/**`, 1 MB por defecto en las demás y `MAX_BODY_BYTES` solo en las subidas de imágenes (5 MB por imagen según la rule `seguridad`). El body se reenvía en streaming: no se carga entero en memoria.
+- **Lecturas lentas:** en `/api/v1/auth/**` con body (`r.ContentLength != 0`), deadline de `AUTH_READ_TIMEOUT` (5 s) con `http.ResponseController.SetReadDeadline`. Si no, dos clientes que nunca terminan de enviar el body bloquearían a identity. Sin body no se aplica: cancelaría la request si el destino tarda más que el deadline.
 - `ErrorHandler`:
-  - **Error de conexión (dial) o timeout del destino:** avisa al balancer para marcar la réplica como caída y responde 502 o 504 problem+json, con `detail` fijo. `err.Error()` va solo al log, porque contiene direcciones internas.
-  - **El cliente canceló** (`r.Context().Err() != nil`): **no marca la réplica**. Si la marcara, cerrar una pestaña en pleno login dejaría a identity en 503 para todos.
-  - **`*http.MaxBytesError`:** responde 413 y **no marca la réplica**.
+  - **Solo se marca la réplica si la culpa es del destino.** Para distinguirlo, `r.Body` se envuelve y registra sus errores de lectura:
+    - **El cliente canceló** (`r.Context().Err() != nil`): no marca. Si marcara, cerrar una pestaña en pleno login dejaría a identity en 503 para todos.
+    - **`*http.MaxBytesError`:** 413, no marca.
+    - **Falló la lectura del body del cliente** (por ejemplo, un chunked malformado): 400, no marca. Si marcara, una sola request sacaría réplicas de servicio.
+    - **Cualquier otro error de transporte** (dial, reset, timeout): marca la réplica y responde 502 o 504.
+  - El `detail` es fijo. `err.Error()` va solo al log, porque contiene direcciones internas.
   - **5xx de negocio del servicio:** se devuelve tal cual. No marca la réplica.
 - **Sin reintentos automáticos** de `POST`, `PUT`, `PATCH` ni `DELETE` en otra réplica: podrían duplicar efectos. Si se agregan reintentos, solo para `GET` y `HEAD`.
 
@@ -110,6 +114,7 @@ Todos en `application/problem+json`, con `code` estable y `correlationId`:
 |---|---|---|
 | 401 | `GATEWAY_UNAUTHORIZED` | Falta el token o es inválido en una ruta protegida |
 | 404 | `GATEWAY_ROUTE_NOT_FOUND` | Ningún prefijo coincide |
+| 400 | `GATEWAY_BAD_REQUEST` | Path con `..` o `//`, o body del cliente ilegible |
 | 413 | `GATEWAY_PAYLOAD_TOO_LARGE` | El body supera el límite |
 | 429 | `GATEWAY_RATE_LIMITED` | Rate limit |
 | 502 | `GATEWAY_UPSTREAM_ERROR` | Error de conexión con la réplica |
@@ -128,7 +133,8 @@ Todos en `application/problem+json`, con `code` estable y `correlationId`:
 | `RATE_LIMIT_AUTH_PER_MINUTE` | `10` |
 | `UPSTREAM_TIMEOUT` | `10s` |
 | `REPLICA_DOWN_DURATION` | `30s` |
-| `MAX_BODY_BYTES` | `10485760` |
+| `MAX_BODY_BYTES` (solo imágenes) | `10485760` |
+| `AUTH_READ_TIMEOUT` | `5s` |
 
 ## Tests
 
@@ -138,7 +144,9 @@ Con `go test ./...`, table-driven y con `net/http/httptest`. **Sin Consul ni ser
 - **Round robin:** con 3 servidores falsos, las requests se reparten en orden.
 - **Circuit Breaker:** una réplica que corta la conexión queda fuera y vuelve después del tiempo configurado.
 - **Auth:** genera un par RSA en el test y sirve un JWKS falso. Sin token, vencido, sin `exp`, `alg=none`, HS256 firmado con la clave pública, `iss` o `aud` incorrectos, refresh token (`typ=rt+jwt`) y `kid` desconocido → 401. Token válido → llega con `Authorization` intacto.
-- **Circuit Breaker:** un cliente que cancela o un body demasiado grande no marcan la réplica.
+- **Circuit Breaker:** un cliente que cancela, un body demasiado grande o un chunked malformado no marcan la réplica.
+- **JWKS:** muchos tokens con `kid` al azar generan una sola recarga.
+- **Paths:** `..`, `%2e%2e` y `//` responden 400.
 - **Headers:** un `X-User-Id` del cliente no llega al servicio.
 - **CORS y rate limit:** el preflight responde los headers correctos; la request N+1 al login da 429.
 

@@ -93,7 +93,7 @@ GET /api/v1/search/properties?zone=equipetrol&type=HOUSE&operation=SALE
 ## Seguridad
 
 - `Authorization: Bearer <jwt>` en todo lo que no es público.
-  - Públicos: catálogo, detalle de propiedad, imágenes de una propiedad, registro, login, refresh y JWKS.
+  - Públicos: catálogo y detalle (`/api/v1/search/properties[/{id}]`), imágenes de una propiedad, registro, login, refresh y JWKS.
   - El refresh es público para el gateway porque se usa justamente cuando el access token ya venció. Su credencial es el propio refresh token, en el body.
 - La **autorización de dominio** (¿es el agente dueño de la propiedad?) va en la capa de aplicación, no solo en el gateway.
 - CORS y rate limit se configuran **en el gateway**, no en cada servicio.

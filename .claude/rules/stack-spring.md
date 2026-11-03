@@ -40,9 +40,9 @@ presentation/
   - `spring.jpa.hibernate.ddl-auto=validate`.
 - **Validación:** Bean Validation (`@Valid`) en los DTOs de `presentation`. Las reglas de negocio van en el aggregate.
 - **Errores:** `ProblemDetail` nativo de Spring 6+ con `code` y `correlationId` como propiedades extra.
-- **Seguridad:** `spring-boot-starter-oauth2-resource-server` con `jwk-set-uri` apuntando a identity. Los roles se toman del claim `roles`.
+- **Seguridad:** `spring-boot-starter-oauth2-resource-server` con `jwk-set-uri` apuntando a identity. Los roles se toman del claim `roles`. El access token lleva `typ=at+jwt`: hay que configurar el decoder para aceptarlo y rechazar `rt+jwt` (verificar el default de `NimbusJwtDecoder`).
 - **Kafka:** `spring-kafka`. El `OutboxRelay` publica con `KafkaTemplate` usando como clave el `aggregateId`.
-- **Imágenes:** `POST /api/v1/properties/{id}/images` (multipart) → puerto `ImageStorage` (patrón Adapter).
+- **Imágenes:** `POST /api/v1/properties/{id}/images` (multipart) → puerto `ImageStorage` (patrón Adapter). `GET /api/v1/properties/{id}/images/{imageId}` es público y responde 404 si la propiedad está en `DRAFT` o `PAUSED`.
 - **OpenAPI:** `springdoc-openapi`, con Swagger UI en `/docs`. Debe coincidir con `contracts/openapi/listing-service.yaml`.
 - **Eventos que produce:** `PropertyPublished`, `PropertyUpdated`, `PropertyPaused`, `PropertyReserved`, `PropertySold` y `PropertyRented` en `listing.property.events`.
 - **Favoritos:**
@@ -70,6 +70,7 @@ spring.cloud.consul.discovery.health-check-critical-timeout=1m
   - `management.endpoints.web.path-mapping.health=health`.
   - Un grupo de health `ready` que incluya la base.
 - La baja al apagar la hace la librería (`deregister=true` por defecto).
+- **Registro periódico:** verificar si el starter vuelve a registrar cuando Consul se reinicia. Si no, agregar un `@Scheduled` que llame a `ConsulServiceRegistry.register(registration)` cada 60 s.
 
 ## Comandos
 

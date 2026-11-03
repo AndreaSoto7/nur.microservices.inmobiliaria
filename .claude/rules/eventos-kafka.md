@@ -61,7 +61,7 @@ Cada `payload` tiene su schema en `contracts/events/<servicio>/<evento-kebab>.v<
   - Nunca te quedes en un loop infinito ni tumbes el consumidor.
 - **Ignora** los `eventType` que no conoces, sin fallar. Así se pueden agregar eventos nuevos al topic sin romperte.
 - **Filtra por `(eventType, eventVersion)`** e ignora las versiones que no conoces. Mientras conviven v1 y v2, procesa una sola versión de cada hecho.
-- **Arranca desde el principio del topic** (`fromBeginning`, `auto.offset.reset=earliest`). Así un consumidor nuevo o reconstruido conoce las propiedades ya publicadas.
+- **search y visit arrancan desde el principio del topic** (`fromBeginning`, `auto.offset.reset=earliest`), para conocer las propiedades ya publicadas. **notification arranca desde el final** (`latest`): si no, con una base vacía reenviaría todos los avisos históricos.
 - Traduce el evento a tu propio modelo (anti-corruption layer). No reutilices clases del productor.
 
 ## Versionado de eventos
@@ -77,4 +77,4 @@ Cada `payload` tiene su schema en `contracts/events/<servicio>/<evento-kebab>.v<
 
 - Kafka corre en modo KRaft (sin Zookeeper) dentro de `infra/docker-compose.yml`. Kafka UI está en `http://localhost:8090`.
 - Los topics se crean explícitamente en el compose o en un script de init. No dependas de la autocreación.
-- **Retención:** `retention.ms=-1` en los topics de estado (`listing.property.events`, `identity.user.events`). Sin compactación: el último evento de una propiedad, como `PropertyPaused`, puede no llevar el estado completo.
+- **Retención:** `retention.ms=-1` en `listing.property.events`, sin compactación (el último evento de una propiedad, como `PropertyPaused`, puede no llevar el estado completo). `identity.user.events` usa la retención por defecto, porque lleva datos personales.

@@ -48,7 +48,7 @@ Se hace **después de que el servidor HTTP ya escucha**, para que el primer heal
 - **Dirección:** la IP del contenedor, que se obtiene resolviendo el propio hostname. **Nunca `localhost` ni `127.0.0.1`:** Consul y el gateway no podrían llegar.
 - **`DeregisterCriticalServiceAfter`:** hace que Consul borre solas las réplicas que mueren sin darse de baja.
 - **Si Consul no está disponible, el servicio arranca igual:** el registro no bloquea el arranque ni el apagado.
-- **El registro se repite de forma periódica (cada 60 s).** Es obligatorio: Consul en modo dev guarda todo en memoria, así que si se reinicia, o si Consul borró una réplica que estuvo crítica, el servicio vuelve a aparecer solo. El `PUT` es idempotente.
+- **El registro se repite de forma periódica (cada 60 s), y ese ciclo se detiene antes de la baja:** un `PUT` tardío revive una réplica muerta. Es obligatorio: Consul en modo dev guarda todo en memoria, así que si se reinicia, o si Consul borró una réplica que estuvo crítica, el servicio vuelve a aparecer solo. El `PUT` es idempotente.
 
 ### Baja
 
@@ -68,8 +68,8 @@ El apagado completo debe tardar menos que los 10 s de `docker stop`. Si no, Dock
 
 ## Docker Compose
 
-- **`infra/docker-compose.yml`** publica en el host solo el gateway, el frontend, la UI de Consul y la UI de Kafka.
-- **`infra/docker-compose.debug.yml`** publica además los puertos de los servicios, las bases y Kafka. No se combina con `--scale`.
+- **`infra/docker-compose.yml`** publica en el host el gateway y el frontend. La UI de Consul y la de Kafka, solo en `127.0.0.1`: el puerto 8500 también sirve la API de escritura de Consul.
+- **`infra/docker-compose.debug.yml`** publica además, solo en `127.0.0.1`, los puertos de los servicios, las bases y Kafka. No se combina con `--scale`.
 - **Ningún servicio usa `container_name`.** Si lo tuviera, `--scale` fallaría.
 - **Arranque:** los servicios declaran `depends_on` de Consul con `condition: service_healthy`, además de los reintentos de registro.
 - **Demo de balanceo:** `docker compose -f infra/docker-compose.yml up -d --scale listing-service=3`.

@@ -12,9 +12,9 @@
 
 ## Pendientes
 
-- [ ] `infra/docker-compose.yml` base: publica solo el gateway, el frontend, la UI de Consul y la UI de Kafka (ADR 0002)
-- [ ] `infra/docker-compose.debug.yml`: puertos de los servicios (8001–8005) y de las bases (5433–5437)
-- [ ] Kafka en modo KRaft + Kafka UI, con los topics creados explícitamente
+- [ ] `infra/docker-compose.yml` base: publica el gateway y el frontend; la UI de Consul y la de Kafka solo en `127.0.0.1` (ADR 0002)
+- [ ] `infra/docker-compose.debug.yml`: servicios (8001–8005), bases (5433–5437) y Kafka (9092), todo solo en `127.0.0.1`
+- [ ] Kafka en modo KRaft + Kafka UI, con los topics creados explícitamente; `retention.ms=-1` en `listing.property.events`
 - [ ] Consul en modo dev
 - [ ] Un PostgreSQL por servicio
 - [ ] Cada responsable agrega su servicio al compose, sin `container_name`
