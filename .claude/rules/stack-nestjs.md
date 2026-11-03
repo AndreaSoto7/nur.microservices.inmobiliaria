@@ -49,7 +49,8 @@ Sigue el contrato de la rule `service-discovery`.
 
 - Un `ConsulRegistrationService` en `shared/discovery/` hace el `PUT` de registro con el `fetch` nativo de Node. No hace falta una librería de Consul.
 - **Registro:** en `main.ts`, **después** de `await app.listen(...)`.
-- **Baja:** `app.enableShutdownHooks()`, y el servicio implementa `OnApplicationShutdown` para darse de baja.
+- **Registro periódico:** un `setInterval` de 60 s repite el `PUT`.
+- **Baja:** `app.enableShutdownHooks()`, y el servicio implementa `OnApplicationShutdown`: detiene el intervalo y después se da de baja.
 - **IP del contenedor:** `os.hostname()` + `dns.promises.lookup`, salvo que `SERVICE_ADDRESS` venga lleno.
 - **Health:** `GET /health` y `GET /health/ready` en un controlador de `shared/`, fuera del prefijo `/api/v1`. Para `ready` se puede usar `@nestjs/terminus`.
 

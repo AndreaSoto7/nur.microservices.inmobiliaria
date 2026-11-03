@@ -47,17 +47,19 @@ Se hace **después de que el servidor HTTP ya escucha**, para que el primer heal
 - **ID único por réplica:** `<servicio>-<hostname>`. En Docker, el hostname es el ID corto del contenedor.
 - **Dirección:** la IP del contenedor, que se obtiene resolviendo el propio hostname. **Nunca `localhost` ni `127.0.0.1`:** Consul y el gateway no podrían llegar.
 - **`DeregisterCriticalServiceAfter`:** hace que Consul borre solas las réplicas que mueren sin darse de baja.
-- **Si Consul todavía no está listo,** se reintenta con backoff. El servicio no se cae por eso.
-- **Consul en modo dev guarda todo en memoria.** Si se reinicia, los servicios deben volver a registrarse. El `PUT` es idempotente, así que se puede repetir de forma periódica (por ejemplo, cada 60 s) sin efectos secundarios.
+- **Si Consul no está disponible, el servicio arranca igual:** el registro no bloquea el arranque ni el apagado.
+- **El registro se repite de forma periódica (cada 60 s), y ese ciclo se detiene antes de la baja:** un `PUT` tardío revive una réplica muerta. Es obligatorio: Consul en modo dev guarda todo en memoria, así que si se reinicia, o si Consul borró una réplica que estuvo crítica, el servicio vuelve a aparecer solo. El `PUT` es idempotente.
 
 ### Baja
 
-Al recibir `SIGTERM`, el servicio llama a `PUT {CONSUL_HTTP_ADDR}/v1/agent/service/deregister/<ID>` y después cierra el servidor.
+Al recibir `SIGTERM`, el servicio llama a `PUT {CONSUL_HTTP_ADDR}/v1/agent/service/deregister/<ID>` y cierra el servidor. El orden ideal es dar de baja primero. Donde el framework no lo permita (gunicorn ejecuta `on_exit` al final), se acepta el orden inverso: la ventana es corta y la cubren `DeregisterCriticalServiceAfter` y el Circuit Breaker del gateway.
+
+El apagado completo debe tardar menos que los 10 s de `docker stop`. Si no, Docker mata el proceso y la baja no ocurre.
 
 ### Health
 
 - **`GET /health`** (liveness) es el check de Consul. Responde 200 rápido y **no depende de la base ni de Kafka**: si la base parpadea, no conviene que Consul saque todas las réplicas a la vez.
-- **`GET /health/ready`** (readiness) sí revisa sus dependencias. Lo usan Docker y la depuración.
+- **`GET /health/ready`** (readiness) sí revisa sus dependencias. Lo usan el `HEALTHCHECK` de Docker y la depuración.
 
 ## Qué no se registra
 
@@ -66,8 +68,8 @@ Al recibir `SIGTERM`, el servicio llama a `PUT {CONSUL_HTTP_ADDR}/v1/agent/servi
 
 ## Docker Compose
 
-- **`infra/docker-compose.yml`** publica en el host solo el gateway, el frontend, la UI de Consul y la UI de Kafka.
-- **`infra/docker-compose.debug.yml`** publica además los puertos de los servicios, las bases y Kafka. No se combina con `--scale`.
+- **`infra/docker-compose.yml`** publica en el host el gateway y el frontend. La UI de Consul y la de Kafka, solo en `127.0.0.1`: el puerto 8500 también sirve la API de escritura de Consul.
+- **`infra/docker-compose.debug.yml`** publica además, solo en `127.0.0.1`, los puertos de los servicios, las bases y Kafka. No se combina con `--scale`.
 - **Ningún servicio usa `container_name`.** Si lo tuviera, `--scale` fallaría.
 - **Arranque:** los servicios declaran `depends_on` de Consul con `condition: service_healthy`, además de los reintentos de registro.
 - **Demo de balanceo:** `docker compose -f infra/docker-compose.yml up -d --scale listing-service=3`.

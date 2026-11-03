@@ -66,7 +66,7 @@
 ### Balanceador dentro del gateway
 
 - **Round robin** entre las réplicas sanas que devuelve Consul.
-- **Respaldo:** si una réplica falla (error de conexión o timeout), el gateway la marca como caída por un tiempo, aunque Consul todavía no lo haya detectado (Circuit Breaker por réplica).
+- **Respaldo:** si una réplica falla (error de transporte del destino, no del cliente), el gateway la marca como caída por un tiempo, aunque Consul todavía no lo haya detectado (Circuit Breaker por réplica).
 - **Strategy:** el algoritmo va detrás de una interfaz, para poder cambiarlo (por ejemplo, por menor cantidad de conexiones) sin tocar el proxy.
 - **Demo:** `listing-service` se escala a 3 réplicas.
 
@@ -80,10 +80,11 @@
 
 | Archivo | Qué publica en el host | Para qué |
 |---|---|---|
-| `infra/docker-compose.yml` (base) | Gateway 8080, frontend 5173, UI de Consul 8500 y UI de Kafka 8090 | Uso normal y demo. Los servicios y sus bases no publican puertos: se ven por la red interna y por Consul. Así funciona `--scale`. |
-| `infra/docker-compose.debug.yml` (override) | Servicios 8001–8005, Postgres 5433–5437 y Kafka 9092 | Depurar un servicio desde el host. **No se combina con `--scale`.** |
+| `infra/docker-compose.yml` (base) | Gateway 8080 y frontend 5173. UI de Consul 8500 y UI de Kafka 8090 **solo en `127.0.0.1`** | Uso normal y demo. Los servicios y sus bases no publican puertos: se ven por la red interna y por Consul. Así funciona `--scale`. |
+| `infra/docker-compose.debug.yml` (override) | Servicios 8001–8005, Postgres 5433–5437 y Kafka 9092, **todo solo en `127.0.0.1`** | Depurar un servicio desde el host. **No se combina con `--scale`.** |
 
 - Ningún servicio usa `container_name`, porque impide escalar.
+- Por qué loopback: el puerto 8500 sirve también la API de escritura de Consul, sin ACL. Desde otra máquina de la red se podría registrar un `identity-service` falso.
 - Comando de la demo: `docker compose -f infra/docker-compose.yml up -d --scale listing-service=3`.
 
 ## Justificación
@@ -107,7 +108,7 @@
 ### Qué se pierde o qué riesgo se asume
 
 - El gateway es un punto único de falla. Se acepta en un proyecto académico.
-- **Consul en modo dev guarda todo en memoria.** Si se reinicia, los servicios deben volver a registrarse: se reinician o reintentan el registro.
+- **Consul en modo dev guarda todo en memoria.** Si se reinicia, los servicios vuelven a registrarse solos, porque repiten el registro cada 60 s.
 - **Llamadas HTTP síncronas que este ADR autoriza** (regla de oro 2):
   - De los servicios y el gateway hacia la API de Consul.
   - Del gateway hacia los servicios.

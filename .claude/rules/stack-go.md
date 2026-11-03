@@ -48,11 +48,12 @@ Sigue el contrato de la rule `service-discovery`.
 - En `main`, primero se abre el listener (`net.Listen`) y se sirve en una goroutine. Recién después se registra, para que el primer health check encuentre el servidor arriba.
 - La IP del contenedor se obtiene con `os.Hostname()` + `net.LookupHost`, salvo que `SERVICE_ADDRESS` venga lleno.
 - El registro y la baja son un `PUT` con `net/http` y `encoding/json`. No hace falta el SDK de Consul.
+- Una goroutine con `time.Ticker` repite el registro cada 60 s. Al apagar, se detiene antes de la baja.
 
 ## search-service (modelo de lectura, CQRS)
 
 - Consume `listing.property.events`. Hace upsert de la proyección por `propertyId` e ignora los eventos más viejos que el último aplicado.
-- En el catálogo solo aparecen las propiedades `PUBLISHED`. Las `RESERVED` se muestran marcadas como tales; las `PAUSED`, `SOLD` y `RENTED` se ocultan.
+- En el catálogo aparecen las propiedades `PUBLISHED` y las `RESERVED`, estas marcadas como tales. Las `PAUSED`, `SOLD` y `RENTED` se ocultan.
 - `GET /api/v1/search/properties` (filtros, paginación y orden según la rule `api-rest`) y `GET /api/v1/search/properties/{id}`.
 - Criterios de búsqueda con **Builder / functional options** y filtros combinables (**Specification**), con índices en la base para zona, tipo, precio y dormitorios.
 

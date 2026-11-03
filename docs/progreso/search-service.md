@@ -21,5 +21,6 @@
 **Catálogo (lado query de CQRS)**
 
 - [ ] Proyección del catálogo: consumir `listing.property.events` con upsert por `propertyId`, idempotente
+- [ ] Comparar `zone` sin distinguir mayúsculas
 - [ ] Buscar con filtros: zona, tipo, operación, precio, dormitorios y características, con paginación y orden
 - [ ] Detalle de una propiedad

@@ -73,7 +73,7 @@ El destino es el nombre del servicio en Consul. El gateway elige una réplica sa
 }
 ```
 
-`code` es estable y está en `UPPER_SNAKE_CASE`, prefijado por el aggregate. `errors` solo aparece en los errores de validación.
+`code` es estable y está en `UPPER_SNAKE_CASE`, prefijado por el aggregate o el área (`PROPERTY_*`, `USER_*`, `AUTH_*`, `GATEWAY_*`). Los errores genéricos no llevan prefijo (`VALIDATION_ERROR`, `NOT_FOUND`, `INTERNAL_ERROR`). `errors` solo aparece en los errores de validación.
 
 ## Filtros, paginación y ordenamiento
 
@@ -93,7 +93,8 @@ GET /api/v1/search/properties?zone=equipetrol&type=HOUSE&operation=SALE
 ## Seguridad
 
 - `Authorization: Bearer <jwt>` en todo lo que no es público.
-  - Públicos: catálogo, detalle de propiedad, registro, login y JWKS.
+  - Públicos: catálogo y detalle (`/api/v1/search/properties[/{id}]`), imágenes de una propiedad, registro, login, refresh y JWKS.
+  - El refresh es público para el gateway porque se usa justamente cuando el access token ya venció. Su credencial es el propio refresh token, en el body.
 - La **autorización de dominio** (¿es el agente dueño de la propiedad?) va en la capa de aplicación, no solo en el gateway.
 - CORS y rate limit se configuran **en el gateway**, no en cada servicio.
 - Valida toda entrada en `presentation` (formato) y en `domain` (reglas).

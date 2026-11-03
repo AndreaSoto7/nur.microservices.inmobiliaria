@@ -49,7 +49,7 @@ Cada `payload` tiene su schema en `contracts/events/<servicio>/<evento-kebab>.v<
 - **Patrón Outbox.** En la misma transacción en que se guarda el aggregate, se inserta el evento en la tabla `outbox`. Un relay publica en Kafka y marca la fila como enviada.
   - Nunca publiques en Kafka dentro de la transacción de base de datos ni antes del commit.
 - Configura el productor con `acks=all` y en modo idempotente cuando la librería lo permita.
-- El payload lleva lo que los consumidores necesitan para no tener que llamarte por HTTP (*event-carried state transfer*), sin datos sensibles. Ejemplo: `PropertyPublished` lleva precio, zona, tipo, dormitorios, características e imagen de portada.
+- El payload lleva lo que los consumidores necesitan para no tener que llamarte por HTTP (*event-carried state transfer*), sin datos sensibles (contraseñas, tokens). Un email solo va si el consumidor lo necesita para notificar. Ejemplo: `PropertyPublished` lleva precio, zona, tipo, dormitorios, características e imagen de portada.
 
 ## Consumidor
 
@@ -60,6 +60,8 @@ Cada `payload` tiene su schema en `contracts/events/<servicio>/<evento-kebab>.v<
   - Si sigue fallando, manda el mensaje a `<topic>.dlq` con el error y continúa.
   - Nunca te quedes en un loop infinito ni tumbes el consumidor.
 - **Ignora** los `eventType` que no conoces, sin fallar. Así se pueden agregar eventos nuevos al topic sin romperte.
+- **Filtra por `(eventType, eventVersion)`** e ignora las versiones que no conoces. Mientras conviven v1 y v2, procesa una sola versión de cada hecho.
+- **search y visit arrancan desde el principio del topic** (`fromBeginning`, `auto.offset.reset=earliest`), para conocer las propiedades ya publicadas. **notification arranca desde el final** (`latest`): si no, con una base vacía reenviaría todos los avisos históricos.
 - Traduce el evento a tu propio modelo (anti-corruption layer). No reutilices clases del productor.
 
 ## Versionado de eventos
@@ -75,3 +77,4 @@ Cada `payload` tiene su schema en `contracts/events/<servicio>/<evento-kebab>.v<
 
 - Kafka corre en modo KRaft (sin Zookeeper) dentro de `infra/docker-compose.yml`. Kafka UI está en `http://localhost:8090`.
 - Los topics se crean explícitamente en el compose o en un script de init. No dependas de la autocreación.
+- **Retención:** `retention.ms=-1` en `listing.property.events`, sin compactación (el último evento de una propiedad, como `PropertyPaused`, puede no llevar el estado completo). `identity.user.events` usa la retención por defecto, porque lleva datos personales.

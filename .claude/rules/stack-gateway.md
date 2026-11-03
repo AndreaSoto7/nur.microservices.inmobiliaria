@@ -40,10 +40,11 @@ Módulo: `github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway`. Las co
 
 - La tabla de rutas es la de la rule `api-rest` ("Mapa de rutas del gateway"). El destino es un **nombre de servicio de Consul** (`listing-service`), nunca una dirección fija.
 - El path se reenvía **sin reescribirlo**: el servicio recibe `/api/v1/...` igual que el cliente.
-- **Rutas públicas** (sin JWT):
+- **Rutas públicas** (sin JWT). Las de auth se comparan **de forma exacta**, por método y path, no por prefijo. Los paths con segmentos `..` o vacíos (`//`) se rechazan con 400, evaluando por segmentos sobre `r.URL.Path` ya decodificado, para que `%2e%2e` tampoco pase. Así `/api/v1/auth/../users/x` no se salta el JWT.
   - `GET /api/v1/search/**`
-  - Registro, login y refresh de `/api/v1/auth/**`
-  - El JWKS (`/api/v1/auth/.well-known/jwks.json`)
+  - `GET /api/v1/properties/{propertyId}/images/{imageId}`
+  - `POST /api/v1/auth/register`, `POST /api/v1/auth/login` y `POST /api/v1/auth/refresh`
+  - `GET /api/v1/auth/.well-known/jwks.json`
   - `GET /health`
 - El resto exige `Authorization: Bearer`.
 - Prefijo desconocido → 404 problem+json.
@@ -53,26 +54,36 @@ Módulo: `github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway`. Las co
 Cada middleware recibe un `http.Handler` y devuelve otro (`func(http.Handler) http.Handler`). Cada eslabón puede cortar la cadena (401, 429) o pasar al siguiente. El orden importa:
 
 1. **Recover:** un `panic` se convierte en 500 problem+json y no tumba el proceso.
-2. **Correlation-id:** si no llega `X-Correlation-Id`, se genera un UUID. Se reenvía al servicio y se devuelve en la respuesta.
+2. **Correlation-id:** si no llega `X-Correlation-Id` o no cumple `^[A-Za-z0-9._-]{1,128}$`, se genera un UUID. Se reenvía al servicio y se devuelve en la respuesta.
 3. **Logging:** método, ruta, status, duración, correlationId y réplica destino. Nunca el header `Authorization` ni el body.
-4. **CORS:** origen permitido por variable de entorno (`http://localhost:5173`). Responde el preflight `OPTIONS` antes de la auth. Nunca `*` con credenciales.
+4. **CORS:** origen permitido por variable de entorno (`http://localhost:5173`), con comparación exacta y `Vary: Origin`. Responde el preflight `OPTIONS` antes de la auth. Nunca `*`. Con Bearer no hace falta `Allow-Credentials`.
 5. **Borrado de headers de identidad:** borra cualquier `X-User-*` que llegue del cliente.
-6. **Rate limit:** token bucket por IP en login y registro (`golang.org/x/time/rate`). La IP sale de `r.RemoteAddr`, no de un `X-Forwarded-For` enviado por el cliente.
+6. **Rate limit:** token bucket por IP y ruta en login y registro (`golang.org/x/time/rate`).
+   - La IP sale de `r.RemoteAddr` con `net.SplitHostPort` (sin el puerto; con él, cada conexión tendría su propio límite), no de un `X-Forwarded-For` enviado por el cliente.
+   - Las entradas viejas del mapa expiran.
+   - Comprobar una vez, de forma puntual, qué IP ve el gateway: en algunos entornos de Docker todos los clientes llegan con la misma IP, y el límite pasaría a ser global. La IP no se loguea de forma permanente (es un dato personal).
 7. **Auth:** en las rutas protegidas valida firma RS256, `exp`, `iss` y `aud`.
-   - Fija el algoritmo esperado: rechaza `none` y `HS256`.
+   - Fija el algoritmo y los claims: `jwt.WithValidMethods(["RS256"])`, `WithExpirationRequired()`, `WithIssuer` y `WithAudience`. Rechaza `none` y `HS256`.
    - Exige `typ=at+jwt` en el header. Así un refresh token, que tiene `aud=identity-service` y `typ=rt+jwt`, nunca pasa.
    - Si el token es válido, **reenvía `Authorization` intacto**: cada servicio vuelve a validar.
 8. **Proxy.**
 
 ## Proxy (patrón Proxy)
 
-- Se usa `httputil.ReverseProxy` con la función `Rewrite` (no `Director`). Allí se elige la réplica y se llama a `SetXForwarded()`.
+- Se usa `httputil.ReverseProxy` con la función `Rewrite` (no `Director`), que llama a `SetURL()` y `SetXForwarded()`.
+- **La réplica se elige antes de `ServeHTTP`** y se pasa por el contexto: `Rewrite` no puede responder, así que el 503 por falta de réplicas se resuelve antes.
 - **Timeouts:**
   - Del servidor: `ReadHeaderTimeout` (evita Slowloris), `ReadTimeout`, `WriteTimeout` e `IdleTimeout`.
   - Hacia el destino: un `http.Transport` con `ResponseHeaderTimeout`.
-- **Límite de body** con `http.MaxBytesReader`, compatible con las subidas de imágenes (5 MB por imagen según la rule `seguridad`). El body se reenvía en streaming: no se carga entero en memoria.
+- **Límite de body por ruta** con `http.MaxBytesReader`: 64 KB en `/api/v1/auth/**`, 1 MB por defecto en las demás y `MAX_BODY_BYTES` solo en las subidas de imágenes (5 MB por imagen según la rule `seguridad`). El body se reenvía en streaming: no se carga entero en memoria.
+- **Lecturas lentas:** en `/api/v1/auth/**` con body (`r.ContentLength != 0`), deadline de `AUTH_READ_TIMEOUT` (5 s) con `http.ResponseController.SetReadDeadline`. Si no, dos clientes que nunca terminan de enviar el body bloquearían a identity. Sin body no se aplica: cancelaría la request si el destino tarda más que el deadline.
 - `ErrorHandler`:
-  - **Error de conexión o timeout del destino:** avisa al balancer para marcar la réplica como caída y responde 502 o 504 problem+json.
+  - **Solo se marca la réplica si la culpa es del destino.** Para distinguirlo, `r.Body` se envuelve y registra sus errores de lectura:
+    - **El cliente canceló** (`r.Context().Err() != nil`): no marca. Si marcara, cerrar una pestaña en pleno login dejaría a identity en 503 para todos.
+    - **`*http.MaxBytesError`:** 413, no marca.
+    - **Falló la lectura del body del cliente** (por ejemplo, un chunked malformado): 400, no marca. Si marcara, una sola request sacaría réplicas de servicio.
+    - **Cualquier otro error de transporte** (dial, reset, timeout): marca la réplica y responde 502 o 504.
+  - El `detail` es fijo. `err.Error()` va solo al log, porque contiene direcciones internas.
   - **5xx de negocio del servicio:** se devuelve tal cual. No marca la réplica.
 - **Sin reintentos automáticos** de `POST`, `PUT`, `PATCH` ni `DELETE` en otra réplica: podrían duplicar efectos. Si se agregan reintentos, solo para `GET` y `HEAD`.
 
@@ -93,7 +104,7 @@ Cada middleware recibe un `http.Handler` y devuelve otro (`func(http.Handler) ht
 - **Snapshot:** se guarda en memoria y se lee de forma concurrente (`sync.RWMutex` o `atomic.Pointer`).
 - **Si Consul no responde:** se conserva el último snapshot, se loguea un warning y se reintenta en el siguiente ciclo.
 - **El gateway no se registra en Consul.** Nadie necesita descubrirlo.
-- El JWKS de identity también se resuelve por discovery (`identity-service`). Se cachea y se refresca cuando llega un `kid` desconocido.
+- El JWKS de identity también se resuelve por discovery (`identity-service`). Se cachea y se refresca cuando llega un `kid` desconocido, **como máximo una vez cada 30 s y con una sola recarga en curso** (`singleflight`). Si el `kid` sigue sin aparecer, 401. Sin ese freno, cada request con un `kid` al azar generaría una llamada a identity.
 
 ## Errores propios del gateway
 
@@ -103,6 +114,7 @@ Todos en `application/problem+json`, con `code` estable y `correlationId`:
 |---|---|---|
 | 401 | `GATEWAY_UNAUTHORIZED` | Falta el token o es inválido en una ruta protegida |
 | 404 | `GATEWAY_ROUTE_NOT_FOUND` | Ningún prefijo coincide |
+| 400 | `GATEWAY_BAD_REQUEST` | Path con `..` o `//`, o body del cliente ilegible |
 | 413 | `GATEWAY_PAYLOAD_TOO_LARGE` | El body supera el límite |
 | 429 | `GATEWAY_RATE_LIMITED` | Rate limit |
 | 502 | `GATEWAY_UPSTREAM_ERROR` | Error de conexión con la réplica |
@@ -121,7 +133,8 @@ Todos en `application/problem+json`, con `code` estable y `correlationId`:
 | `RATE_LIMIT_AUTH_PER_MINUTE` | `10` |
 | `UPSTREAM_TIMEOUT` | `10s` |
 | `REPLICA_DOWN_DURATION` | `30s` |
-| `MAX_BODY_BYTES` | `10485760` |
+| `MAX_BODY_BYTES` (solo imágenes) | `10485760` |
+| `AUTH_READ_TIMEOUT` | `5s` |
 
 ## Tests
 
@@ -130,7 +143,10 @@ Con `go test ./...`, table-driven y con `net/http/httptest`. **Sin Consul ni ser
 - **Ruteo:** el prefijo correcto llega al servicio correcto; un prefijo desconocido da 404.
 - **Round robin:** con 3 servidores falsos, las requests se reparten en orden.
 - **Circuit Breaker:** una réplica que corta la conexión queda fuera y vuelve después del tiempo configurado.
-- **Auth:** genera un par RSA en el test y sirve un JWKS falso. Sin token → 401, token vencido → 401, token válido → llega con `Authorization` intacto.
+- **Auth:** genera un par RSA en el test y sirve un JWKS falso. Sin token, vencido, sin `exp`, `alg=none`, HS256 firmado con la clave pública, `iss` o `aud` incorrectos, refresh token (`typ=rt+jwt`) y `kid` desconocido → 401. Token válido → llega con `Authorization` intacto.
+- **Circuit Breaker:** un cliente que cancela, un body demasiado grande o un chunked malformado no marcan la réplica.
+- **JWKS:** muchos tokens con `kid` al azar generan una sola recarga.
+- **Paths:** `..`, `%2e%2e` y `//` responden 400.
 - **Headers:** un `X-User-Id` del cliente no llega al servicio.
 - **CORS y rate limit:** el preflight responde los headers correctos; la request N+1 al login da 429.
 

@@ -37,7 +37,7 @@ Django tiende a MVC/MTV. Aquí el **modelo de Django es persistencia** (`infrast
   - El refresh token usa `aud=identity-service` y `typ=rt+jwt`: ningún otro servicio lo acepta.
 - **JSON en camelCase:** `djangorestframework-camel-case` (parser y renderer) en `REST_FRAMEWORK`.
 - **Errores:** `EXCEPTION_HANDLER` propio que devuelve `application/problem+json` (ver la rule `api-rest`).
-- **OpenAPI:** `drf-spectacular`. Se exporta a `contracts/openapi/identity-service.yaml` y Swagger UI queda en `/docs`.
+- **OpenAPI:** la fuente de verdad es `contracts/openapi/identity-service.yaml`, que **se edita a mano** (contract-first) y nunca se sobrescribe. `drf-spectacular` solo alimenta Swagger UI en `/docs`. Un test de contrato comprueba que las operaciones del YAML existan.
 - **Configuración:** `django-environ`. `DEBUG=False` por defecto; `SECRET_KEY` y credenciales solo desde el entorno.
 - **Kafka:** `confluent-kafka`. El relay de outbox corre como management command (`python manage.py run_outbox_relay`).
 - **Eventos que produce:** `UserRegistered` en `identity.user.events`.
@@ -51,7 +51,9 @@ Sigue el contrato de la rule `service-discovery`.
   - Hook `when_ready` → registro.
   - Hook `on_exit` → baja.
   - Los dos hooks van en `config/gunicorn.conf.py`.
-- **Con `runserver`** (desarrollo) no se registra, salvo que se active con una variable de entorno. Así el autoreload no duplica registros.
+- **Con `runserver`** (desarrollo) no se registra. Así el autoreload no duplica registros.
+- **En el contenedor** el registro se repite en un hilo del proceso maestro, y `graceful_timeout` deja margen frente a los 10 s de `docker stop`.
+- **Workers:** `gthread`, para que dos clientes lentos no bloqueen todo el servicio.
 - **IP del contenedor:** `socket.gethostbyname(socket.gethostname())`, salvo que `SERVICE_ADDRESS` venga lleno.
 - **Health:** `GET /health` y `GET /health/ready` en `presentation/`, fuera del prefijo `/api/v1`.
 
