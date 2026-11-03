@@ -11,9 +11,8 @@ Guía corta para todo el equipo. Si es la primera vez que revisas un PR en GitHu
 | **Todos** | Trabajan en su rama y hacen push solo de su rama | No hacen push a `main` ni `--force` sobre ramas ajenas |
 
 Por qué mergea el autor:
-- Muchos PRs están **encadenados**: uno se apoya en el anterior.
-- Si alguien mergea fuera de orden, la cadena se rompe y hay que rehacer ramas.
-- El autor es quien sabe en qué orden van y quien rebasea el siguiente.
+- Es quien sabe si el cambio está listo y en qué orden entra respecto de sus otros PRs.
+- Es quien debe verificar que el cambio haya llegado a `main`.
 
 ## 2. Cómo revisar y aprobar un PR (paso a paso)
 
@@ -63,26 +62,27 @@ En la lista de PRs de GitHub, o con `gh pr list` / `gh pr view <número>`:
 
 ## 5. Cómo mergea el autor
 
-1. Comprueba que el PR esté **Approved** y que su **base sea `main`**.
+1. Comprueba que el PR esté **Approved** y que su **base sea `main`** (si no lo es, no lo mergees).
 2. Botón **Squash and merge**. Nunca "Create a merge commit" ni "Rebase and merge".
    - Desde la terminal: `gh pr merge <número> --squash`.
    - Si trabajas con Claude Code, también puede hacerlo él: verifica que el PR esté aprobado y **pide confirmación antes de cada merge**.
 3. El título del squash queda como el título del PR (Conventional Commits en español).
 
-### PRs encadenados (stacked)
+### Nada de PRs encadenados
 
-Cuando un PR tiene como base **otra rama** y no `main`, se mergea **después** de su base, en orden. Por ejemplo, `#8 → chore/identity-scaffold` va después de #7.
+**Todo PR tiene base `main`.** Un PR con base en otra rama queda "Merged" en GitHub sin llegar a `main`, y nadie se entera. Ya nos pasó: #9, #10 y #11 quedaron fuera de `main` y hubo que recuperarlos en #13, #14 y #15.
 
-Después de mergear la base, el autor actualiza el PR siguiente:
+Si un trabajo depende de otro, el segundo se abre recién cuando el primero ya está en `main`:
 
 ```bash
-gh pr edit <siguiente> --base main
-git switch <rama-siguiente> && git fetch origin
-git rebase --onto origin/main origin/<rama-base-ya-mergeada>
+git fetch origin
+git switch <rama-siguiente>
+git rebase origin/main
 git push --force-with-lease          # solo en tu propia rama
+gh pr create --base main
 ```
 
-Hace falta porque el squash crea un commit nuevo en `main`. Sin el rebase, el PR siguiente mostraría otra vez los cambios que ya entraron.
+Después de mergear, verifica que el cambio esté en `main`.
 
 ## 6. Qué NO hacer
 
@@ -103,5 +103,5 @@ Hoy estas reglas son un **acuerdo del equipo**: con permiso de escritura, GitHub
   - Do not allow bypassing the above settings.
 - **General → Pull Requests:**
   - Dejar activo solo **Allow squash merging**.
-  - Activar **Automatically delete head branches**: al mergear un PR, GitHub cambia solo la base de los PRs encadenados a `main`. El rebase de la sección 5 sigue haciendo falta.
+  - Activar **Automatically delete head branches**: las ramas ya mergeadas se borran solas.
 - **Opcional:** un archivo `.github/CODEOWNERS`, para que cada servicio y `contracts/` pidan revisión a su responsable de forma automática.
