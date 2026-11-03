@@ -2,10 +2,9 @@
 
 import json
 import logging
-from contextvars import ContextVar
 from datetime import UTC, datetime
 
-correlation_id: ContextVar[str | None] = ContextVar("correlation_id", default=None)
+from identity.application.correlation import correlation_id
 
 
 class CorrelationIdFilter(logging.Filter):

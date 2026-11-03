@@ -11,5 +11,7 @@ urlpatterns = [
     path("api/v1/", include("identity.presentation.urls")),
 ]
 
+handler400 = "identity.presentation.errors.bad_request"
+handler403 = "identity.presentation.errors.permission_denied"
 handler404 = "identity.presentation.errors.not_found"
 handler500 = "identity.presentation.errors.server_error"

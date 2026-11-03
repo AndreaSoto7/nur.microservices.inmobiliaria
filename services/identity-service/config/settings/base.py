@@ -36,6 +36,8 @@ ALLOWED_HOSTS = [
     *env.list("DJANGO_ALLOWED_HOSTS", default=["localhost", "127.0.0.1"]),
     SERVICE_NAME,
     *_container_hosts(),
+    # Si se registra en Consul con otra dirección (depuración), el check llega con ese Host.
+    *([address] if (address := env.str("SERVICE_ADDRESS", default="")) else []),
 ]
 
 INSTALLED_APPS = [
@@ -44,6 +46,11 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     "identity.infrastructure.persistence.apps.PersistenceConfig",
+]
+
+# Swagger UI (/docs) necesita las plantillas de drf_spectacular.
+TEMPLATES = [
+    {"BACKEND": "django.template.backends.django.DjangoTemplates", "APP_DIRS": True},
 ]
 
 MIDDLEWARE = [
@@ -100,7 +107,7 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "OAS_VERSION": "3.1.0",
     "TITLE": "identity-service",
-    "VERSION": "1.0.0",
+    "VERSION": "1.1.1",
     "SERVE_INCLUDE_SCHEMA": False,
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",

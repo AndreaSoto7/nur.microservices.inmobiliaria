@@ -9,8 +9,17 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 
+class StrictCharField(serializers.CharField):
+    """CharField convierte números a texto. El contrato pide string: lo demás responde 400."""
+
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            self.fail("invalid")
+        return super().to_internal_value(data)
+
+
 @extend_schema_field({"type": "string", "enum": ["CLIENT", "AGENT"], "default": "CLIENT"})
-class SelfRegistrationRoleField(serializers.CharField):
+class SelfRegistrationRoleField(StrictCharField):
     """Se documenta como enum, pero la validación la hace el dominio (USER_ROLE_NOT_ALLOWED)."""
 
 
@@ -18,8 +27,8 @@ class RegisterUserRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=254)
     # Sin límites de largo: la política de 8 a 128 es del dominio y se valida antes de hashear.
     # El tamaño total del body ya lo acota Django (DATA_UPLOAD_MAX_MEMORY_SIZE).
-    password = serializers.CharField(write_only=True, trim_whitespace=False)
-    full_name = serializers.CharField(max_length=150)
+    password = StrictCharField(write_only=True, trim_whitespace=False)
+    full_name = StrictCharField(max_length=150)
     role = SelfRegistrationRoleField(required=False, max_length=20)
 
 
@@ -29,7 +38,7 @@ class RegisterUserResponseSerializer(serializers.Serializer):
 
 class LoginRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=254)
-    password = serializers.CharField(write_only=True, trim_whitespace=False, max_length=1024)
+    password = StrictCharField(write_only=True, trim_whitespace=False, max_length=1024)
 
 
 @extend_schema_field({"type": "string", "const": "Bearer"})

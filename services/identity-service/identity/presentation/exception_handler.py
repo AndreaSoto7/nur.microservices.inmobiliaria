@@ -12,7 +12,6 @@ DOMAIN_ERRORS: dict[type[errors.DomainError], tuple[int, str]] = {
     errors.InvalidFullName: (400, "Nombre inválido"),
     errors.WeakPassword: (400, "Contraseña débil"),
     errors.RoleNotAllowed: (400, "Rol no permitido"),
-    errors.MissingRole: (400, "Usuario sin rol"),
     errors.EmailAlreadyRegistered: (409, "Email ya registrado"),
     errors.InvalidCredentials: (401, "Credenciales inválidas"),
 }

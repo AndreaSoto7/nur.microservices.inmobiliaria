@@ -131,3 +131,12 @@ def test_el_log_de_django_request_lleva_el_correlation_id(client):
         logger.removeHandler(capture)
 
     assert [record.correlation_id for record in capture.records] == ["corr-log"]
+
+
+@pytest.mark.parametrize("override", [{"password": 12345678}, {"fullName": 123}, {"role": 1}])
+def test_los_valores_que_no_son_string_responden_400(client, override):
+    response = post(client, a_body(**override))
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "VALIDATION_ERROR"
+    assert not UserModel.objects.exists()

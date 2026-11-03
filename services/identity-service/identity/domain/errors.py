@@ -25,10 +25,6 @@ class RoleNotAllowed(DomainError):
     code = "USER_ROLE_NOT_ALLOWED"
 
 
-class MissingRole(DomainError):
-    code = "USER_MISSING_ROLE"
-
-
 class EmailAlreadyRegistered(DomainError):
     code = "USER_EMAIL_ALREADY_REGISTERED"
 
