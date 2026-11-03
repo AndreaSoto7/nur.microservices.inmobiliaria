@@ -5,6 +5,7 @@ import pytest
 
 from identity.domain.email import Email
 from identity.domain.errors import (
+    InvalidCredentials,
     InvalidFullName,
     MissingRole,
     RoleNotAllowed,
@@ -164,3 +165,17 @@ def test_el_autorregistro_acepta_agent():
 def test_el_autorregistro_rechaza_admin_y_roles_desconocidos(value):
     with pytest.raises(RoleNotAllowed):
         self_registration_role(value)
+
+
+def test_un_usuario_activo_puede_autenticarse():
+    register().ensure_can_authenticate()
+
+
+def test_un_usuario_inactivo_no_puede_autenticarse():
+    user = register()
+    inactive = dataclasses.replace(user, is_active=False)
+
+    with pytest.raises(InvalidCredentials) as error:
+        inactive.ensure_can_authenticate()
+
+    assert error.value.code == "AUTH_INVALID_CREDENTIALS"

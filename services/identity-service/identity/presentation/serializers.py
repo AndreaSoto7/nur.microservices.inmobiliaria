@@ -27,6 +27,38 @@ class RegisterUserResponseSerializer(serializers.Serializer):
     id = serializers.UUIDField()
 
 
+class LoginRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=254)
+    password = serializers.CharField(write_only=True, trim_whitespace=False, max_length=1024)
+
+
+@extend_schema_field({"type": "string", "const": "Bearer"})
+class BearerField(serializers.CharField):
+    pass
+
+
+class TokenPairSerializer(serializers.Serializer):
+    """Respuesta del login. Se serializa directamente desde el DTO TokenPair."""
+
+    access_token = serializers.CharField()
+    refresh_token = serializers.CharField()
+    token_type = BearerField()
+    expires_in = serializers.IntegerField()
+
+
+class JwkSerializer(serializers.Serializer):
+    kty = serializers.ChoiceField(choices=["RSA"])
+    use = serializers.ChoiceField(choices=["sig"])
+    alg = serializers.ChoiceField(choices=["RS256"])
+    kid = serializers.CharField(help_text="Huella RFC 7638 de la clave pública (base64url).")
+    n = serializers.CharField()
+    e = serializers.CharField()
+
+
+class JwksSerializer(serializers.Serializer):
+    keys = JwkSerializer(many=True)
+
+
 class ProblemSerializer(serializers.Serializer):
     """Solo para documentar las respuestas problem+json en /docs."""
 
