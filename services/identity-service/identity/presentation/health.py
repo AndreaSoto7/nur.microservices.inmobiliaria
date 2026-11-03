@@ -4,6 +4,9 @@ from django.db import DatabaseError, connection
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.http import require_GET
 
+from identity import container
+from identity.infrastructure.security.keys import SigningKeyUnavailable
+
 
 @require_GET
 def liveness(request: HttpRequest) -> JsonResponse:
@@ -16,6 +19,8 @@ def liveness(request: HttpRequest) -> JsonResponse:
 def readiness(request: HttpRequest) -> JsonResponse:
     try:
         connection.ensure_connection()
-    except DatabaseError:
+        # Sin clave de firma no se puede emitir tokens: el servicio no está listo.
+        container.signing_key()
+    except (DatabaseError, SigningKeyUnavailable):
         return JsonResponse({"status": "DOWN"}, status=503)
     return JsonResponse({"status": "UP"})

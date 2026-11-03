@@ -68,3 +68,19 @@ def test_el_mapper_ida_y_vuelta_conserva_todos_los_campos():
     assert restored.roles == user.roles
     assert restored.is_active == user.is_active
     assert restored.registered_at == user.registered_at
+
+
+def test_busca_por_email_y_reconstruye_el_agregado():
+    repository = DjangoUserRepository()
+    user = a_user()
+    repository.add(user)
+
+    found = repository.get_by_email(Email("ANA@example.com"))
+
+    assert found == user
+    assert found.roles == frozenset({Role.AGENT})
+    assert found.password_hash == "pbkdf2_sha256$hash"
+
+
+def test_buscar_un_email_inexistente_devuelve_none():
+    assert DjangoUserRepository().get_by_email(Email("nadie@example.com")) is None

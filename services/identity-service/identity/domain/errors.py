@@ -31,3 +31,15 @@ class MissingRole(DomainError):
 
 class EmailAlreadyRegistered(DomainError):
     code = "USER_EMAIL_ALREADY_REGISTERED"
+
+
+INVALID_CREDENTIALS_MESSAGE = "Email o contraseña incorrectos."
+
+
+class InvalidCredentials(DomainError):
+    """Mismo mensaje en todos los casos: no se revela si el email existe ni por qué falló."""
+
+    code = "AUTH_INVALID_CREDENTIALS"
+
+    def __init__(self, message: str = INVALID_CREDENTIALS_MESSAGE) -> None:
+        super().__init__(message)

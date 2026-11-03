@@ -4,13 +4,17 @@ from identity.domain.email import Email
 from identity.domain.errors import EmailAlreadyRegistered
 from identity.domain.repository import UserRepository
 from identity.domain.user import User
-from identity.infrastructure.persistence.mappers import to_model
+from identity.infrastructure.persistence.mappers import to_domain, to_model
 from identity.infrastructure.persistence.models import UserModel
 
 
 class DjangoUserRepository(UserRepository):
     def exists_with_email(self, email: Email) -> bool:
         return UserModel.objects.filter(email=email.value).exists()
+
+    def get_by_email(self, email: Email) -> User | None:
+        model = UserModel.objects.filter(email=email.value).first()
+        return to_domain(model) if model is not None else None
 
     def add(self, user: User) -> None:
         try:

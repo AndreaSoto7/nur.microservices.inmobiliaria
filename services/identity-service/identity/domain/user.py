@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from identity.domain.email import Email
-from identity.domain.errors import MissingRole, RoleNotAllowed
+from identity.domain.errors import InvalidCredentials, MissingRole, RoleNotAllowed
 from identity.domain.events import UserRegistered
 from identity.domain.full_name import FullName
 from identity.domain.role import ROLE_NOT_ALLOWED_MESSAGE, SELF_REGISTRABLE_ROLES, Role
@@ -64,6 +64,11 @@ class User:
             )
         )
         return user
+
+    def ensure_can_authenticate(self) -> None:
+        # Mismo error que una contraseña incorrecta: no se revela que la cuenta existe.
+        if not self.is_active:
+            raise InvalidCredentials()
 
     def pull_events(self) -> list[UserRegistered]:
         """Entrega los eventos registrados y los olvida (se despachan una sola vez)."""
