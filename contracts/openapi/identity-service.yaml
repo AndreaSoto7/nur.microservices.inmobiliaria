@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: identity-service
-  version: 1.1.0
+  version: 1.1.1
   description: |
     Registro, autenticación y emisión de JWT RS256 de la Plataforma Inmobiliaria.
 
@@ -13,7 +13,8 @@ info:
       `aud=identity-service`: solo lo acepta identity. Es de un solo uso: cada refresh entrega un par nuevo, con otros 7 días de vida (sesión deslizante).
     - **Cómo valida un consumidor** (gateway y servicios): firma con el JWKS (eligiendo la clave por `kid`), `alg=RS256`,
       `iss=identity-service`, `aud=inmobiliaria`, `exp` y `typ=at+jwt`. Con eso, un refresh token nunca pasa como access token.
-    - Los errores siguen RFC 9457 (`application/problem+json`).
+    - Los errores siguen RFC 9457 (`application/problem+json`). Además de los documentados en cada operación:
+      identity responde 404 `NOT_FOUND`, 405 `METHOD_NOT_ALLOWED`, 406 `NOT_ACCEPTABLE` y 500 `INTERNAL_ERROR`; el gateway responde 413, 502, 503 y 504 (`GATEWAY_*`).
 servers:
   - url: http://localhost:8080
     description: API Gateway (desarrollo)
@@ -133,7 +134,22 @@ paths:
                 tokenType: Bearer
                 expiresIn: 900
         '400':
-          $ref: '#/components/responses/ValidationError'
+          description: Body mal formado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://inmobiliaria.local/problems/validation-error
+                title: Datos inválidos
+                status: 400
+                detail: Uno o más campos no son válidos.
+                instance: /api/v1/auth/login
+                code: VALIDATION_ERROR
+                correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+                errors:
+                  - field: password
+                    message: Este campo es requerido.
         '401':
           description: Email o contraseña incorrectos.
           content:
@@ -163,7 +179,7 @@ paths:
 
         Un token inválido, vencido, reutilizado o de un usuario inactivo dan el mismo 401, sin `WWW-Authenticate`: la credencial viaja en el body. También da 401 cualquier otro string que no sea un refresh token válido, incluido un access token. El 400 es solo para un body mal formado: falta el campo, no es string, está vacío o supera el tope.
 
-        **Qué debe hacer el cliente:** la rotación no tiene período de gracia. Debe serializar los refresh (dos pestañas a la vez revocarían la familia) y guardar el token nuevo antes de usarlo. Solo un 401 cierra la sesión; un 429 o un 5xx no.
+        **Qué debe hacer el cliente:** la rotación no tiene período de gracia. Debe serializar los refresh (dos pestañas a la vez revocarían la familia) y guardar el token nuevo antes de usarlo. Solo un 401 cierra la sesión; un 5xx o un error de red no.
 
         Endpoint público: la credencial es el propio refresh token.
       parameters:
@@ -288,7 +304,7 @@ paths:
       tags: [health]
       operationId: getReadiness
       summary: Readiness
-      description: Revisa la conexión a la base de datos.
+      description: Revisa la conexión a la base de datos y que la clave de firma esté disponible.
       servers:
         - url: http://identity-service:8001
           description: Red interna de Docker (no pasa por el gateway)
@@ -316,9 +332,10 @@ components:
       name: X-Correlation-Id
       in: header
       required: false
-      description: Si no llega, lo genera el gateway (o el servicio). Se devuelve en la respuesta.
+      description: Si no llega o no cumple el formato, lo genera el gateway (o el servicio). Se devuelve en la respuesta.
       schema:
         type: string
+        pattern: '^[A-Za-z0-9._-]{1,128}$'
 
   headers:
     CorrelationId:
@@ -359,6 +376,16 @@ components:
                 errors:
                   - field: email
                     message: Introduzca una dirección de correo electrónico válida.
+            invalidEmail:
+              summary: El formato pasa la validación general, pero el dominio lo rechaza (por ejemplo, sin punto en el dominio)
+              value:
+                type: https://inmobiliaria.local/problems/user-invalid-email
+                title: Email inválido
+                status: 400
+                detail: El email no es válido.
+                instance: /api/v1/auth/register
+                code: USER_INVALID_EMAIL
+                correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
             weakPassword:
               value:
                 type: https://inmobiliaria.local/problems/user-weak-password
@@ -421,6 +448,7 @@ components:
         password:
           type: string
           format: password
+          minLength: 1
           maxLength: 1024
           writeOnly: true
           description: En el login no aplica la política de 8 a 128 caracteres; el tope solo evita abusos.

@@ -17,10 +17,13 @@
     "areaM2",
     "features",
     "status",
-    "publishedAt"
+    "publishedAt",
+    "description",
+    "coverImageUrl",
+    "imageUrls"
   ],
   "properties": {
-    "propertyId": { "type": "string", "format": "uuid" },
+    "propertyId": { "type": "string", "format": "uuid", "description": "Igual al aggregateId del envelope." },
     "agentId": { "type": "string", "format": "uuid" },
     "title": { "type": "string", "minLength": 1, "maxLength": 150 },
     "description": { "type": "string", "maxLength": 5000 },
@@ -30,7 +33,7 @@
       "type": "object",
       "required": ["amount", "currency"],
       "properties": {
-        "amount": { "type": "number", "exclusiveMinimum": 0 },
+        "amount": { "type": "number", "exclusiveMinimum": 0, "description": "Máximo 2 decimales. Para RENT es el precio mensual. El consumidor lo decodifica sin pérdida (decimal o json.Number), nunca a float64." },
         "currency": { "type": "string", "enum": ["USD", "BOB"] }
       }
     },
@@ -38,7 +41,7 @@
       "type": "object",
       "required": ["zone"],
       "properties": {
-        "zone": { "type": "string" },
+        "zone": { "type": "string", "minLength": 1 },
         "address": { "type": "string" },
         "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
         "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
@@ -53,10 +56,10 @@
       "uniqueItems": true,
       "examples": [["GARAGE", "GARDEN", "POOL", "COMMON_AREAS"]]
     },
-    "coverImageUrl": { "type": ["string", "null"] },
-    "imageUrls": { "type": "array", "items": { "type": "string" } },
+    "coverImageUrl": { "type": ["string", "null"], "description": "Ruta relativa al gateway: /api/v1/properties/{propertyId}/images/{imageId} (GET público). null si no hay imágenes." },
+    "imageUrls": { "type": "array", "items": { "type": "string" }, "description": "Rutas relativas al gateway, con el mismo formato que coverImageUrl. Lista vacía si no hay imágenes." },
     "status": { "type": "string", "const": "PUBLISHED" },
-    "publishedAt": { "type": "string", "format": "date-time" }
+    "publishedAt": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$", "description": "Fecha de la primera publicación. No cambia al reanudar ni al liberar una reserva." }
   },
   "additionalProperties": true,
   "examples": [
@@ -73,8 +76,8 @@
       "bathrooms": 2,
       "areaM2": 240.5,
       "features": ["GARAGE", "GARDEN"],
-      "coverImageUrl": "/media/properties/3f6c2a7e/cover.webp",
-      "imageUrls": ["/media/properties/3f6c2a7e/1.webp"],
+      "coverImageUrl": "/api/v1/properties/3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01/images/5a1f0c2e-7b3d-4e6f-9a10-1b2c3d4e5f60",
+      "imageUrls": ["/api/v1/properties/3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01/images/5a1f0c2e-7b3d-4e6f-9a10-1b2c3d4e5f60"],
       "status": "PUBLISHED",
       "publishedAt": "2026-10-16T14:30:00Z"
     }

@@ -8,6 +8,8 @@ Esta es la fuente de verdad de los eventos entre servicios. Si un evento no est√
 - **Payload:** `<servicio>/<evento-kebab>.v<N>.schema.json` (JSON Schema 2020-12).
 - **Topic:** `<servicio>.<aggregate>.events`. Clave del mensaje: `aggregateId`.
 - **DLQ:** `<topic>.dlq`. Consumer group: el nombre del servicio consumidor.
+- **Versiones:** el consumidor filtra por `(eventType, eventVersion)` e ignora las versiones que no conoce.
+- **Retenci√≥n:** los topics de estado (`listing.property.events`, `identity.user.events`) no expiran (`retention.ms=-1`) y los consumidores arrancan desde el principio. As√≠ search y visit pueden reconstruirse.
 
 ## Topics
 
@@ -24,7 +26,7 @@ Esta es la fuente de verdad de los eventos entre servicios. Si un evento no est√
 |---|---|---|---|---|---|
 | `UserRegistered` | 1 | identity.user.events | identity | notification | Se registra un usuario |
 | `PropertyPublished` | 1 | listing.property.events | listing | search, visit, notification | Una propiedad pasa a `PUBLISHED` (tambi√©n al reanudar o liberar una reserva) |
-| `PropertyUpdated` | 1 | listing.property.events | listing | search, visit | Se editan los datos de una propiedad publicada |
+| `PropertyUpdated` | 1 | listing.property.events | listing | search, visit | Se editan los datos de una propiedad publicada o reservada |
 | `PropertyPaused` | 1 | listing.property.events | listing | search, visit | Una propiedad pasa a `PAUSED` |
 | `PropertyReserved` | 1 | listing.property.events | listing | search, visit, notification | Una propiedad pasa a `RESERVED` |
 | `PropertySold` | 1 | listing.property.events | listing | search, visit, notification | Una propiedad pasa a `SOLD` |
