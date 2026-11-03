@@ -80,10 +80,11 @@
 
 | Archivo | Qué publica en el host | Para qué |
 |---|---|---|
-| `infra/docker-compose.yml` (base) | Gateway 8080, frontend 5173, UI de Consul 8500 y UI de Kafka 8090 | Uso normal y demo. Los servicios y sus bases no publican puertos: se ven por la red interna y por Consul. Así funciona `--scale`. |
-| `infra/docker-compose.debug.yml` (override) | Servicios 8001–8005, Postgres 5433–5437 y Kafka 9092 | Depurar un servicio desde el host. **No se combina con `--scale`.** |
+| `infra/docker-compose.yml` (base) | Gateway 8080 y frontend 5173. UI de Consul 8500 y UI de Kafka 8090 **solo en `127.0.0.1`** | Uso normal y demo. Los servicios y sus bases no publican puertos: se ven por la red interna y por Consul. Así funciona `--scale`. |
+| `infra/docker-compose.debug.yml` (override) | Servicios 8001–8005, Postgres 5433–5437 y Kafka 9092, **todo solo en `127.0.0.1`** | Depurar un servicio desde el host. **No se combina con `--scale`.** |
 
 - Ningún servicio usa `container_name`, porque impide escalar.
+- Por qué loopback: el puerto 8500 sirve también la API de escritura de Consul, sin ACL. Desde otra máquina de la red se podría registrar un `identity-service` falso.
 - Comando de la demo: `docker compose -f infra/docker-compose.yml up -d --scale listing-service=3`.
 
 ## Justificación

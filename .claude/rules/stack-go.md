@@ -52,7 +52,7 @@ Sigue el contrato de la rule `service-discovery`.
 ## search-service (modelo de lectura, CQRS)
 
 - Consume `listing.property.events`. Hace upsert de la proyección por `propertyId` e ignora los eventos más viejos que el último aplicado.
-- En el catálogo solo aparecen las propiedades `PUBLISHED`. Las `RESERVED` se muestran marcadas como tales; las `PAUSED`, `SOLD` y `RENTED` se ocultan.
+- En el catálogo aparecen las propiedades `PUBLISHED` y las `RESERVED`, estas marcadas como tales. Las `PAUSED`, `SOLD` y `RENTED` se ocultan.
 - `GET /api/v1/search/properties` (filtros, paginación y orden según la rule `api-rest`) y `GET /api/v1/search/properties/{id}`.
 - Criterios de búsqueda con **Builder / functional options** y filtros combinables (**Specification**), con índices en la base para zona, tipo, precio y dormitorios.
 

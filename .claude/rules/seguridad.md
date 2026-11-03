@@ -60,6 +60,8 @@ Detalle en la rule `stack-gateway`.
 
 ## Puertos y Consul
 
-- **Compose base:** solo el gateway, el frontend, la UI de Consul y la UI de Kafka publican puertos en el host. Los servicios y las bases publican solo en `infra/docker-compose.debug.yml`.
-- **Consul en modo dev no tiene ACL.** Es aceptable en local, pero el puerto 8500 no se expone fuera del entorno de desarrollo.
+- **Compose base:** solo el gateway y el frontend publican hacia afuera. La UI de Consul y la UI de Kafka se publican **solo en loopback** (`127.0.0.1:8500:8500` y `127.0.0.1:8090:8090`).
+- **`infra/docker-compose.debug.yml`:** todo publicado solo en `127.0.0.1` (servicios, bases y Kafka).
+- **Por qué:** el puerto 8500 sirve la UI **y la API de escritura** de Consul, sin ACL, y un `8500:8500` escucha en todas las interfaces (Docker suele saltarse el firewall). Desde otra máquina en la misma red, alguien podría registrar un `identity-service` falso y recibir contraseñas o servir su propio JWKS. La UI de Kafka permite además leer y producir eventos.
+- **En el compose,** `DJANGO_DEBUG=false` y los settings de producción van en `environment:`, que tiene prioridad sobre `env_file`. Un `.env` copiado del ejemplo no debe activar el modo debug en un contenedor.
 - **El registro en Consul** no lleva secretos en `Tags` ni `Meta`.
