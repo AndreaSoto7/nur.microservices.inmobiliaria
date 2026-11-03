@@ -128,7 +128,18 @@ docs/              # enunciado, ADRs, patrones de diseño, progreso por servicio
 | `/resolver-conflicto` | Resolver conflictos de merge o rebase sin perder trabajo |
 | `/adr` | Registrar una decisión de arquitectura |
 
-**Agentes:** `arquitecto-ddd`, `revisor-api-rest`, `guardian-contratos`, `revisor-seguridad`, `revisor-frontend` e `ingeniero-tests`.
+**Agentes:** `revisor-seguridad`, `guardian-contratos` y `arquitecto-ddd`. Las revisiones de API REST y frontend son checklists dentro de `/revisar`.
+
+- **Un solo agente por PR, el del riesgo principal.** Cada agente parte de cero y consume muchos tokens: una auditoría con pruebas puede gastar más de 100.000.
+- **`arquitecto-ddd` y `guardian-contratos` corren con Sonnet** (`model: sonnet` en su archivo). `revisor-seguridad` usa el modelo de la sesión.
+- **Alcance:** que revisen el diff; ejecutar pruebas solo si hace falta.
+
+**Lecciones (ya nos pasaron):**
+
+- **Todo PR tiene base `main`.** Un PR con base en otra rama queda "Merged" sin llegar a `main`: GitHub no avisa, y así se perdieron de `main` el registro y el login (#9 a #11, recuperados en #13 a #15). Si un trabajo depende de otro, el segundo se abre recién cuando el primero está en `main`.
+- **Después de mergear, verifica que el cambio esté en `main`.** Un merge justo después de un push puede fallar porque GitHub todavía calcula si es mergeable.
+- **`git add` por ruta, nunca `git add -A` sobre una carpeta:** así se coló un archivo local en un PR. Además, un archivo local que entra a una rama desaparece de tu carpeta al cambiar de rama.
+- **No reformatees JSON con un script:** infla el diff. Edita solo la línea que cambia.
 
 **Preferencias personales:** van en `CLAUDE.local.md` y `.claude/settings.local.json`. Los dos están en `.gitignore`.
 

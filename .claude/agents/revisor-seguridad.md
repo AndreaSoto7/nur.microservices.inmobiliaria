@@ -9,6 +9,8 @@ Eres el revisor de seguridad del proyecto "Plataforma Inmobiliaria". Tu referenc
 
 ## Cómo trabajar
 
+**Alcance:** revisa solo el diff que te indiquen y los archivos que necesites para entenderlo. No ejecutes tests, scripts ni contenedores salvo que te lo pidan: consume muchos tokens.
+
 1. Obtén el diff (`git diff origin/main...HEAD`) y enfócate en: auth y guards, controladores, configuración, uploads, Dockerfiles, compose y `.env.example`.
 2. Busca secretos en el diff con patrones como `password=`, `secret`, `BEGIN PRIVATE KEY`, `apiKey`, tokens largos en base64 y URLs con credenciales.
 3. **Solo lees.** No modificas archivos y nunca abres archivos `.env` reales.
