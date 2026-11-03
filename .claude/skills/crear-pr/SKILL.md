@@ -39,6 +39,13 @@ allowed-tools:
 - Si rebaseaste una rama ya publicada: `git push --force-with-lease`, **solo** en tu propia rama.
 - Ambos comandos piden confirmación.
 
+## 4.5. Progreso del servicio
+
+- Si es un `feat` o un `fix`, actualiza `docs/progreso/<servicio>.md` en el mismo PR:
+  - una fila en **Historial** (tipo, qué se hizo en una línea y el PR; usa `este PR` si todavía no hay número);
+  - tacha o agrega los **Pendientes** que correspondan, incluidos los que la revisión dejó para después.
+- Después de crear el PR, reemplaza `este PR` por el número real con un commit chico.
+
 ## 5. Abrir el PR
 
 - **Título:** como el commit principal (`feat(listing): …`).

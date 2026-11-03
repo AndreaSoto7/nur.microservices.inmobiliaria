@@ -31,4 +31,5 @@
 - [ ] Contrato y implementación coinciden
 - [ ] Sin secretos; `.env.example` actualizado
 - [ ] Patrones registrados en `docs/patrones-de-diseno.md`
+- [ ] `docs/progreso/<servicio>.md` actualizado (historial y pendientes)
 - [ ] Rama actualizada con `main` (rebase)

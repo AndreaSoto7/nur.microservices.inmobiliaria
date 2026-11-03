@@ -28,7 +28,7 @@ services/
   search-service/    notification-service/
 gateway/   frontend/
 infra/             # docker-compose, Kafka, bases de datos
-docs/              # enunciado, ADRs, registro de patrones de diseño
+docs/              # enunciado, ADRs, patrones de diseño, progreso por servicio (docs/progreso/)
 .claude/           # rules, skills y agents compartidos del equipo
 ```
 
@@ -75,6 +75,7 @@ docs/              # enunciado, ADRs, registro de patrones de diseño
 ## Flujo de trabajo Git
 
 - `main` está protegida: solo entra código por PR, con 1 aprobación y **squash merge**.
+- **Otra persona aprueba y el autor mergea su propio PR.** Nadie mergea PRs ajenos. Los PRs encadenados se mergean en orden. Guía paso a paso: [`docs/flujo-de-revision.md`](docs/flujo-de-revision.md).
 - **Ramas:** `<tipo>/<scope>-<descripcion-corta>`, por ejemplo `feat/listing-publicar-propiedad` o `fix/visit-validar-fecha`.
 - **Commits:** Conventional Commits, `tipo(scope): descripción en español`.
   - Tipos: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`.
@@ -90,6 +91,7 @@ docs/              # enunciado, ADRs, registro de patrones de diseño
 - [ ] El contrato (OpenAPI o evento) está actualizado y coincide con la implementación.
 - [ ] No hay secretos, y `.env.example` está al día.
 - [ ] Si se usó un patrón de diseño, está registrado en `docs/patrones-de-diseno.md`.
+- [ ] `docs/progreso/<servicio>.md` está actualizado: una fila en el historial (feat o fix y su PR) y los pendientes tachados o agregados.
 - [ ] El PR tiene la plantilla completa y una revisión aprobada.
 
 ## Cómo trabajar con Claude en este repo
