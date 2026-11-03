@@ -8,6 +8,7 @@ import socket
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -62,6 +63,23 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Usuario propio con PK UUID desde el día 1 (rule stack-django).
 AUTH_USER_MODEL = "identity.UserModel"
 
+# JWT RS256. La clave privada nunca va en git: o su contenido PEM en JWT_PRIVATE_KEY (con \n
+# escapado), o la ruta a un archivo montado en JWT_PRIVATE_KEY_PATH. Los demás validan con el JWKS.
+JWT_PRIVATE_KEY = env.str("JWT_PRIVATE_KEY", default="", multiline=True)
+JWT_PRIVATE_KEY_PATH = env.str("JWT_PRIVATE_KEY_PATH", default="")
+JWT_ISSUER = env.str("JWT_ISSUER", default="identity-service")
+JWT_AUDIENCE = env.str("JWT_AUDIENCE", default="inmobiliaria")
+JWT_ACCESS_TTL_SECONDS = env.int("JWT_ACCESS_TTL_SECONDS", default=15 * 60)
+JWT_REFRESH_TTL_SECONDS = env.int("JWT_REFRESH_TTL_SECONDS", default=7 * 24 * 60 * 60)
+
+# Un error de configuración aquí anularía las garantías de los tokens: mejor no arrancar.
+if not 60 <= JWT_ACCESS_TTL_SECONDS <= 3600:
+    raise ImproperlyConfigured("JWT_ACCESS_TTL_SECONDS debe estar entre 60 y 3600.")
+if JWT_REFRESH_TTL_SECONDS <= JWT_ACCESS_TTL_SECONDS:
+    raise ImproperlyConfigured("JWT_REFRESH_TTL_SECONDS debe ser mayor que el del access token.")
+if not JWT_ISSUER or not JWT_AUDIENCE:
+    raise ImproperlyConfigured("JWT_ISSUER y JWT_AUDIENCE no pueden estar vacíos.")
+
 LANGUAGE_CODE = "es"
 TIME_ZONE = "UTC"
 USE_I18N = True
@@ -80,6 +98,7 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
+    "OAS_VERSION": "3.1.0",
     "TITLE": "identity-service",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
