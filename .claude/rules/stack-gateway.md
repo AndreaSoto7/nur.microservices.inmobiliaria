@@ -60,6 +60,7 @@ Cada middleware recibe un `http.Handler` y devuelve otro (`func(http.Handler) ht
 6. **Rate limit:** token bucket por IP en login y registro (`golang.org/x/time/rate`). La IP sale de `r.RemoteAddr`, no de un `X-Forwarded-For` enviado por el cliente.
 7. **Auth:** en las rutas protegidas valida firma RS256, `exp`, `iss` y `aud`.
    - Fija el algoritmo esperado: rechaza `none` y `HS256`.
+   - Exige `typ=at+jwt` en el header. Así un refresh token, que tiene `aud=identity-service` y `typ=rt+jwt`, nunca pasa.
    - Si el token es válido, **reenvía `Authorization` intacto**: cada servicio vuelve a validar.
 8. **Proxy.**
 
