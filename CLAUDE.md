@@ -6,12 +6,12 @@ Plataforma donde agentes publican casas y departamentos (venta o alquiler) y los
 
 | Servicio | Stack | Responsable | Puerto | Base de datos | Responsabilidad |
 |---|---|---|---|---|---|
-| `identity-service` | Django + DRF | _(completar)_ | 8001 | PostgreSQL | Registro, login, usuarios, roles, emisión de JWT |
+| `identity-service` | Django + DRF | @Tiesol | 8001 | PostgreSQL | Registro, login, usuarios, roles, emisión de JWT |
 | `listing-service` | Spring Boot | _(completar)_ | 8002 | PostgreSQL | Propiedades, galería, características, estados (lado comando) y favoritos |
 | `visit-service` | NestJS | _(completar)_ | 8003 | PostgreSQL | Consultas, leads, solicitudes y programación de visitas, seguimiento |
 | `search-service` | Go | _(completar)_ | 8004 | por decidir (ADR) | Catálogo de solo lectura con filtros (lado query de CQRS) |
 | `notification-service` | Go | _(completar)_ | 8005 | por decidir (ADR) | Avisos ante solicitudes, visitas y cambios de estado |
-| `gateway` | Go (propio) | _(completar)_ | 8080 | — | Único punto de entrada: ruteo, JWT, CORS, rate limit, balanceo de carga y cliente de service discovery |
+| `gateway` | Go (propio) | @Tiesol | 8080 | — | Único punto de entrada: ruteo, JWT, CORS, rate limit, balanceo de carga y cliente de service discovery |
 | `frontend` | React + Vite + TypeScript | _(completar)_ | 5173 | — | UI para interesados y agentes |
 | Kafka (KRaft) | — | — | 9092 · UI 8090 | — | Bus de eventos entre servicios |
 | Consul (modo dev) | — | — | UI 8500 | — | Service discovery: registro de servicios y health checks |
