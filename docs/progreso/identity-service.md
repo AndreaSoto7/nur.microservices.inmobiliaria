@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| fix | Auditoría de la base: registro en Consul sin bloquear y repetido cada 60 s, `/docs`, capas, readiness, errores en problem+json, tipos estrictos y workers con hilos | este PR |
 | feat | Login: `AuthenticateUserQuery` sin enumeración de emails, `POST /api/v1/auth/login` y JWKS | #15 |
 | feat | Firma JWT RS256 con `kid` y `typ`, JWKS, refresh con `aud` propio y validación de la configuración JWT | #14 |
 | feat | Registro de usuario, API: repositorio Django, hasher, `POST /api/v1/auth/register` y errores problem+json | #13 |

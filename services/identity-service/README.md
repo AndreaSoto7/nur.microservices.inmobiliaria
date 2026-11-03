@@ -68,7 +68,7 @@ python manage.py migrate
 python manage.py runserver 8001
 ```
 
-Con `runserver` no se registra en Consul (`CONSUL_ENABLED=false`). En el contenedor, gunicorn registra la réplica al arrancar y la da de baja al apagarse.
+Con `runserver` no se registra en Consul. En el contenedor, un hilo de gunicorn registra la réplica, repite el registro cada 60 s (Consul en modo dev guarda todo en memoria) y la da de baja al apagarse. Si Consul no responde, el servicio arranca igual.
 
 ## Tests, lint y formato
 

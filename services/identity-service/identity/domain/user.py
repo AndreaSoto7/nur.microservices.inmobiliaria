@@ -3,7 +3,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from identity.domain.email import Email
-from identity.domain.errors import InvalidCredentials, MissingRole, RoleNotAllowed
+from identity.domain.errors import InvalidCredentials, RoleNotAllowed
 from identity.domain.events import UserRegistered
 from identity.domain.full_name import FullName
 from identity.domain.role import ROLE_NOT_ALLOWED_MESSAGE, SELF_REGISTRABLE_ROLES, Role
@@ -28,9 +28,10 @@ class User:
     _events: list[UserRegistered] = field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self) -> None:
-        # Invariante que vale siempre, también al reconstruir el usuario desde la base.
+        # Invariante que vale siempre, también al reconstruir el usuario desde la base. No es un
+        # error de negocio: si pasa, es un bug o un dato corrupto, y debe terminar en un 500.
         if not self.roles:
-            raise MissingRole("Un usuario tiene al menos un rol.")
+            raise ValueError("Un usuario tiene al menos un rol.")
 
     @classmethod
     def register(

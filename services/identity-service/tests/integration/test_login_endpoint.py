@@ -126,3 +126,44 @@ def test_el_jwks_es_publico_cacheable_y_solo_trae_la_parte_publica(client):
     assert response["Cache-Control"] == "public, max-age=300"
     (key,) = response.json()["keys"]
     assert set(key) == {"kty", "use", "alg", "kid", "n", "e"}
+
+
+def test_una_contrasena_que_no_es_string_responde_400(client, registered):
+    response = login(client, password=12345678)
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "VALIDATION_ERROR"
+
+
+def test_un_usuario_con_datos_corruptos_responde_500_y_no_revela_nada(registered):
+    from django.test import Client
+
+    UserModel.objects.filter(email="ana@example.com").update(roles=[])
+
+    response = Client(raise_request_exception=False).post(
+        LOGIN,
+        {"email": "ana@example.com", "password": PASSWORD},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 500
+    body = response.json()
+    assert body["code"] == "INTERNAL_ERROR"
+    assert "rol" not in response.content.decode().lower()
+    assert "ana@example.com" not in response.content.decode()
+
+
+@pytest.mark.parametrize("password", [PASSWORD, "otra-clave"])
+def test_un_nombre_corrupto_responde_500_y_no_revela_que_la_cuenta_existe(registered, password):
+    from django.test import Client
+
+    UserModel.objects.filter(email="ana@example.com").update(full_name="")
+
+    response = Client(raise_request_exception=False).post(
+        LOGIN,
+        {"email": "ana@example.com", "password": password},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 500
+    assert response.json()["code"] == "INTERNAL_ERROR"

@@ -7,7 +7,6 @@ from identity.domain.email import Email
 from identity.domain.errors import (
     InvalidCredentials,
     InvalidFullName,
-    MissingRole,
     RoleNotAllowed,
     WeakPassword,
 )
@@ -83,7 +82,8 @@ def test_no_se_pueden_cambiar_los_roles_desde_afuera():
 
 
 def test_un_usuario_siempre_tiene_al_menos_un_rol():
-    with pytest.raises(MissingRole):
+    # Es una invariante, no un error de negocio: si pasa, es un bug o un dato corrupto (500).
+    with pytest.raises(ValueError):
         User(
             id=register().id,
             email=Email("ana@example.com"),

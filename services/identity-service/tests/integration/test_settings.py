@@ -40,3 +40,24 @@ def test_rechaza_configuraciones_de_jwt_peligrosas(env):
 
     assert result.returncode != 0
     assert "ImproperlyConfigured" in result.stderr
+
+
+def test_service_address_entra_en_allowed_hosts():
+    # Consul llama a http://<SERVICE_ADDRESS>:8001/health. Sin esto, el check da 400.
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import django; django.setup(); from django.conf import settings; "
+            "print('10.9.9.9' in settings.ALLOWED_HOSTS)",
+        ],
+        cwd=SERVICE_DIR,
+        env=os.environ
+        | {"DJANGO_SETTINGS_MODULE": "config.settings.test"}
+        | {"SERVICE_ADDRESS": "10.9.9.9"},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.stdout.strip().endswith("True")

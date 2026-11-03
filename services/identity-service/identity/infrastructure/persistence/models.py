@@ -7,12 +7,18 @@ from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.utils import timezone
 
+from identity.domain.email import Email
+from identity.domain.full_name import FullName
+
 
 class UserModelManager(BaseUserManager["UserModel"]):
     # Solo lo usan los comandos de Django (por ejemplo `createsuperuser`). La API registra
     # usuarios a través del caso de uso del dominio, no con este manager.
     def create_user(self, email: str, password: str | None = None, **extra) -> "UserModel":
-        user = self.model(email=self.normalize_email(email).lower(), **extra)
+        # Mismas reglas que el dominio: una fila sin roles o con otro email no se podría cargar.
+        extra.setdefault("roles", ["CLIENT"])
+        extra["full_name"] = FullName(extra.get("full_name", "")).value
+        user = self.model(email=Email(email).value, **extra)
         user.set_password(password)
         user.save(using=self._db)
         return user

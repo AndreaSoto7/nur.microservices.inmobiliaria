@@ -1,17 +1,27 @@
 """Composition root: la capa más externa. Arma los handlers con sus adaptadores concretos."""
 
+import logging
 from datetime import timedelta
 from functools import cache
 
 from django.conf import settings
+from django.db import Error as DatabaseError
 
 from identity.application.commands.register_user import RegisterUserHandler
 from identity.application.queries.authenticate_user import AuthenticateUserHandler
 from identity.infrastructure.clock import SystemClock
+from identity.infrastructure.persistence.health import check_database
 from identity.infrastructure.persistence.repositories import DjangoUserRepository
-from identity.infrastructure.security.keys import SigningKey, jwks, load_signing_key
+from identity.infrastructure.security.keys import (
+    SigningKey,
+    SigningKeyUnavailable,
+    jwks,
+    load_signing_key,
+)
 from identity.infrastructure.security.password_hasher import DjangoPasswordHasher
 from identity.infrastructure.security.token_issuer import PyJwtTokenIssuer
+
+logger = logging.getLogger(__name__)
 
 
 def register_user_handler() -> RegisterUserHandler:
@@ -48,3 +58,14 @@ def signing_key() -> SigningKey:
 
 def public_jwks() -> dict:
     return jwks([signing_key()])
+
+
+def is_ready() -> bool:
+    """Readiness: la base responde y hay clave de firma. El motivo del fallo queda en el log."""
+    try:
+        check_database()
+        signing_key()
+    except (DatabaseError, SigningKeyUnavailable):
+        logger.warning("El servicio no está listo", exc_info=True)
+        return False
+    return True

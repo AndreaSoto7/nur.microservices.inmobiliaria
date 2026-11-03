@@ -5,7 +5,7 @@ import uuid
 
 from django.http import HttpRequest, HttpResponse
 
-from identity.infrastructure.observability import correlation_id
+from identity.application.correlation import correlation_id
 
 CORRELATION_HEADER = "X-Correlation-Id"
 # Solo se acepta un valor "limpio": evita que alguien inyecte saltos de línea o basura en los logs.

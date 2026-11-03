@@ -1,13 +1,20 @@
 """Registro en Consul contra un servidor HTTP falso: no hace falta Consul corriendo."""
 
 import json
+import socket
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import ClassVar
 
 import pytest
 
-from identity.infrastructure.discovery.consul import ServiceRegistration, deregister, register
+from identity.infrastructure.discovery.consul import (
+    ServiceRegistration,
+    deregister,
+    keep_registered,
+    register,
+)
 
 
 class FakeConsul(BaseHTTPRequestHandler):
@@ -32,6 +39,7 @@ def consul_url():
     thread.start()
     yield f"http://127.0.0.1:{server.server_port}"
     server.shutdown()
+    server.server_close()
 
 
 def a_registration(consul_url: str) -> ServiceRegistration:
@@ -79,14 +87,102 @@ def test_si_consul_no_responde_reintenta_y_no_tumba_el_servicio():
     assert waits == [0.5, 1.0]
 
 
-def test_no_permite_registrarse_con_localhost():
+@pytest.mark.parametrize("address", ["localhost", "127.0.0.1", "127.0.1.1", "::1"])
+def test_no_permite_registrarse_con_una_direccion_de_loopback(address):
     with pytest.raises(ValueError):
         ServiceRegistration(
             consul_addr="http://consul:8500",
             name="identity-service",
             port=8001,
-            address="localhost",
+            address=address,
         )
+
+
+def test_una_respuesta_invalida_de_consul_no_tumba_el_registro():
+    # Un servidor que no habla HTTP provoca http.client.HTTPException, que no es OSError.
+    server = socket.create_server(("127.0.0.1", 0))
+
+    def answer_garbage() -> None:
+        connection, _ = server.accept()
+        connection.recv(4096)
+        connection.sendall(b"esto no es http\r\n\r\n")
+        connection.close()
+
+    threading.Thread(target=answer_garbage, daemon=True).start()
+    registration = ServiceRegistration(
+        consul_addr=f"http://127.0.0.1:{server.getsockname()[1]}",
+        name="identity-service",
+        port=8001,
+        address="10.0.0.5",
+    )
+
+    assert register(registration, attempts=1) is False
+    server.close()
+
+
+def test_repite_el_registro_de_forma_periodica_hasta_que_lo_detienen(consul_url):
+    stop = threading.Event()
+    thread = threading.Thread(
+        target=keep_registered,
+        args=(a_registration(consul_url), stop),
+        kwargs={"interval_seconds": 0.01, "initial_delay_seconds": 0},
+    )
+
+    thread.start()
+    deadline = time.monotonic() + 3
+    while len(FakeConsul.requests) < 3 and time.monotonic() < deadline:
+        time.sleep(0.01)
+    stop.set()
+    thread.join(timeout=2)
+
+    assert not thread.is_alive()
+    assert len(FakeConsul.requests) >= 3
+    assert all(path == "/v1/agent/service/register" for _, path, _ in FakeConsul.requests)
+
+
+def test_espera_antes_del_primer_registro_para_no_cruzarse_con_el_fork(consul_url):
+    # gunicorn crea los workers justo después de when_ready: un hilo activo durante el fork
+    # puede dejar a un worker colgado. También le da tiempo al servidor de empezar a escuchar.
+    stop = threading.Event()
+    thread = threading.Thread(
+        target=keep_registered,
+        args=(a_registration(consul_url), stop),
+        kwargs={"initial_delay_seconds": 30},
+    )
+
+    thread.start()
+    time.sleep(0.1)
+    requests_during_delay = list(FakeConsul.requests)
+    stop.set()
+    thread.join(timeout=2)
+
+    assert requests_during_delay == []
+    assert FakeConsul.requests == []
+    assert not thread.is_alive()
+
+
+@pytest.mark.parametrize("consul_addr", ["http://a..b:8500", "http://[x"])
+def test_una_direccion_mal_formada_no_mata_el_hilo_de_registro(consul_addr):
+    registration = ServiceRegistration(
+        consul_addr=consul_addr, name="identity-service", port=8001, address="10.0.0.5"
+    )
+
+    assert register(registration, attempts=1) is False
+
+
+def test_se_detiene_enseguida_aunque_consul_no_responda():
+    stop = threading.Event()
+    registration = ServiceRegistration(
+        consul_addr="http://127.0.0.1:1", name="identity-service", port=8001, address="10.0.0.5"
+    )
+    thread = threading.Thread(target=keep_registered, args=(registration, stop))
+
+    thread.start()
+    time.sleep(0.05)
+    stop.set()
+    thread.join(timeout=2)
+
+    assert not thread.is_alive()
 
 
 def test_el_id_por_defecto_incluye_el_hostname(monkeypatch):

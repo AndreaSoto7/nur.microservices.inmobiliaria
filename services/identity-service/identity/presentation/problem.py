@@ -1,6 +1,6 @@
 """Cuerpos de error RFC 9457 (`application/problem+json`) con las extensiones del proyecto."""
 
-from identity.infrastructure.observability import correlation_id
+from identity.application.correlation import correlation_id
 
 PROBLEM_CONTENT_TYPE = "application/problem+json"
 PROBLEM_TYPE_BASE = "https://inmobiliaria.local/problems/"

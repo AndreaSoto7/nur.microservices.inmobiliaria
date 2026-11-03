@@ -9,17 +9,19 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DJANGO_SETTINGS_MODULE=config.settings.base \
-    SERVICE_PORT=8001
+    SERVICE_PORT=8001 \
+    CONSUL_ENABLED=true
 RUN useradd --create-home --uid 10001 app
 WORKDIR /app
 COPY --from=builder /wheels /wheels
 RUN pip install --no-cache-dir --no-index /wheels/* && rm -rf /wheels
-COPY --chown=app:app . .
+# Sin --chown: el proceso no necesita escribir su propio código.
+COPY . .
 USER app
 EXPOSE 8001
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=2)"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health/ready', timeout=2)"
 
 # `exec` hace que gunicorn sea el PID 1 y reciba el SIGTERM de `docker stop`; así corre `on_exit`
 # y se da de baja en Consul.
