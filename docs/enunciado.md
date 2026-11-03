@@ -45,7 +45,7 @@ Una propiedad puede recibir múltiples consultas y solicitudes de visita. Conser
 | Property | Propiedades, galería, características, estados | `listing-service` (Spring) |
 | Search | Consultas, filtros, vistas optimizadas del catálogo | `search-service` (Go) |
 | Lead / Visit | Contactos, solicitudes, programación de visitas | `visit-service` (NestJS) |
-| Favorite | Propiedades guardadas | por decidir (ADR) |
+| Favorite | Propiedades guardadas | dentro de `listing-service` (ADR 0003) |
 | Notification | Avisos ante solicitudes, visitas y cambios | `notification-service` (Go) |
 
 ## Criterios técnicos obligatorios (evaluados)
@@ -56,3 +56,12 @@ Una propiedad puede recibir múltiples consultas y solicitudes de visita. Conser
 4. **CQRS** donde sea pertinente.
 5. **Eventos**, por ejemplo `PropertyPublished`, `VisitRequested`, `VisitScheduled`, `PropertyReserved` y `PropertySold`.
 6. **Patrones de diseño** aplicados y justificados según el dominio.
+
+## Requisitos adicionales del docente
+
+No están en el PDF del enunciado, pero el docente los exige.
+
+1. **Balanceador de carga** entre varias réplicas de un mismo servicio.
+2. **Service discovery:** los servicios se registran y se encuentran dinámicamente, sin direcciones fijas.
+
+Cómo los resolvemos: [ADR 0002](adr/0002-gateway-go-balanceador-consul.md).
