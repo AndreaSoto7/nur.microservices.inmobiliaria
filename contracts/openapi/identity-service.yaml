@@ -7,7 +7,12 @@ info:
 
     - Los clientes llaman siempre a través del gateway (`http://localhost:8080`).
     - Los tokens se validan en el resto de servicios con el JWKS publicado aquí.
-    - Claims del access token: `sub` (UUID del usuario), `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`. Dura 15 minutos.
+    - **Access token** (15 min). Header: `alg=RS256`, `kid` y `typ=at+jwt` (RFC 9068).
+      Claims: `sub` (UUID del usuario), `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`, `iat`, `exp`, `jti` y `tokenType=access`.
+    - **Refresh token** (7 días). Header: `typ=rt+jwt`. Claims: `sub`, `iss`, `iat`, `exp`, `jti` y `tokenType=refresh`, con
+      `aud=identity-service`: solo lo acepta identity.
+    - **Cómo valida un consumidor** (gateway y servicios): firma con el JWKS (eligiendo la clave por `kid`), `alg=RS256`,
+      `iss=identity-service`, `aud=inmobiliaria`, `exp` y `typ=at+jwt`. Con eso, un refresh token nunca pasa como access token.
     - Los errores siguen RFC 9457 (`application/problem+json`).
 servers:
   - url: http://localhost:8080
@@ -27,7 +32,7 @@ paths:
       description: |
         Crea un usuario con rol `CLIENT` (por defecto) o `AGENT`.
         El rol `ADMIN` no se puede obtener por registro público.
-        Endpoint público.
+        Endpoint público. El gateway le aplica rate limit (hashear es caro y el 409 revela si un email existe).
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
       requestBody:
@@ -50,7 +55,9 @@ paths:
                   role: AGENT
       responses:
         '201':
-          description: Usuario creado. Devuelve solo su ID (CQRS).
+          description: |
+            Usuario creado. Devuelve solo su ID (comando CQRS).
+            Sin header `Location`: en v1 no existe `GET /api/v1/users/{id}`. Se agregará junto con ese endpoint.
           headers:
             X-Correlation-Id:
               $ref: '#/components/headers/CorrelationId'
@@ -84,7 +91,9 @@ paths:
       summary: Iniciar sesión
       description: |
         Valida email y contraseña y devuelve un par de tokens.
-        Un email inexistente y una contraseña incorrecta dan el mismo error, para no revelar qué emails están registrados.
+        Un email inexistente, una contraseña incorrecta y un usuario inactivo dan exactamente el mismo 401 (y tardan lo
+        mismo), para no revelar qué emails están registrados.
+        El 401 no lleva `WWW-Authenticate`: las credenciales viajan en el body, no en un esquema de autenticación HTTP.
         Endpoint público. El gateway le aplica rate limit.
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
@@ -103,6 +112,15 @@ paths:
           headers:
             X-Correlation-Id:
               $ref: '#/components/headers/CorrelationId'
+            Cache-Control:
+              description: Las respuestas con tokens no se guardan en cachés (RFC 6749, sección 5.1).
+              schema:
+                type: string
+                const: no-store
+            Pragma:
+              schema:
+                type: string
+                const: no-cache
           content:
             application/json:
               schema:
@@ -137,9 +155,17 @@ paths:
       description: |
         JSON Web Key Set con la clave pública RS256.
         Lo consumen el gateway y todos los servicios. Endpoint público.
+        El `kid` es la huella RFC 7638 de la clave pública (SHA-256 en base64url). Si llega un token con un `kid`
+        desconocido, el consumidor vuelve a pedir el JWKS.
       responses:
         '200':
           description: JWKS.
+          headers:
+            Cache-Control:
+              description: Se puede cachear 5 minutos. Cambia solo al rotar la clave.
+              schema:
+                type: string
+                const: public, max-age=300
           content:
             application/json:
               schema:
@@ -149,7 +175,7 @@ paths:
                   - kty: RSA
                     use: sig
                     alg: RS256
-                    kid: 3c9d7f0a51e2b8c4
+                    kid: NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs
                     n: 0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw
                     e: AQAB
 
@@ -293,10 +319,13 @@ components:
         email:
           type: string
           format: email
+          maxLength: 254
         password:
           type: string
           format: password
+          maxLength: 1024
           writeOnly: true
+          description: En el login no aplica la política de 8 a 128 caracteres; el tope solo evita abusos.
 
     TokenPair:
       type: object
@@ -304,10 +333,12 @@ components:
       properties:
         accessToken:
           type: string
-          description: JWT RS256 con `sub`, `email`, `roles`, `iss`, `aud`, `exp`.
+          description: JWT RS256 (`typ=at+jwt`, `aud=inmobiliaria`). Claims en la descripción general.
         refreshToken:
           type: string
-          description: JWT de refresco. El endpoint para usarlo se agrega en una versión compatible posterior.
+          description: |
+            JWT de refresco (`typ=rt+jwt`, `aud=identity-service`). Ningún otro servicio lo acepta.
+            El endpoint para usarlo se agrega en una versión compatible posterior.
         tokenType:
           type: string
           const: Bearer
@@ -344,7 +375,7 @@ components:
     Problem:
       type: object
       description: RFC 9457 con las extensiones del proyecto (`code`, `correlationId`, `errors`).
-      required: [type, title, status, code]
+      required: [type, title, status, code, correlationId]
       properties:
         type: { type: string, format: uri }
         title: { type: string }
