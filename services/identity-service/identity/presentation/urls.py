@@ -1,3 +1,9 @@
-"""Rutas bajo /api/v1/. Las de auth (registro, login, JWKS) se agregan con su caso de uso."""
+"""Rutas bajo /api/v1/ (contracts/openapi/identity-service.yaml)."""
 
-urlpatterns: list = []
+from django.urls import path
+
+from identity.presentation.views import RegisterUserView
+
+urlpatterns = [
+    path("auth/register", RegisterUserView.as_view(), name="auth-register"),
+]
