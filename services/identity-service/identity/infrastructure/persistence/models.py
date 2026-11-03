@@ -8,6 +8,7 @@ from django.db import models
 from django.utils import timezone
 
 from identity.domain.email import Email
+from identity.domain.full_name import FullName
 
 
 class UserModelManager(BaseUserManager["UserModel"]):
@@ -16,6 +17,7 @@ class UserModelManager(BaseUserManager["UserModel"]):
     def create_user(self, email: str, password: str | None = None, **extra) -> "UserModel":
         # Mismas reglas que el dominio: una fila sin roles o con otro email no se podría cargar.
         extra.setdefault("roles", ["CLIENT"])
+        extra["full_name"] = FullName(extra.get("full_name", "")).value
         user = self.model(email=Email(email).value, **extra)
         user.set_password(password)
         user.save(using=self._db)

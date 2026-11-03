@@ -125,7 +125,7 @@ def test_repite_el_registro_de_forma_periodica_hasta_que_lo_detienen(consul_url)
     thread = threading.Thread(
         target=keep_registered,
         args=(a_registration(consul_url), stop),
-        kwargs={"interval_seconds": 0.01},
+        kwargs={"interval_seconds": 0.01, "initial_delay_seconds": 0},
     )
 
     thread.start()
@@ -138,6 +138,36 @@ def test_repite_el_registro_de_forma_periodica_hasta_que_lo_detienen(consul_url)
     assert not thread.is_alive()
     assert len(FakeConsul.requests) >= 3
     assert all(path == "/v1/agent/service/register" for _, path, _ in FakeConsul.requests)
+
+
+def test_espera_antes_del_primer_registro_para_no_cruzarse_con_el_fork(consul_url):
+    # gunicorn crea los workers justo después de when_ready: un hilo activo durante el fork
+    # puede dejar a un worker colgado. También le da tiempo al servidor de empezar a escuchar.
+    stop = threading.Event()
+    thread = threading.Thread(
+        target=keep_registered,
+        args=(a_registration(consul_url), stop),
+        kwargs={"initial_delay_seconds": 30},
+    )
+
+    thread.start()
+    time.sleep(0.1)
+    requests_during_delay = list(FakeConsul.requests)
+    stop.set()
+    thread.join(timeout=2)
+
+    assert requests_during_delay == []
+    assert FakeConsul.requests == []
+    assert not thread.is_alive()
+
+
+@pytest.mark.parametrize("consul_addr", ["http://a..b:8500", "http://[x"])
+def test_una_direccion_mal_formada_no_mata_el_hilo_de_registro(consul_addr):
+    registration = ServiceRegistration(
+        consul_addr=consul_addr, name="identity-service", port=8001, address="10.0.0.5"
+    )
+
+    assert register(registration, attempts=1) is False
 
 
 def test_se_detiene_enseguida_aunque_consul_no_responda():

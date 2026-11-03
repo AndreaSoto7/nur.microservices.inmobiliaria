@@ -147,4 +147,23 @@ def test_un_usuario_con_datos_corruptos_responde_500_y_no_revela_nada(registered
     )
 
     assert response.status_code == 500
+    body = response.json()
+    assert body["code"] == "INTERNAL_ERROR"
+    assert "rol" not in response.content.decode().lower()
+    assert "ana@example.com" not in response.content.decode()
+
+
+@pytest.mark.parametrize("password", [PASSWORD, "otra-clave"])
+def test_un_nombre_corrupto_responde_500_y_no_revela_que_la_cuenta_existe(registered, password):
+    from django.test import Client
+
+    UserModel.objects.filter(email="ana@example.com").update(full_name="")
+
+    response = Client(raise_request_exception=False).post(
+        LOGIN,
+        {"email": "ana@example.com", "password": password},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 500
     assert response.json()["code"] == "INTERNAL_ERROR"

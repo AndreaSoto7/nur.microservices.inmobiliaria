@@ -16,7 +16,7 @@ class Email:
     def __post_init__(self) -> None:
         normalized = self.value.strip().lower()
         if len(normalized) > MAX_EMAIL_LENGTH or not _EMAIL_PATTERN.fullmatch(normalized):
-            raise InvalidEmail(f"'{self.value}' no es un email válido.")
+            raise InvalidEmail("El email no es válido.")
         object.__setattr__(self, "value", normalized)
 
     def __str__(self) -> str:

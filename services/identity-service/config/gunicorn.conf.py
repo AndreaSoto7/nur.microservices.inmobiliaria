@@ -16,8 +16,9 @@ workers = int(os.environ.get("GUNICORN_WORKERS", "2"))
 # Con hilos, dos clientes lentos no bloquean todo el servicio (con workers sync, sí).
 worker_class = "gthread"
 threads = int(os.environ.get("GUNICORN_THREADS", "4"))
-# Menos que los 10 s de `docker stop`: si no, Docker mata el proceso y la baja en Consul no ocurre.
-graceful_timeout = 5
+# Con la espera de on_exit, queda por debajo de los 10 s de `docker stop`: si no, Docker mata el
+# proceso y la baja en Consul no ocurre.
+graceful_timeout = 3
 # Cada request ya se loguea en JSON en RequestLoggingMiddleware.
 accesslog = None
 # El maestro no carga Django: sin esto, sus logs y los de Consul no saldrían en JSON.
@@ -26,7 +27,7 @@ logconfig_dict = {
     "disable_existing_loggers": False,
     "formatters": {"json": {"()": "identity.infrastructure.observability.JsonFormatter"}},
     "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "json"}},
-    "root": {"handlers": ["console"], "level": "INFO"},
+    "root": {"handlers": ["console"], "level": os.environ.get("LOG_LEVEL", "INFO")},
     "loggers": {"gunicorn.error": {"handlers": [], "propagate": True, "level": "INFO"}},
 }
 

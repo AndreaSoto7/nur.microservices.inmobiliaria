@@ -1,7 +1,12 @@
+import json
+
 import pytest
+from django.core.exceptions import PermissionDenied
 from django.db import InterfaceError, OperationalError
+from django.urls import get_resolver
 
 from identity import container
+from identity.infrastructure.persistence import health
 
 
 def test_liveness_no_toca_la_base(client):
@@ -69,6 +74,36 @@ def test_readiness_responde_down_si_falta_la_clave_de_firma(client, settings):
 
     assert response.status_code == 503
     assert response.json() == {"status": "DOWN"}
+
+
+def test_el_handler_403_responde_problem_json(rf):
+    handler, _ = get_resolver().resolve_error_handler(403), None
+
+    response = handler(rf.get("/x"), exception=PermissionDenied())
+
+    assert response.status_code == 403
+    assert response["Content-Type"] == "application/problem+json"
+    assert json.loads(response.content)["code"] == "PERMISSION_DENIED"
+
+
+def test_check_database_hace_una_consulta_real(monkeypatch):
+    executed: list[str] = []
+
+    class Cursor:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def execute(self, sql):
+            executed.append(sql)
+
+    monkeypatch.setattr(health.connection, "cursor", Cursor)
+
+    health.check_database()
+
+    assert executed == ["SELECT 1"]
 
 
 def test_docs_responde_swagger_ui(client):

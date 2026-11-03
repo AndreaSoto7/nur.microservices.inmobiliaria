@@ -21,10 +21,14 @@ def operations() -> list[tuple[str, str, str]]:
     ]
 
 
-@pytest.mark.parametrize(("path", "method", "operation_id"), operations())
+def a_case(path: str, method: str, operation_id: str):
+    # strict: si alguien implementa la operación y no la saca de la lista, el test falla.
+    marks = pytest.mark.xfail(strict=True) if operation_id in NOT_IMPLEMENTED_YET else ()
+    return pytest.param(path, method, operation_id, marks=marks)
+
+
+@pytest.mark.parametrize(("path", "method", "operation_id"), [a_case(*op) for op in operations()])
 def test_cada_operacion_del_contrato_tiene_su_ruta(path, method, operation_id):
-    if operation_id in NOT_IMPLEMENTED_YET:
-        pytest.skip("Pendiente de implementar")
     try:
         match = resolve(path)
     except Resolver404:

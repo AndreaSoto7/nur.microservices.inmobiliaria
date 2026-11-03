@@ -22,6 +22,7 @@ DEREGISTER_CRITICAL_AFTER = "1m"
 REQUEST_TIMEOUT_SECONDS = 3
 REREGISTER_INTERVAL_SECONDS = 60.0
 RETRY_SECONDS = 5.0
+INITIAL_DELAY_SECONDS = 2.0
 
 
 def _container_address() -> str:
@@ -102,7 +103,8 @@ def register(
     for attempt in range(1, attempts + 1):
         try:
             _put(url, registration.payload())
-        except (OSError, HTTPException) as error:
+        # ValueError: una dirección mal formada no debe matar el hilo de registro.
+        except (OSError, HTTPException, ValueError) as error:
             logger.warning("Consul no disponible (intento %s/%s): %s", attempt, attempts, error)
             if attempt < attempts:
                 sleep(backoff_seconds * 2 ** (attempt - 1))
@@ -117,13 +119,18 @@ def keep_registered(
     *,
     interval_seconds: float = REREGISTER_INTERVAL_SECONDS,
     retry_seconds: float = RETRY_SECONDS,
+    initial_delay_seconds: float = INITIAL_DELAY_SECONDS,
 ) -> None:
     """Mantiene la réplica registrada hasta que `stop` se active. Pensado para correr en un hilo.
 
     Consul en modo dev guarda todo en memoria y borra las réplicas que estuvieron críticas, así
     que el registro se repite. Hace un solo intento por vuelta para poder detenerse rápido.
+
+    Espera antes del primer registro: gunicorn crea los workers justo después de `when_ready`, y
+    un hilo haciendo red durante el fork puede dejar a un worker colgado.
     """
     registered = False
+    stop.wait(initial_delay_seconds)
     while not stop.is_set():
         ok = register(registration, attempts=1)
         if ok and not registered:

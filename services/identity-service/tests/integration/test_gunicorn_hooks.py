@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import socket
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -66,12 +67,19 @@ def set_env(monkeypatch, consul_addr: str) -> None:
     monkeypatch.setenv("SERVICE_ADDRESS", "10.0.0.5")
 
 
+def conf_max_exit_seconds() -> int:
+    # on_exit espera al hilo y después hace la baja: dos timeouts de Consul como máximo.
+    from identity.infrastructure.discovery.consul import REQUEST_TIMEOUT_SECONDS
+
+    return 2 * REQUEST_TIMEOUT_SECONDS
+
+
 def test_usa_workers_con_hilos_y_deja_margen_frente_a_docker_stop():
     conf = load_conf()
 
     assert conf.worker_class == "gthread"
     assert conf.threads > 1
-    assert conf.graceful_timeout < 10
+    assert conf.graceful_timeout + conf_max_exit_seconds() < 10
 
 
 def test_sin_consul_habilitado_no_registra_y_lo_avisa(monkeypatch):
@@ -84,8 +92,11 @@ def test_sin_consul_habilitado_no_registra_y_lo_avisa(monkeypatch):
     assert any("Consul" in message for message in server.log.messages)
 
 
-def test_con_consul_caido_when_ready_no_bloquea_y_on_exit_cierra_rapido(monkeypatch):
-    set_env(monkeypatch, "http://127.0.0.1:1")
+def test_con_consul_colgado_when_ready_no_bloquea_y_on_exit_termina(monkeypatch):
+    # Un socket que acepta y nunca responde: el puerto cerrado rechazaría al instante y un
+    # registro síncrono también pasaría este test.
+    hanging = socket.create_server(("127.0.0.1", 0))
+    set_env(monkeypatch, f"http://127.0.0.1:{hanging.getsockname()[1]}")
     conf, server = load_conf(), Server()
 
     started = time.monotonic()
@@ -94,7 +105,8 @@ def test_con_consul_caido_when_ready_no_bloquea_y_on_exit_cierra_rapido(monkeypa
 
     started = time.monotonic()
     conf.on_exit(server)
-    assert time.monotonic() - started < 5
+    assert time.monotonic() - started < 7
+    hanging.close()
 
 
 def test_la_baja_es_lo_ultimo_que_recibe_consul(monkeypatch, consul_url):
@@ -102,11 +114,12 @@ def test_la_baja_es_lo_ultimo_que_recibe_consul(monkeypatch, consul_url):
     conf, server = load_conf(), Server()
 
     conf.when_ready(server)
-    deadline = time.monotonic() + 3
+    deadline = time.monotonic() + 5
     while not FakeConsul.paths and time.monotonic() < deadline:
         time.sleep(0.01)
     conf.on_exit(server)
 
+    assert not conf._thread.is_alive()
     assert FakeConsul.paths[0] == "/v1/agent/service/register"
     assert FakeConsul.paths[-1].startswith("/v1/agent/service/deregister/")
 
