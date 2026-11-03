@@ -16,18 +16,18 @@
     "payload"
   ],
   "properties": {
-    "eventId": { "type": "string", "format": "uuid", "description": "Identificador único del evento; usado para idempotencia." },
+    "eventId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "Identificador único del evento; usado para idempotencia." },
     "eventType": { "type": "string", "pattern": "^[A-Z][A-Za-z]+$", "examples": ["PropertyPublished"] },
     "eventVersion": { "type": "integer", "minimum": 1 },
-    "occurredAt": { "type": "string", "format": "date-time", "description": "Momento del hecho en UTC (ISO-8601)." },
+    "occurredAt": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$", "description": "Momento del hecho en UTC (ISO-8601)." },
     "producer": {
       "type": "string",
       "enum": ["identity-service", "listing-service", "visit-service", "search-service", "notification-service"]
     },
     "aggregateType": { "type": "string", "examples": ["Property", "Visit", "User", "Inquiry"] },
-    "aggregateId": { "type": "string", "format": "uuid", "description": "También es la clave del mensaje en Kafka." },
-    "correlationId": { "type": "string", "description": "Propagado desde el header X-Correlation-Id." },
-    "causationId": { "type": ["string", "null"], "description": "eventId del evento que causó este, si aplica." },
+    "aggregateId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "También es la clave del mensaje en Kafka." },
+    "correlationId": { "type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$", "description": "Propagado desde el header X-Correlation-Id." },
+    "causationId": { "type": ["string", "null"], "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "eventId del evento que causó este, si aplica." },
     "payload": { "type": "object", "description": "Validado por el schema específico del evento." }
   },
   "additionalProperties": true
