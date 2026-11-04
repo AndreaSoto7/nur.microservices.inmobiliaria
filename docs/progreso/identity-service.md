@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Tope de 30 días para la sesión: el refresh guarda `auth_time` y no vence más allá de ese tope | #31 |
 | feat | Publicar `UserRegistered` en Kafka: schema, outbox en la misma transacción y relay | #28 |
 | feat | Re-hash de contraseñas al iniciar sesión; el login pasa a ser un comando (`AuthenticateUserCommand`) | #25 |
 | feat | Cerrar sesión (`POST /api/v1/auth/logout`): revoca la familia del refresh token | #24 |
@@ -31,7 +32,7 @@
 - [x] Re-hashear la contraseña al iniciar sesión cuando Django suba las iteraciones de PBKDF2
 - [x] Publicar `UserRegistered` con outbox y relay a Kafka
 - [ ] Borrar periódicamente las filas ya publicadas de `outbox`
-- [ ] Decidir una duración máxima absoluta de la sesión: hoy cada rotación renueva los 7 días, así que una sesión activa no vence nunca
+- [x] Duración máxima de la sesión: 30 días desde el login
 
 **Depende de otros**
 

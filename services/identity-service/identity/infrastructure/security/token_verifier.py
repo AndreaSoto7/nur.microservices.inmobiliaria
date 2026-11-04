@@ -8,7 +8,7 @@ from identity.domain.refresh_token import RefreshToken
 from identity.infrastructure.security.keys import ALGORITHM, SigningKey
 from identity.infrastructure.security.token_issuer import ACCESS_TOKEN_TYPE, REFRESH_TOKEN_TYPE
 
-REQUIRED_CLAIMS = ["exp", "iat", "iss", "aud", "sub", "jti", "fid"]
+REQUIRED_CLAIMS = ["exp", "iat", "iss", "aud", "sub", "jti", "fid", "auth_time"]
 
 
 class PyJwtRefreshTokenVerifier:
@@ -36,6 +36,7 @@ class PyJwtRefreshTokenVerifier:
                 user_id=UUID(claims["sub"]),
                 family_id=UUID(claims["fid"]),
                 expires_at=datetime.fromtimestamp(claims["exp"], UTC),
+                session_started_at=datetime.fromtimestamp(claims["auth_time"], UTC),
             )
         except (jwt.PyJWTError, ValueError, TypeError) as error:
             raise InvalidRefreshToken() from error

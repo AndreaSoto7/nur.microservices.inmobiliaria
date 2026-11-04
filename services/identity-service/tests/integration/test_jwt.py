@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from identity.domain.email import Email
 from identity.domain.errors import InvalidRefreshToken
 from identity.domain.full_name import FullName
+from identity.domain.refresh_token import RefreshToken
 from identity.domain.role import Role
 from identity.domain.user import User
 from identity.infrastructure.security.keys import (
@@ -49,6 +50,7 @@ def issuer(signing_key) -> PyJwtTokenIssuer:
         audience="inmobiliaria",
         access_ttl=timedelta(minutes=15),
         refresh_ttl=timedelta(days=7),
+        session_max=timedelta(days=30),
         clock=FixedClock(NOW),
     )
 
@@ -199,7 +201,7 @@ def verifier(signing_key) -> PyJwtRefreshTokenVerifier:
 def test_el_refresh_nuevo_abre_una_familia_y_la_conserva_al_rotar(issuer, verifier, user):
     first = verifier.verify(issuer.issue(user).refresh_token)
     other_login = verifier.verify(issuer.issue(user).refresh_token)
-    rotated = verifier.verify(issuer.issue(user, family_id=first.family_id).refresh_token)
+    rotated = verifier.verify(issuer.issue(user, renewing=first).refresh_token)
 
     assert other_login.family_id != first.family_id
     assert rotated.family_id == first.family_id
@@ -207,14 +209,82 @@ def test_el_refresh_nuevo_abre_una_familia_y_la_conserva_al_rotar(issuer, verifi
 
 
 def test_el_verificador_devuelve_los_datos_del_token(issuer, verifier, user):
-    family_id = uuid4()
+    first = verifier.verify(issuer.issue(user).refresh_token)
 
-    token = verifier.verify(issuer.issue(user, family_id=family_id).refresh_token)
+    token = verifier.verify(issuer.issue(user, renewing=first).refresh_token)
 
     assert token.user_id == user.id
-    assert token.family_id == family_id
+    assert token.family_id == first.family_id
+    assert token.session_started_at == NOW
     assert isinstance(token.jti, UUID)
+
+
+def a_renewable_token(started_at: datetime, user: User) -> RefreshToken:
+    return RefreshToken(
+        jti=uuid4(),
+        user_id=user.id,
+        family_id=uuid4(),
+        expires_at=NOW + timedelta(days=1),
+        session_started_at=started_at,
+    )
+
+
+def test_el_login_inicia_la_sesion_con_siete_dias_de_vida(issuer, verifier, user):
+    token = verifier.verify(issuer.issue(user).refresh_token)
+
+    assert token.session_started_at == NOW
     assert token.expires_at == NOW + timedelta(days=7)
+
+
+def test_rotar_conserva_el_inicio_de_la_sesion_y_renueva_siete_dias(issuer, verifier, user):
+    started_at = NOW - timedelta(days=10)
+
+    token = verifier.verify(
+        issuer.issue(user, renewing=a_renewable_token(started_at, user)).refresh_token
+    )
+
+    assert token.session_started_at == started_at
+    assert token.expires_at == NOW + timedelta(days=7)
+
+
+def test_rotar_cerca_del_tope_no_pasa_de_treinta_dias_desde_el_login(issuer, verifier, user):
+    started_at = NOW - timedelta(days=28)
+
+    token = verifier.verify(
+        issuer.issue(user, renewing=a_renewable_token(started_at, user)).refresh_token
+    )
+
+    assert token.expires_at == started_at + timedelta(days=30)
+
+
+def test_pasado_el_tope_de_la_sesion_el_refresh_ya_nace_vencido(issuer, verifier, user):
+    started_at = NOW - timedelta(days=31)
+
+    refresh_token = issuer.issue(user, renewing=a_renewable_token(started_at, user)).refresh_token
+
+    with pytest.raises(InvalidRefreshToken):
+        verifier.verify(refresh_token)
+
+
+def test_el_verificador_rechaza_un_refresh_sin_auth_time(signing_key, verifier, user):
+    claims = {
+        "sub": str(user.id),
+        "iss": "identity-service",
+        "aud": "identity-service",
+        "iat": int(NOW.timestamp()),
+        "exp": int((NOW + timedelta(days=7)).timestamp()),
+        "jti": str(uuid4()),
+        "fid": str(uuid4()),
+    }
+    token = jwt.encode(
+        claims,
+        signing_key.private_key,
+        algorithm=ALGORITHM,
+        headers={"kid": signing_key.kid, "typ": "rt+jwt"},
+    )
+
+    with pytest.raises(InvalidRefreshToken):
+        verifier.verify(token)
 
 
 def test_el_verificador_rechaza_un_access_token(issuer, verifier, user):
@@ -230,6 +300,7 @@ def test_el_verificador_rechaza_un_token_vencido(signing_key, verifier, user):
         audience="inmobiliaria",
         access_ttl=timedelta(minutes=15),
         refresh_ttl=timedelta(days=7),
+        session_max=timedelta(days=30),
         clock=FixedClock(past),
     )
 
@@ -244,6 +315,7 @@ def test_el_verificador_rechaza_un_token_firmado_con_otra_clave(verifier, signin
         audience="inmobiliaria",
         access_ttl=timedelta(minutes=15),
         refresh_ttl=timedelta(days=7),
+        session_max=timedelta(days=30),
         clock=FixedClock(NOW),
     )
 

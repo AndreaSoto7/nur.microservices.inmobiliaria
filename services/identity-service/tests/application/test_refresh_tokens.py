@@ -74,7 +74,7 @@ def test_canjea_el_token_por_un_par_nuevo_de_la_misma_familia(
 
     assert tokens.access_token == f"access-for-{user.id}"
     assert token.jti in ledger.used
-    assert issuer.family_ids == [token.family_id]
+    assert issuer.renewed == [token]
 
 
 def test_un_token_desconocido_es_invalido(handler):
@@ -90,7 +90,7 @@ def test_reutilizar_un_token_es_invalido_y_no_emite_nada(handler, verifier, issu
     with pytest.raises(InvalidRefreshToken):
         handler.handle(RefreshTokensCommand(refresh_token="viejo"))
 
-    assert len(issuer.family_ids) == 1
+    assert len(issuer.renewed) == 1
     assert token.family_id in ledger.revoked
 
 
@@ -100,7 +100,7 @@ def test_un_usuario_inexistente_es_invalido(handler, verifier, issuer):
     with pytest.raises(InvalidRefreshToken):
         handler.handle(RefreshTokensCommand(refresh_token="viejo"))
 
-    assert issuer.family_ids == []
+    assert issuer.renewed == []
 
 
 def test_un_usuario_inactivo_no_renueva_y_no_gasta_el_token(handler, users, verifier, ledger, user):

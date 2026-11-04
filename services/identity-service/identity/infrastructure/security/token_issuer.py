@@ -1,10 +1,11 @@
 from datetime import timedelta
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import jwt
 
 from identity.application.dto import TokenPair
 from identity.application.ports import Clock
+from identity.domain.refresh_token import RefreshToken
 from identity.domain.user import User
 from identity.infrastructure.security.keys import ALGORITHM, SigningKey
 
@@ -20,6 +21,9 @@ class PyJwtTokenIssuer:
     Claims del access token según CLAUDE.md: sub, email, roles, iss y aud (más iat, exp y jti).
     El refresh token no lleva datos personales y su audiencia es identity-service (el emisor):
     solo identity lo acepta, ningún otro servicio.
+
+    Cada rotación renueva `refresh_ttl`, pero nunca pasa de `session_max` desde el login: al llegar
+    al tope el refresh vence como cualquier otro, y hay que volver a iniciar sesión.
     """
 
     def __init__(
@@ -30,6 +34,7 @@ class PyJwtTokenIssuer:
         audience: str,
         access_ttl: timedelta,
         refresh_ttl: timedelta,
+        session_max: timedelta,
         clock: Clock,
     ):
         self._signing_key = signing_key
@@ -37,10 +42,13 @@ class PyJwtTokenIssuer:
         self._audience = audience
         self._access_ttl = access_ttl
         self._refresh_ttl = refresh_ttl
+        self._session_max = session_max
         self._clock = clock
 
-    def issue(self, user: User, family_id: UUID | None = None) -> TokenPair:
+    def issue(self, user: User, renewing: RefreshToken | None = None) -> TokenPair:
         now = self._clock.now()
+        session_started_at = renewing.session_started_at if renewing else now
+        refresh_expires_at = min(now + self._refresh_ttl, session_started_at + self._session_max)
         common = {"sub": str(user.id), "iss": self._issuer, "iat": int(now.timestamp())}
         access_token = self._sign(
             ACCESS_TOKEN_TYPE,
@@ -59,10 +67,11 @@ class PyJwtTokenIssuer:
             common
             | {
                 "aud": self._issuer,
-                "fid": str(family_id or uuid4()),
+                "fid": str(renewing.family_id if renewing else uuid4()),
+                "auth_time": int(session_started_at.timestamp()),
                 "tokenType": "refresh",
                 "jti": str(uuid4()),
-                "exp": int((now + self._refresh_ttl).timestamp()),
+                "exp": int(refresh_expires_at.timestamp()),
             },
         )
         return TokenPair(

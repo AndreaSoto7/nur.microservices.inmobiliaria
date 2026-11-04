@@ -81,12 +81,15 @@ JWT_ISSUER = env.str("JWT_ISSUER", default="identity-service")
 JWT_AUDIENCE = env.str("JWT_AUDIENCE", default="inmobiliaria")
 JWT_ACCESS_TTL_SECONDS = env.int("JWT_ACCESS_TTL_SECONDS", default=15 * 60)
 JWT_REFRESH_TTL_SECONDS = env.int("JWT_REFRESH_TTL_SECONDS", default=7 * 24 * 60 * 60)
+JWT_SESSION_MAX_SECONDS = env.int("JWT_SESSION_MAX_SECONDS", default=30 * 24 * 60 * 60)
 
 # Un error de configuración aquí anularía las garantías de los tokens: mejor no arrancar.
 if not 60 <= JWT_ACCESS_TTL_SECONDS <= 3600:
     raise ImproperlyConfigured("JWT_ACCESS_TTL_SECONDS debe estar entre 60 y 3600.")
 if JWT_REFRESH_TTL_SECONDS <= JWT_ACCESS_TTL_SECONDS:
     raise ImproperlyConfigured("JWT_REFRESH_TTL_SECONDS debe ser mayor que el del access token.")
+if JWT_SESSION_MAX_SECONDS < JWT_REFRESH_TTL_SECONDS:
+    raise ImproperlyConfigured("JWT_SESSION_MAX_SECONDS no puede ser menor que el del refresh.")
 if not JWT_ISSUER or not JWT_AUDIENCE:
     raise ImproperlyConfigured("JWT_ISSUER y JWT_AUDIENCE no pueden estar vacíos.")
 
@@ -110,7 +113,7 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "OAS_VERSION": "3.1.0",
     "TITLE": "identity-service",
-    "VERSION": "1.2.0",
+    "VERSION": "1.2.1",
     "SERVE_INCLUDE_SCHEMA": False,
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",
