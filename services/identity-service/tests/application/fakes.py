@@ -27,8 +27,9 @@ class InMemoryUserRepository(UserRepository):
     def get_by_id(self, user_id: UUID) -> User | None:
         return next((user for user in self.users.values() if user.id == user_id), None)
 
-    def update_password_hash(self, user: User) -> None:
-        self.users[user.email.value] = user
+    def update_password_hash(self, user: User, previous_hash: str) -> None:
+        if self.users[user.email.value].password_hash == previous_hash:
+            self.users[user.email.value] = user
 
     def add(self, user: User) -> None:
         if user.email.value in self.users:

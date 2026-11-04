@@ -17,8 +17,7 @@ class AuthenticateUserHandler:
     """Comando: valida credenciales y devuelve un par de tokens.
 
     Devuelve los tokens porque son el resultado de la operación, no un dato de lectura. Es un
-    comando porque puede cambiar estado: actualiza el hash si quedó con parámetros viejos. Así los
-    hashes viejos no tardan menos que uno actual, lo que permitiría detectar cuentas por tiempo.
+    comando porque puede cambiar estado: actualiza el hash si quedó con parámetros viejos.
 
     Un email inexistente, una contraseña incorrecta y un usuario inactivo dan el mismo error, con
     el mismo mensaje y un tiempo parecido: no se revela qué emails están registrados.
@@ -44,6 +43,7 @@ class AuthenticateUserHandler:
         user.ensure_can_authenticate()
         if self._password_hasher.needs_rehash(user.password_hash):
             self._users.update_password_hash(
-                user.with_password_hash(self._password_hasher.rehash(command.password))
+                user.with_password_hash(self._password_hasher.rehash(command.password)),
+                previous_hash=user.password_hash,
             )
         return self._token_issuer.issue(user)

@@ -18,7 +18,8 @@ class UserRepository(ABC):
     def get_by_id(self, user_id: UUID) -> User | None: ...
 
     @abstractmethod
-    def update_password_hash(self, user: User) -> None: ...
+    def update_password_hash(self, user: User, previous_hash: str) -> None:
+        """Actualiza el hash solo si sigue siendo `previous_hash`. Una falla no impide el login."""
 
     @abstractmethod
     def add(self, user: User) -> None:
