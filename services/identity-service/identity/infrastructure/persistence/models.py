@@ -28,6 +28,23 @@ class UserModelManager(BaseUserManager["UserModel"]):
         return self.create_user(email, password, **extra)
 
 
+class OutboxMessage(models.Model):
+    """Evento de integración pendiente de publicar. Se escribe en la transacción del agregado."""
+
+    id = models.UUIDField(primary_key=True)
+    topic = models.CharField(max_length=255)
+    aggregate_id = models.CharField(max_length=36)
+    envelope = models.JSONField()
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    published_at = models.DateTimeField(null=True, db_index=True)
+
+    class Meta:
+        db_table = "outbox"
+
+    def __str__(self) -> str:
+        return str(self.id)
+
+
 class UsedRefreshToken(models.Model):
     """Refresh tokens ya canjeados. El PK garantiza que dos canjes simultáneos no pasen ambos."""
 

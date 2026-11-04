@@ -70,6 +70,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Usuario propio con PK UUID desde el día 1 (rule stack-django).
 AUTH_USER_MODEL = "identity.UserModel"
 
+KAFKA_BOOTSTRAP_SERVERS = env.str("KAFKA_BOOTSTRAP_SERVERS", default="kafka:29092")
+OUTBOX_POLL_SECONDS = env.float("OUTBOX_POLL_SECONDS", default=1.0)
+
 # JWT RS256. La clave privada nunca va en git: o su contenido PEM en JWT_PRIVATE_KEY (con \n
 # escapado), o la ruta a un archivo montado en JWT_PRIVATE_KEY_PATH. Los demás validan con el JWKS.
 JWT_PRIVATE_KEY = env.str("JWT_PRIVATE_KEY", default="", multiline=True)
@@ -107,7 +110,7 @@ REST_FRAMEWORK = {
 SPECTACULAR_SETTINGS = {
     "OAS_VERSION": "3.1.0",
     "TITLE": "identity-service",
-    "VERSION": "1.1.1",
+    "VERSION": "1.2.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",

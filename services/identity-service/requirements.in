@@ -8,3 +8,4 @@ drf-spectacular
 django-environ
 psycopg[binary]
 gunicorn
+confluent-kafka

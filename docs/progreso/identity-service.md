@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Publicar `UserRegistered` en Kafka: schema, outbox en la misma transacción y relay | #28 |
 | feat | Re-hash de contraseñas al iniciar sesión; el login pasa a ser un comando (`AuthenticateUserCommand`) | #25 |
 | feat | Cerrar sesión (`POST /api/v1/auth/logout`): revoca la familia del refresh token | #24 |
 | feat | `GET /api/v1/users/me`: datos del usuario autenticado, primer endpoint de identity que valida un access token | #23 |
@@ -28,7 +29,9 @@
 - [x] `GET /api/v1/users/me`
 - [x] Cerrar sesión (`POST /api/v1/auth/logout`)
 - [x] Re-hashear la contraseña al iniciar sesión cuando Django suba las iteraciones de PBKDF2
-- [ ] Publicar `UserRegistered` con outbox y relay a Kafka. Necesita `infra/` con Kafka, el schema del evento en `contracts/events/` y definir la unidad de trabajo (usuario + outbox en la misma transacción)
+- [x] Publicar `UserRegistered` con outbox y relay a Kafka
+- [ ] Borrar periódicamente las filas ya publicadas de `outbox`
+- [ ] Decidir una duración máxima absoluta de la sesión: hoy cada rotación renueva los 7 días, así que una sesión activa no vence nunca
 
 **Depende de otros**
 

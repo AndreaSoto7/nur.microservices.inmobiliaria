@@ -10,6 +10,7 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Repository | DDD | identity | `identity/domain/repository.py`, `identity/infrastructure/persistence/repositories.py` | El dominio no debe conocer el ORM de Django | Usar `UserModel` directo en el handler acoplaría el caso de uso a Django y exigiría una base en cada test |
 | Adapter | Estructural | identity | `identity/infrastructure/security/password_hasher.py` | Adaptar los hashers de Django al puerto `PasswordHasher` de la capa de aplicación | Llamar a `make_password` desde el handler metería a Django en `application` |
 | Adapter | Estructural | identity | `identity/infrastructure/security/token_issuer.py` | Adaptar PyJWT al puerto `TokenIssuer`: la aplicación pide tokens sin saber cómo se firman | Usar `djangorestframework-simplejwt` no sirve: no pone `kid` en el header |
+| Outbox | Integración | identity | `identity/infrastructure/persistence/repositories.py`, `identity/infrastructure/messaging/relay.py` | Guardar el usuario y publicar en Kafka son dos sistemas: si uno falla, quedaría un usuario sin evento o un evento sin usuario | Publicar directo en el handler pierde el evento si Kafka está caído; una transacción distribuida no existe entre PostgreSQL y Kafka |
 | Command | Comportamiento | identity | `identity/application/commands/register_user.py` | Encapsular la intención de registrar un usuario, separada de HTTP (CQRS) | Sin `CommandBus` (Mediator): con pocos casos de uso, el handler se invoca directo desde la vista (KISS) |
 
 ## Planificados (candidatos, mover a "Aplicados" al implementarlos)
@@ -25,7 +26,7 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Mediator | Comportamiento | visit, listing | `CommandBus` / `QueryBus` desacoplan los controladores de los handlers |
 | Database per Service | Microservicios | todos | Persistencia independiente |
 | CQRS | Arquitectura | listing + search | Comandos en listing, lectura optimizada en search |
-| Outbox | Integración | identity, listing, visit | Publicación confiable de eventos |
+| Outbox | Integración | listing, visit | Publicación confiable de eventos (ya aplicado en identity) |
 | Repository | DDD | todos | Un repositorio por aggregate; el dominio no conoce el ORM |
 | Factory Method | Creacional | listing | `Property.create()` valida distinto según `HOUSE` o `APARTMENT` |
 | Builder | Creacional | search | Criterios de búsqueda con muchos filtros opcionales |

@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 from identity.application.dto import TokenPair
 from identity.domain.email import Email
 from identity.domain.errors import EmailAlreadyRegistered, InvalidRefreshToken
+from identity.domain.events import UserRegistered
 from identity.domain.password import RawPassword
 from identity.domain.refresh_token import RefreshToken, RefreshTokenLedger
 from identity.domain.repository import UserRepository
@@ -15,6 +16,7 @@ from identity.domain.user import User
 class InMemoryUserRepository(UserRepository):
     def __init__(self) -> None:
         self.users: dict[str, User] = {}
+        self.saved_events: list[UserRegistered] = []
 
     def exists_with_email(self, email: Email) -> bool:
         return email.value in self.users
@@ -32,6 +34,7 @@ class InMemoryUserRepository(UserRepository):
         if user.email.value in self.users:
             raise EmailAlreadyRegistered("Ya existe un usuario con ese email.")
         self.users[user.email.value] = user
+        self.saved_events.extend(user.pull_events())
 
 
 class FakePasswordHasher:

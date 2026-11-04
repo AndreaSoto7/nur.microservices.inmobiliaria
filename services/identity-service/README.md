@@ -15,7 +15,9 @@ identity/
   domain/                     modelo de dominio en Python puro (value objects, errores)
   application/                casos de uso y puertos
   infrastructure/
-    persistence/              modelo de Django (UserModel), migraciones
+    persistence/              modelos de Django, repositorios, migraciones y comando del relay
+    messaging/                eventos de integración, relay del outbox y productor Kafka
+    security/                 hash de contraseñas, emisión y verificación de JWT
     discovery/                registro y baja en Consul
     observability.py          logs JSON con correlationId
   presentation/               health, middlewares, errores problem+json, urls
@@ -38,7 +40,7 @@ Primero se modela el dominio. La base de datos se deriva de él, y solo este ser
 | `is_active` | `bool` | `True` al registrarse |
 | `registered_at` | `datetime` (UTC) | Lo da el puerto `Clock` |
 
-**Evento de dominio:** `UserRegistered` (se publicará en Kafka con el outbox).
+**Evento de dominio:** `UserRegistered` (se publica en Kafka con el outbox; ver [Eventos](#eventos)).
 
 **Tabla `users`** (PostgreSQL, `identity/infrastructure/persistence/models.py`)
 
@@ -122,5 +124,5 @@ uv pip compile requirements-dev.in -o requirements-dev.txt --python-version 3.13
 
 ## Eventos
 
-- **Produce:** `UserRegistered` en `identity.user.events` (pendiente: outbox).
+- **Produce:** `UserRegistered` en `identity.user.events`. El evento se guarda en la tabla `outbox`, en la misma transacción que el usuario, y el proceso `python manage.py run_outbox_relay` lo publica en Kafka.
 - **Consume:** ninguno.
