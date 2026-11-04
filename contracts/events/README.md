@@ -41,5 +41,6 @@ Esta es la fuente de verdad de los eventos entre servicios. Si un evento no est√
 
 ## Schemas definidos
 
+- [x] `identity/user-registered.v1.schema.json`
 - [x] `listing/property-published.v1.schema.json` (ejemplo de referencia; el responsable de listing puede ajustarlo antes de la primera implementaci√≥n)
 - [ ] El resto se crea con `/nuevo-evento` cuando el servicio productor lo implemente.
