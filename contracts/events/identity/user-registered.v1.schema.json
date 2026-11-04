@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inmobiliaria.local/contracts/events/identity/user-registered.v1.schema.json",
+  "title": "UserRegistered v1 (payload)",
+  "description": "Se registró un usuario. notification lo consume para saber a quién y cómo avisarle. Lleva email y nombre porque son necesarios para notificar: por eso identity.user.events usa la retención por defecto y no guarda datos personales para siempre. Nunca lleva la contraseña ni su hash.",
+  "type": "object",
+  "required": ["userId", "email", "fullName", "roles", "registeredAt"],
+  "properties": {
+    "userId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "Igual al aggregateId del envelope." },
+    "email": { "type": "string", "format": "email", "minLength": 3, "maxLength": 254 },
+    "fullName": { "type": "string", "minLength": 1, "maxLength": 150 },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "enum": ["CLIENT", "AGENT", "ADMIN"] }
+    },
+    "registeredAt": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$" }
+  },
+  "additionalProperties": true,
+  "examples": [
+    {
+      "userId": "6f1c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01",
+      "email": "ana.perez@example.com",
+      "fullName": "Ana Pérez",
+      "roles": ["CLIENT"],
+      "registeredAt": "2026-10-16T14:30:00Z"
+    }
+  ]
+}
