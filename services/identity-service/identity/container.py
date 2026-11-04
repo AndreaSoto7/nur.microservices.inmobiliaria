@@ -7,6 +7,7 @@ from functools import cache
 from django.conf import settings
 from django.db import Error as DatabaseError
 
+from identity.application.commands.logout import LogoutHandler
 from identity.application.commands.refresh_tokens import RefreshTokensHandler
 from identity.application.commands.register_user import RegisterUserHandler
 from identity.application.queries.authenticate_user import AuthenticateUserHandler
@@ -55,6 +56,14 @@ def refresh_tokens_handler() -> RefreshTokensHandler:
         verifier=_refresh_token_verifier(),
         ledger=DjangoRefreshTokenLedger(),
         token_issuer=_token_issuer(),
+        clock=SystemClock(),
+    )
+
+
+def logout_handler() -> LogoutHandler:
+    return LogoutHandler(
+        verifier=_refresh_token_verifier(),
+        ledger=DjangoRefreshTokenLedger(),
         clock=SystemClock(),
     )
 

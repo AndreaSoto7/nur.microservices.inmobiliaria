@@ -6,6 +6,7 @@ from identity.presentation.views import (
     CurrentUserView,
     JwksView,
     LoginView,
+    LogoutView,
     RefreshTokensView,
     RegisterUserView,
 )
@@ -14,6 +15,7 @@ urlpatterns = [
     path("auth/register", RegisterUserView.as_view(), name="auth-register"),
     path("auth/login", LoginView.as_view(), name="auth-login"),
     path("auth/refresh", RefreshTokensView.as_view(), name="auth-refresh"),
+    path("auth/logout", LogoutView.as_view(), name="auth-logout"),
     path("users/me", CurrentUserView.as_view(), name="users-me"),
     path("auth/.well-known/jwks.json", JwksView.as_view(), name="auth-jwks"),
 ]

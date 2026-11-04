@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from identity import container
+from identity.application.commands.logout import LogoutCommand
 from identity.application.commands.refresh_tokens import RefreshTokensCommand
 from identity.application.commands.register_user import RegisterUserCommand
 from identity.application.queries.authenticate_user import AuthenticateUserQuery
@@ -140,6 +141,34 @@ class RefreshTokensView(APIView):
             RefreshTokensCommand(refresh_token=serializer.validated_data["refresh_token"])
         )
         return Response(TokenPairSerializer(tokens).data, headers=_NO_STORE)
+
+
+class LogoutView(APIView):
+    """POST /api/v1/auth/logout. Público: la credencial es el propio refresh token."""
+
+    authentication_classes: ClassVar[list] = []
+    permission_classes: ClassVar[list] = [AllowAny]
+
+    @extend_schema(
+        operation_id="logout",
+        tags=["auth"],
+        summary="Cerrar sesión",
+        request=RefreshTokensRequestSerializer,
+        responses={
+            204: None,
+            (400, _PROBLEM): OpenApiResponse(ProblemSerializer, description="VALIDATION_ERROR"),
+            (401, _PROBLEM): OpenApiResponse(
+                ProblemSerializer, description="AUTH_INVALID_REFRESH_TOKEN"
+            ),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        serializer = RefreshTokensRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        container.logout_handler().handle(
+            LogoutCommand(refresh_token=serializer.validated_data["refresh_token"])
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CurrentUserView(APIView):
