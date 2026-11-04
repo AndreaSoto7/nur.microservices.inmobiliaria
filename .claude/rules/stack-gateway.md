@@ -43,7 +43,7 @@ Módulo: `github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway`. Las co
 - **Rutas públicas** (sin JWT). Las de auth se comparan **de forma exacta**, por método y path, no por prefijo. Los paths con segmentos `..` o vacíos (`//`) se rechazan con 400, evaluando por segmentos sobre `r.URL.Path` ya decodificado, para que `%2e%2e` tampoco pase. Así `/api/v1/auth/../users/x` no se salta el JWT.
   - `GET /api/v1/search/**`
   - `GET /api/v1/properties/{propertyId}/images/{imageId}`
-  - `POST /api/v1/auth/register`, `POST /api/v1/auth/login` y `POST /api/v1/auth/refresh`
+  - `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh` y `POST /api/v1/auth/logout` (su credencial es el refresh token en el body: debe funcionar aunque el access token ya venció)
   - `GET /api/v1/auth/.well-known/jwks.json`
   - `GET /health`
 - El resto exige `Authorization: Bearer`.
