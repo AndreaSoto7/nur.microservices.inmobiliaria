@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: identity-service
-  version: 1.2.0
+  version: 1.2.1
   description: |
     Registro, autenticación y emisión de JWT RS256 de la Plataforma Inmobiliaria.
 
@@ -9,8 +9,8 @@ info:
     - Los tokens se validan en el resto de servicios con el JWKS publicado aquí.
     - **Access token** (15 min). Header: `alg=RS256`, `kid` y `typ=at+jwt` (RFC 9068).
       Claims: `sub` (UUID del usuario), `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`, `iat`, `exp`, `jti` y `tokenType=access`.
-    - **Refresh token** (7 días). Header: `typ=rt+jwt`. Claims: `sub`, `iss`, `iat`, `exp`, `jti`, `fid` (UUID de la familia de tokens) y `tokenType=refresh`, con
-      `aud=identity-service`: solo lo acepta identity. Es de un solo uso: cada refresh entrega un par nuevo, con otros 7 días de vida (sesión deslizante).
+    - **Refresh token** (7 días). Header: `typ=rt+jwt`. Claims: `sub`, `iss`, `iat`, `exp`, `jti`, `fid` (UUID de la familia de tokens), `auth_time` (inicio de la sesión) y `tokenType=refresh`, con
+      `aud=identity-service`: solo lo acepta identity. Es de un solo uso: cada refresh entrega un par nuevo, con otros 7 días de vida (sesión deslizante), sin pasar de 30 días desde el login. Al llegar a ese tope, el refresh responde 401 y el usuario debe volver a iniciar sesión.
     - **Cómo valida un consumidor** (gateway y servicios): firma con el JWKS (eligiendo la clave por `kid`), `alg=RS256`,
       `iss=identity-service`, `aud=inmobiliaria`, `exp` y `typ=at+jwt`. Con eso, un refresh token nunca pasa como access token.
     - Los errores siguen RFC 9457 (`application/problem+json`). Además de los documentados en cada operación:
