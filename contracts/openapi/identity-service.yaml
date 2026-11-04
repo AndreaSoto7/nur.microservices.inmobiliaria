@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: identity-service
-  version: 1.1.1
+  version: 1.2.0
   description: |
     Registro, autenticación y emisión de JWT RS256 de la Plataforma Inmobiliaria.
 
@@ -20,7 +20,9 @@ servers:
     description: API Gateway (desarrollo)
 tags:
   - name: auth
-    description: Registro, login, renovación de tokens y claves públicas
+    description: Registro, login, renovación de tokens, cierre de sesión y claves públicas
+  - name: users
+    description: Datos del usuario autenticado
   - name: health
     description: Liveness y readiness (no se exponen por el gateway)
 
@@ -248,6 +250,89 @@ paths:
                 code: AUTH_INVALID_REFRESH_TOKEN
                 correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
 
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Cerrar sesión
+      description: |
+        Revoca la familia del refresh token recibido: ni ese token ni los que se emitieron con él se pueden canjear.
+        Es idempotente: cerrar una sesión ya cerrada también responde 204.
+        Los access tokens ya emitidos siguen siendo válidos hasta su `exp` (máximo 15 min), porque los servicios los validan sin consultar a identity.
+        El cliente borra sus tokens locales sea cual sea la respuesta.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokensRequest'
+      responses:
+        '204':
+          description: Sesión cerrada.
+        '400':
+          description: Body mal formado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: El token es inválido o ya venció. No hay nada que cerrar.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://inmobiliaria.local/problems/auth-invalid-refresh-token
+                title: Refresh token inválido
+                status: 401
+                detail: La sesión no es válida. Inicia sesión de nuevo.
+                instance: /api/v1/auth/logout
+                code: AUTH_INVALID_REFRESH_TOKEN
+                correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+
+  /api/v1/users/me:
+    get:
+      tags: [users]
+      operationId: getCurrentUser
+      summary: Datos del usuario autenticado
+      description: Devuelve los datos del dueño del access token. Un usuario inactivo responde 401.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Usuario autenticado.
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUser'
+              example:
+                id: 6f1c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
+                email: ana.perez@example.com
+                fullName: Ana Pérez
+                roles: [CLIENT]
+                registeredAt: '2026-10-16T14:30:00Z'
+        '401':
+          description: Falta el access token, es inválido, venció o el usuario está inactivo.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://inmobiliaria.local/problems/auth-invalid-token
+                title: Token inválido
+                status: 401
+                detail: El token de acceso no es válido.
+                instance: /api/v1/users/me
+                code: AUTH_INVALID_TOKEN
+                correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+
   /api/v1/auth/.well-known/jwks.json:
     get:
       tags: [auth]
@@ -464,6 +549,27 @@ components:
           maxLength: 4096
           writeOnly: true
 
+    CurrentUser:
+      type: object
+      required: [id, email, fullName, roles, registeredAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+            enum: [CLIENT, AGENT, ADMIN]
+        registeredAt:
+          type: string
+          format: date-time
+
     TokenPair:
       type: object
       required: [accessToken, refreshToken, tokenType, expiresIn]
@@ -522,7 +628,7 @@ components:
         code:
           type: string
           description: Estable, en UPPER_SNAKE_CASE.
-          examples: [VALIDATION_ERROR, USER_EMAIL_ALREADY_REGISTERED, AUTH_INVALID_CREDENTIALS, AUTH_INVALID_REFRESH_TOKEN]
+          examples: [VALIDATION_ERROR, USER_EMAIL_ALREADY_REGISTERED, AUTH_INVALID_CREDENTIALS, AUTH_INVALID_REFRESH_TOKEN, AUTH_INVALID_TOKEN]
         correlationId: { type: string, pattern: '^[A-Za-z0-9._-]{1,128}$' }
         errors:
           type: array
