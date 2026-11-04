@@ -2,7 +2,7 @@ from typing import ClassVar
 
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,7 +11,10 @@ from identity import container
 from identity.application.commands.refresh_tokens import RefreshTokensCommand
 from identity.application.commands.register_user import RegisterUserCommand
 from identity.application.queries.authenticate_user import AuthenticateUserQuery
+from identity.application.queries.get_current_user import GetCurrentUserQuery
+from identity.presentation.authentication import BearerAuthentication
 from identity.presentation.serializers import (
+    CurrentUserSerializer,
     JwksSerializer,
     LoginRequestSerializer,
     ProblemSerializer,
@@ -137,6 +140,28 @@ class RefreshTokensView(APIView):
             RefreshTokensCommand(refresh_token=serializer.validated_data["refresh_token"])
         )
         return Response(TokenPairSerializer(tokens).data, headers=_NO_STORE)
+
+
+class CurrentUserView(APIView):
+    """GET /api/v1/users/me. Requiere access token."""
+
+    authentication_classes: ClassVar[list] = [BearerAuthentication]
+    permission_classes: ClassVar[list] = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="getCurrentUser",
+        tags=["users"],
+        summary="Datos del usuario autenticado",
+        responses={
+            200: CurrentUserSerializer,
+            (401, _PROBLEM): OpenApiResponse(ProblemSerializer, description="AUTH_INVALID_TOKEN"),
+        },
+    )
+    def get(self, request: Request) -> Response:
+        profile = container.get_current_user_handler().handle(
+            GetCurrentUserQuery(user_id=request.user.id)
+        )
+        return Response(CurrentUserSerializer(profile).data)
 
 
 class JwksView(APIView):

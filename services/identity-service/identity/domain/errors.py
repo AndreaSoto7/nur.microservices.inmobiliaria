@@ -32,6 +32,13 @@ class EmailAlreadyRegistered(DomainError):
 INVALID_CREDENTIALS_MESSAGE = "Email o contraseña incorrectos."
 
 
+class InvalidAccessToken(DomainError):
+    code = "AUTH_INVALID_TOKEN"
+
+    def __init__(self, message: str = "El token de acceso no es válido.") -> None:
+        super().__init__(message)
+
+
 INVALID_REFRESH_TOKEN_MESSAGE = "La sesión no es válida. Inicia sesión de nuevo."  # noqa: S105
 
 

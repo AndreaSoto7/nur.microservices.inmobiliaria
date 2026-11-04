@@ -15,6 +15,7 @@ DOMAIN_ERRORS: dict[type[errors.DomainError], tuple[int, str]] = {
     errors.EmailAlreadyRegistered: (409, "Email ya registrado"),
     errors.InvalidCredentials: (401, "Credenciales inválidas"),
     errors.InvalidRefreshToken: (401, "Refresh token inválido"),
+    errors.InvalidAccessToken: (401, "Token inválido"),
 }
 DEFAULT_DOMAIN_ERROR = (409, "Regla de negocio no cumplida")
 
@@ -51,8 +52,8 @@ def _flatten(detail, prefix: str = "") -> list[dict[str, str]]:
     return [{"field": prefix or "nonFieldErrors", "message": str(detail)}]
 
 
-def _respond(body: dict) -> Response:
-    return Response(body, status=body["status"], content_type=PROBLEM_CONTENT_TYPE)
+def _respond(body: dict, headers: dict | None = None) -> Response:
+    return Response(body, status=body["status"], content_type=PROBLEM_CONTENT_TYPE, headers=headers)
 
 
 def problem_exception_handler(exc: Exception, context: dict) -> Response | None:
@@ -61,6 +62,14 @@ def problem_exception_handler(exc: Exception, context: dict) -> Response | None:
 
     if isinstance(exc, errors.DomainError):
         status, title = DOMAIN_ERRORS.get(type(exc), DEFAULT_DOMAIN_ERROR)
+        if isinstance(exc, errors.InvalidAccessToken):
+            # Las credenciales viajan en un esquema HTTP: el 401 lo declara (RFC 9110).
+            return _respond(
+                problem(
+                    status=status, code=exc.code, title=title, detail=exc.message, instance=instance
+                ),
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         return _respond(
             problem(
                 status=status, code=exc.code, title=title, detail=exc.message, instance=instance

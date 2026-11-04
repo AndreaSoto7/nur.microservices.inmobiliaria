@@ -59,6 +59,14 @@ class TokenPairSerializer(serializers.Serializer):
     expires_in = serializers.IntegerField()
 
 
+class CurrentUserSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    email = serializers.EmailField()
+    full_name = serializers.CharField()
+    roles = serializers.ListField(child=serializers.CharField())
+    registered_at = serializers.DateTimeField()
+
+
 class JwkSerializer(serializers.Serializer):
     kty = serializers.ChoiceField(choices=["RSA"])
     use = serializers.ChoiceField(choices=["sig"])

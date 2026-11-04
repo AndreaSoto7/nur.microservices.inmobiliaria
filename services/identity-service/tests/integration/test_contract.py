@@ -8,7 +8,7 @@ from django.urls import Resolver404, resolve
 
 CONTRACT = Path(__file__).resolve().parents[4] / "contracts/openapi/identity-service.yaml"
 # Operaciones del contrato que todavía no se implementan. Se quitan al implementarlas.
-NOT_IMPLEMENTED_YET = {"logout", "getCurrentUser"}
+NOT_IMPLEMENTED_YET = {"logout"}
 
 
 def operations() -> list[tuple[str, str, str]]:
