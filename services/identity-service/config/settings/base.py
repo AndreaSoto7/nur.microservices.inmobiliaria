@@ -72,6 +72,8 @@ AUTH_USER_MODEL = "identity.UserModel"
 
 KAFKA_BOOTSTRAP_SERVERS = env.str("KAFKA_BOOTSTRAP_SERVERS", default="kafka:29092")
 OUTBOX_POLL_SECONDS = env.float("OUTBOX_POLL_SECONDS", default=1.0)
+OUTBOX_RETENTION_SECONDS = env.int("OUTBOX_RETENTION_SECONDS", default=7 * 24 * 60 * 60)
+MAINTENANCE_INTERVAL_SECONDS = env.int("MAINTENANCE_INTERVAL_SECONDS", default=60 * 60)
 
 # JWT RS256. La clave privada nunca va en git: o su contenido PEM en JWT_PRIVATE_KEY (con \n
 # escapado), o la ruta a un archivo montado en JWT_PRIVATE_KEY_PATH. Los demás validan con el JWKS.
@@ -90,6 +92,10 @@ if JWT_REFRESH_TTL_SECONDS <= JWT_ACCESS_TTL_SECONDS:
     raise ImproperlyConfigured("JWT_REFRESH_TTL_SECONDS debe ser mayor que el del access token.")
 if JWT_SESSION_MAX_SECONDS < JWT_REFRESH_TTL_SECONDS:
     raise ImproperlyConfigured("JWT_SESSION_MAX_SECONDS no puede ser menor que el del refresh.")
+if MAINTENANCE_INTERVAL_SECONDS < 1:
+    raise ImproperlyConfigured("MAINTENANCE_INTERVAL_SECONDS debe ser al menos 1.")
+if OUTBOX_RETENTION_SECONDS < 0:
+    raise ImproperlyConfigured("OUTBOX_RETENTION_SECONDS no puede ser negativo.")
 if not JWT_ISSUER or not JWT_AUDIENCE:
     raise ImproperlyConfigured("JWT_ISSUER y JWT_AUDIENCE no pueden estar vacíos.")
 

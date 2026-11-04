@@ -14,7 +14,7 @@
 
 name: inmobiliaria
 
-# Configuración común de identity-service y de su relay del outbox.
+# Configuración común de identity-service, su relay del outbox y su limpieza.
 x-identity-environment: &identity-environment
   DJANGO_SETTINGS_MODULE: config.settings.base
   # `environment` tiene prioridad: un .env de desarrollo no debe activar el modo debug aquí.
@@ -22,6 +22,10 @@ x-identity-environment: &identity-environment
   DJANGO_SECRET_KEY: ${IDENTITY_SECRET_KEY:?Genera el .env con infra/scripts/generate-env.sh}
   DATABASE_URL: postgres://identity:${IDENTITY_DB_PASSWORD}@identity-db:5432/identity?connect_timeout=3
   KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+  # El servicio y la limpieza deben ver el mismo tope: si la limpieza usara uno menor, borraría una
+  # familia revocada con tokens vivos, y esos tokens volverían a servir.
+  JWT_REFRESH_TTL_SECONDS: ${IDENTITY_JWT_REFRESH_TTL_SECONDS:-604800}
+  JWT_SESSION_MAX_SECONDS: ${IDENTITY_JWT_SESSION_MAX_SECONDS:-2592000}
 
 services:
   consul:
@@ -128,6 +132,19 @@ services:
     restart: unless-stopped
     # Un flush a Kafka puede tardar hasta 15 s: más que los 10 s por defecto de docker stop.
     stop_grace_period: 20s
+
+  identity-maintenance:
+    build: ../services/identity-service
+    command: ["python", "manage.py", "run_maintenance"]
+    depends_on:
+      # identity-service aplica las migraciones al arrancar.
+      identity-service:
+        condition: service_healthy
+    environment:
+      <<: *identity-environment
+    healthcheck:
+      disable: true
+    restart: unless-stopped
 
 volumes:
   kafka-data:

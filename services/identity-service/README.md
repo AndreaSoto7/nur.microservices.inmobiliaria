@@ -104,7 +104,7 @@ Al arrancar, el contenedor aplica las migraciones y levanta gunicorn en el puert
 - **Refresh token** (7 días): solo `sub`, `iss`, `iat`, `exp`, `jti` y `tokenType=refresh`, con `fid`, `auth_time`, `aud=identity-service` y `typ=rt+jwt`. Por eso **ningún otro servicio lo acepta como access token**.
 - **Cerrar sesión:** `POST /api/v1/auth/logout` revoca la familia del refresh token. Los access tokens ya emitidos siguen valiendo hasta su `exp`, porque los servicios los validan sin consultar a identity.
 - **Rotación:** `POST /api/v1/auth/refresh` canjea el refresh token por un par nuevo, y cada uno sirve una sola vez. Si se reutiliza (señal de robo), se revoca toda su familia. Los tokens usados se guardan en `used_refresh_tokens` y las familias revocadas en `revoked_refresh_families`.
-- **Tope de sesión:** cada rotación renueva 7 días, pero nunca pasa de 30 días desde el login (`auth_time`). Después hay que volver a iniciar sesión.
+- **Tope de sesión:** cada rotación renueva 7 días, pero nunca pasa de 30 días desde el login (`auth_time`). Después hay que volver a iniciar sesión. El access token de la última rotación puede pasar el tope hasta 15 min, y se acepta: es su duración normal.
 - **`kid`**: huella RFC 7638 de la clave pública. Si se rota la clave, cambia el `kid`, y el gateway y los servicios saben que deben volver a pedir el JWKS.
 - **Clave privada**: solo la tiene identity (`JWT_PRIVATE_KEY_PATH`). Sin clave, `/health/ready` responde `DOWN`.
 - **Rotar la clave**: exige reiniciar identity, y los tokens firmados con la clave anterior dejan de validar (hasta 15 min los access y 7 días los refresh). Publicar varias claves en el JWKS se agrega solo si hace falta (YAGNI).
@@ -127,3 +127,15 @@ uv pip compile requirements-dev.in -o requirements-dev.txt --python-version 3.13
 
 - **Produce:** `UserRegistered` en `identity.user.events`. El evento se guarda en la tabla `outbox`, en la misma transacción que el usuario, y el proceso `python manage.py run_outbox_relay` lo publica en Kafka.
 - **Consume:** ninguno.
+
+## Limpieza periódica
+
+El proceso `python manage.py run_maintenance` corre cada hora y borra lo que ya no sirve. Con `--once` limpia una vez y termina.
+
+| Tabla | Se borra cuando |
+|---|---|
+| `used_refresh_tokens` | El token venció hace más de 1 h |
+| `revoked_refresh_families` | Pasaron 30 días y 1 h desde la revocación: ya no puede quedar un token vivo de esa familia |
+| `outbox` | El evento se publicó hace más de 7 días. Un evento pendiente nunca se borra |
+
+**Si bajas `JWT_SESSION_MAX_SECONDS`:** primero espera a que venzan los refresh tokens ya emitidos (hasta el tope anterior). Si no, la limpieza podría borrar una familia revocada que todavía tiene tokens vivos, y esos tokens volverían a servir.
