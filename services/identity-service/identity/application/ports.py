@@ -30,6 +30,14 @@ class PasswordHasher(Protocol):
         """
         ...
 
+    def needs_rehash(self, password_hash: str) -> bool:
+        """True si el hash usa un algoritmo viejo o menos iteraciones que las actuales."""
+        ...
+
+    def rehash(self, raw_password: str) -> str:
+        """Hashea sin aplicar la política: la contraseña ya existe y se acaba de verificar."""
+        ...
+
 
 class TokenIssuer(Protocol):
     def issue(self, user: User, family_id: UUID | None = None) -> TokenPair:

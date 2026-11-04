@@ -8,10 +8,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from identity import container
+from identity.application.commands.authenticate_user import AuthenticateUserCommand
 from identity.application.commands.logout import LogoutCommand
 from identity.application.commands.refresh_tokens import RefreshTokensCommand
 from identity.application.commands.register_user import RegisterUserCommand
-from identity.application.queries.authenticate_user import AuthenticateUserQuery
 from identity.application.queries.get_current_user import GetCurrentUserQuery
 from identity.presentation.authentication import BearerAuthentication
 from identity.presentation.serializers import (
@@ -103,7 +103,7 @@ class LoginView(APIView):
         serializer = LoginRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         tokens = container.authenticate_user_handler().handle(
-            AuthenticateUserQuery(
+            AuthenticateUserCommand(
                 email=serializer.validated_data["email"],
                 password=serializer.validated_data["password"],
             )

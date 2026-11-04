@@ -1,4 +1,10 @@
-from django.contrib.auth.hashers import check_password, is_password_usable, make_password
+from django.contrib.auth.hashers import (
+    check_password,
+    get_hasher,
+    identify_hasher,
+    is_password_usable,
+    make_password,
+)
 
 from identity.domain.password import RawPassword
 
@@ -17,3 +23,14 @@ class DjangoPasswordHasher:
             make_password(raw_password)
             return False
         return check_password(raw_password, password_hash)
+
+    def needs_rehash(self, password_hash: str) -> bool:
+        if not is_password_usable(password_hash):
+            return False
+        preferred = get_hasher()
+        return identify_hasher(password_hash).algorithm != preferred.algorithm or (
+            preferred.must_update(password_hash)
+        )
+
+    def rehash(self, raw_password: str) -> str:
+        return make_password(raw_password)

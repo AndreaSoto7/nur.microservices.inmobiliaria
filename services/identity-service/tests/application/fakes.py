@@ -25,6 +25,9 @@ class InMemoryUserRepository(UserRepository):
     def get_by_id(self, user_id: UUID) -> User | None:
         return next((user for user in self.users.values() if user.id == user_id), None)
 
+    def update_password_hash(self, user: User) -> None:
+        self.users[user.email.value] = user
+
     def add(self, user: User) -> None:
         if user.email.value in self.users:
             raise EmailAlreadyRegistered("Ya existe un usuario con ese email.")
@@ -42,7 +45,13 @@ class FakePasswordHasher:
 
     def verify(self, raw_password: str, password_hash: str | None) -> bool:
         self.verify_calls += 1
-        return password_hash == f"hashed::{raw_password}"
+        return password_hash in (f"hashed::{raw_password}", f"viejo::{raw_password}")
+
+    def needs_rehash(self, password_hash: str) -> bool:
+        return password_hash.startswith("viejo::")
+
+    def rehash(self, raw_password: str) -> str:
+        return f"hashed::{raw_password}"
 
 
 class FakeTokenIssuer:

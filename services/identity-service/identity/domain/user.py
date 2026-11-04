@@ -1,3 +1,4 @@
+import dataclasses
 from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -70,6 +71,10 @@ class User:
         # Mismo error que una contraseña incorrecta: no se revela que la cuenta existe.
         if not self.is_active:
             raise InvalidCredentials()
+
+    def with_password_hash(self, password_hash: str) -> "User":
+        """El mismo usuario con otro hash. La contraseña no cambia: solo cómo se guarda."""
+        return dataclasses.replace(self, password_hash=password_hash)
 
     def pull_events(self) -> list[UserRegistered]:
         """Entrega los eventos registrados y los olvida (se despachan una sola vez)."""

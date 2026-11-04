@@ -179,3 +179,13 @@ def test_un_usuario_inactivo_no_puede_autenticarse():
         inactive.ensure_can_authenticate()
 
     assert error.value.code == "AUTH_INVALID_CREDENTIALS"
+
+
+def test_with_password_hash_devuelve_un_usuario_nuevo_sin_cambiar_el_original():
+    user = register()
+
+    updated = user.with_password_hash("otro-hash")
+
+    assert updated.password_hash == "otro-hash"
+    assert updated == user
+    assert user.password_hash == "hash-de-prueba"
