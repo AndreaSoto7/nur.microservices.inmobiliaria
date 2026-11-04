@@ -13,6 +13,7 @@ from identity.application.commands.refresh_tokens import RefreshTokensHandler
 from identity.application.commands.register_user import RegisterUserHandler
 from identity.application.queries.get_current_user import GetCurrentUserHandler
 from identity.infrastructure.clock import SystemClock
+from identity.infrastructure.messaging.kafka_producer import KafkaEventProducer
 from identity.infrastructure.persistence.health import check_database
 from identity.infrastructure.persistence.repositories import (
     DjangoRefreshTokenLedger,
@@ -66,6 +67,10 @@ def logout_handler() -> LogoutHandler:
         ledger=DjangoRefreshTokenLedger(),
         clock=SystemClock(),
     )
+
+
+def event_producer() -> KafkaEventProducer:
+    return KafkaEventProducer(settings.KAFKA_BOOTSTRAP_SERVERS)
 
 
 def get_current_user_handler() -> GetCurrentUserHandler:

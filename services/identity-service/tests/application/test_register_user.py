@@ -109,3 +109,11 @@ def test_no_hashea_si_el_email_ya_existe(handler, hasher):
         handler.handle(a_command())
 
     assert hasher.calls == 1
+
+
+def test_registrar_deja_el_evento_user_registered_para_publicar(handler, users):
+    user_id = handler.handle(a_command())
+
+    (event,) = users.saved_events
+    assert event.user_id == user_id
+    assert event.email == "ana.perez@example.com"

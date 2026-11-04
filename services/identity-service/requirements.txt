@@ -8,6 +8,8 @@ attrs==26.1.0
     #   referencing
 cffi==2.1.1
     # via cryptography
+confluent-kafka==2.16.1
+    # via -r requirements.in
 cryptography==50.0.2
     # via pyjwt
 django==5.2.18

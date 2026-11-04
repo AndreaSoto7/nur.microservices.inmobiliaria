@@ -13,6 +13,10 @@ cffi==2.1.1
     # via
     #   -c requirements.txt
     #   cryptography
+confluent-kafka==2.16.1
+    # via
+    #   -c requirements.txt
+    #   -r requirements.in
 cryptography==50.0.2
     # via
     #   -c requirements.txt

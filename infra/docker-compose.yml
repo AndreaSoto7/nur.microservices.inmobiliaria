@@ -14,6 +14,15 @@
 
 name: inmobiliaria
 
+# Configuración común de identity-service y de su relay del outbox.
+x-identity-environment: &identity-environment
+  DJANGO_SETTINGS_MODULE: config.settings.base
+  # `environment` tiene prioridad: un .env de desarrollo no debe activar el modo debug aquí.
+  DJANGO_DEBUG: "false"
+  DJANGO_SECRET_KEY: ${IDENTITY_SECRET_KEY:?Genera el .env con infra/scripts/generate-env.sh}
+  DATABASE_URL: postgres://identity:${IDENTITY_DB_PASSWORD}@identity-db:5432/identity?connect_timeout=3
+  KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+
 services:
   consul:
     image: hashicorp/consul:1.21
@@ -93,17 +102,32 @@ services:
         condition: service_healthy
       consul:
         condition: service_healthy
-    # `environment` tiene prioridad: un .env de desarrollo no debe activar el modo debug aquí.
     environment:
-      DJANGO_SETTINGS_MODULE: config.settings.base
-      DJANGO_DEBUG: "false"
-      DJANGO_SECRET_KEY: ${IDENTITY_SECRET_KEY:?Genera el .env con infra/scripts/generate-env.sh}
-      DATABASE_URL: postgres://identity:${IDENTITY_DB_PASSWORD}@identity-db:5432/identity?connect_timeout=3
+      <<: *identity-environment
+      # Solo identity-service firma tokens: su clave privada no se comparte con el relay.
       JWT_PRIVATE_KEY: ${IDENTITY_JWT_PRIVATE_KEY:?Genera el .env con infra/scripts/generate-env.sh}
       CONSUL_ENABLED: "true"
       CONSUL_HTTP_ADDR: http://consul:8500
       SERVICE_NAME: identity-service
       SERVICE_PORT: "8001"
+
+  # Publica en Kafka los eventos del outbox de identity. No es un servidor HTTP: no va a Consul.
+  identity-outbox-relay:
+    build: ../services/identity-service
+    command: ["python", "manage.py", "run_outbox_relay"]
+    depends_on:
+      # identity-service aplica las migraciones al arrancar.
+      identity-service:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      <<: *identity-environment
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+    # Un flush a Kafka puede tardar hasta 15 s: más que los 10 s por defecto de docker stop.
+    stop_grace_period: 20s
 
 volumes:
   kafka-data:

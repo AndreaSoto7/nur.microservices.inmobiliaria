@@ -9,8 +9,10 @@ from identity.domain.errors import EmailAlreadyRegistered
 from identity.domain.refresh_token import RefreshToken, RefreshTokenLedger
 from identity.domain.repository import UserRepository
 from identity.domain.user import User
+from identity.infrastructure.messaging.integration_events import to_integration_event
 from identity.infrastructure.persistence.mappers import to_domain, to_model
 from identity.infrastructure.persistence.models import (
+    OutboxMessage,
     RevokedRefreshFamily,
     UsedRefreshToken,
     UserModel,
@@ -36,9 +38,18 @@ class DjangoUserRepository(UserRepository):
 
     def add(self, user: User) -> None:
         try:
-            # El savepoint deja usable la transacción externa si el INSERT falla.
+            # Usuario y eventos en la misma transacción (patrón Outbox): no hay usuario sin evento
+            # ni evento sin usuario. El savepoint deja usable una transacción externa si falla.
             with transaction.atomic():
                 to_model(user).save(force_insert=True)
+                for event in user.pull_events():
+                    integration = to_integration_event(event)
+                    OutboxMessage.objects.create(
+                        id=integration.event_id,
+                        topic=integration.topic,
+                        aggregate_id=integration.key,
+                        envelope=integration.envelope,
+                    )
         except IntegrityError as error:
             # Solo un email repetido es un error de negocio. Cualquier otra violación es un bug
             # y debe llegar como 500, no disfrazada de 409.
