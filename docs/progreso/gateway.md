@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| docs | Contrato de identity: errores 400, 401 y 404 `GATEWAY_*` que responde el gateway | este PR |
+| docs | Contrato de identity: errores 400, 401 y 404 `GATEWAY_*` que responde el gateway | #34 |
 
 ## Pendientes
 
