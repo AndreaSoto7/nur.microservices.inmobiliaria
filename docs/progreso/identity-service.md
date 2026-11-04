@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Limpieza periódica de `used_refresh_tokens`, `revoked_refresh_families` y `outbox` (`run_maintenance`) | #32 |
 | feat | Tope de 30 días para la sesión: el refresh guarda `auth_time` y no vence más allá de ese tope | #31 |
 | feat | Publicar `UserRegistered` en Kafka: schema, outbox en la misma transacción y relay | #28 |
 | feat | Re-hash de contraseñas al iniciar sesión; el login pasa a ser un comando (`AuthenticateUserCommand`) | #25 |
@@ -26,12 +27,12 @@
 
 - [x] Login con JWT RS256 (`kid`) y JWKS
 - [x] Refresh token (`POST /api/v1/auth/refresh`) con rotación y revocación
-- [ ] Borrar periódicamente las filas vencidas de `used_refresh_tokens`
+- [x] Borrar periódicamente las filas vencidas de `used_refresh_tokens` y `revoked_refresh_families`
 - [x] `GET /api/v1/users/me`
 - [x] Cerrar sesión (`POST /api/v1/auth/logout`)
 - [x] Re-hashear la contraseña al iniciar sesión cuando Django suba las iteraciones de PBKDF2
 - [x] Publicar `UserRegistered` con outbox y relay a Kafka
-- [ ] Borrar periódicamente las filas ya publicadas de `outbox`
+- [x] Borrar periódicamente las filas ya publicadas de `outbox`
 - [x] Duración máxima de la sesión: 30 días desde el login
 
 **Depende de otros**
