@@ -7,10 +7,10 @@ from functools import cache
 from django.conf import settings
 from django.db import Error as DatabaseError
 
+from identity.application.commands.authenticate_user import AuthenticateUserHandler
 from identity.application.commands.logout import LogoutHandler
 from identity.application.commands.refresh_tokens import RefreshTokensHandler
 from identity.application.commands.register_user import RegisterUserHandler
-from identity.application.queries.authenticate_user import AuthenticateUserHandler
 from identity.application.queries.get_current_user import GetCurrentUserHandler
 from identity.infrastructure.clock import SystemClock
 from identity.infrastructure.persistence.health import check_database

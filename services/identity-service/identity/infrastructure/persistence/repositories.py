@@ -31,6 +31,9 @@ class DjangoUserRepository(UserRepository):
         model = UserModel.objects.filter(id=user_id).first()
         return to_domain(model) if model is not None else None
 
+    def update_password_hash(self, user: User) -> None:
+        UserModel.objects.filter(id=user.id).update(password=user.password_hash)
+
     def add(self, user: User) -> None:
         try:
             # El savepoint deja usable la transacción externa si el INSERT falla.

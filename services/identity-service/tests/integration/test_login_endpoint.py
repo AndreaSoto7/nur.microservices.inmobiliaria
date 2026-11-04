@@ -167,3 +167,19 @@ def test_un_nombre_corrupto_responde_500_y_no_revela_que_la_cuenta_existe(regist
 
     assert response.status_code == 500
     assert response.json()["code"] == "INTERNAL_ERROR"
+
+
+def test_el_login_actualiza_un_hash_viejo_sin_cambiar_la_contrasena(client, registered, settings):
+    old = UserModel.objects.get(email="ana@example.com").password
+    settings.PASSWORD_HASHERS = [
+        "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+        "django.contrib.auth.hashers.MD5PasswordHasher",
+    ]
+
+    assert login(client).status_code == 200
+
+    updated = UserModel.objects.get(email="ana@example.com")
+    assert updated.password != old
+    assert updated.password.startswith("pbkdf2_sha256$")
+    assert login(client).status_code == 200
+    assert login(client, password="otra-clave").status_code == 401

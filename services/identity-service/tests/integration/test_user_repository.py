@@ -117,3 +117,15 @@ def test_el_ledger_revoca_una_familia_de_forma_idempotente():
     ledger.revoke_family(family_id, NOW)
 
     assert ledger.is_family_revoked(family_id) is True
+
+
+def test_actualiza_solo_el_hash_de_la_contrasena():
+    repository = DjangoUserRepository()
+    user = a_user()
+    repository.add(user)
+
+    repository.update_password_hash(user.with_password_hash("nuevo-hash"))
+
+    stored = repository.get_by_id(user.id)
+    assert stored.password_hash == "nuevo-hash"
+    assert stored.full_name == user.full_name

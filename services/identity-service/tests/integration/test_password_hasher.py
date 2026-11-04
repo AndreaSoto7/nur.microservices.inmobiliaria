@@ -1,4 +1,4 @@
-from django.contrib.auth.hashers import make_password
+from django.contrib.auth.hashers import PBKDF2PasswordHasher, make_password
 
 from identity.infrastructure.security import password_hasher
 from identity.infrastructure.security.password_hasher import DjangoPasswordHasher
@@ -37,3 +37,34 @@ def test_con_una_contrasena_inutilizable_igual_paga_el_costo_de_un_hash(monkeypa
 
     assert DjangoPasswordHasher().verify("x", unusable) is False
     assert calls == ["x"]
+
+
+PBKDF2_FIRST = [
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.MD5PasswordHasher",
+]
+
+
+def test_un_hash_con_otro_algoritmo_necesita_actualizarse(settings):
+    old = make_password("S3gura-2026")  # MD5 en los tests
+    settings.PASSWORD_HASHERS = PBKDF2_FIRST
+
+    assert DjangoPasswordHasher().needs_rehash(old) is True
+    assert DjangoPasswordHasher().needs_rehash(make_password("S3gura-2026")) is False
+
+
+def test_un_hash_con_menos_iteraciones_necesita_actualizarse(settings):
+    settings.PASSWORD_HASHERS = PBKDF2_FIRST
+    weak = PBKDF2PasswordHasher().encode("S3gura-2026", "salsalsalsal", iterations=1000)
+
+    assert DjangoPasswordHasher().needs_rehash(weak) is True
+
+
+def test_un_hash_inutilizable_no_se_actualiza():
+    assert DjangoPasswordHasher().needs_rehash(make_password(None)) is False
+
+
+def test_rehash_genera_un_hash_valido():
+    hasher = DjangoPasswordHasher()
+
+    assert hasher.verify("S3gura-2026", hasher.rehash("S3gura-2026")) is True

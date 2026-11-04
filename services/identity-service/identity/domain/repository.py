@@ -18,5 +18,8 @@ class UserRepository(ABC):
     def get_by_id(self, user_id: UUID) -> User | None: ...
 
     @abstractmethod
+    def update_password_hash(self, user: User) -> None: ...
+
+    @abstractmethod
     def add(self, user: User) -> None:
         """Guarda un usuario nuevo. Lanza EmailAlreadyRegistered si el email ya existe."""
