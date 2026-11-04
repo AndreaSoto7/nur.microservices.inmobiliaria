@@ -8,12 +8,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from identity import container
+from identity.application.commands.refresh_tokens import RefreshTokensCommand
 from identity.application.commands.register_user import RegisterUserCommand
 from identity.application.queries.authenticate_user import AuthenticateUserQuery
 from identity.presentation.serializers import (
     JwksSerializer,
     LoginRequestSerializer,
     ProblemSerializer,
+    RefreshTokensRequestSerializer,
     RegisterUserRequestSerializer,
     RegisterUserResponseSerializer,
     TokenPairSerializer,
@@ -101,6 +103,38 @@ class LoginView(APIView):
                 email=serializer.validated_data["email"],
                 password=serializer.validated_data["password"],
             )
+        )
+        return Response(TokenPairSerializer(tokens).data, headers=_NO_STORE)
+
+
+class RefreshTokensView(APIView):
+    """POST /api/v1/auth/refresh. Público: la credencial es el propio refresh token."""
+
+    authentication_classes: ClassVar[list] = []
+    permission_classes: ClassVar[list] = [AllowAny]
+
+    @extend_schema(
+        operation_id="refreshTokens",
+        tags=["auth"],
+        summary="Renovar los tokens",
+        request=RefreshTokensRequestSerializer,
+        parameters=[
+            _response_header("Cache-Control", "no-store"),
+            _response_header("Pragma", "no-cache"),
+        ],
+        responses={
+            200: TokenPairSerializer,
+            (400, _PROBLEM): OpenApiResponse(ProblemSerializer, description="VALIDATION_ERROR"),
+            (401, _PROBLEM): OpenApiResponse(
+                ProblemSerializer, description="AUTH_INVALID_REFRESH_TOKEN"
+            ),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        serializer = RefreshTokensRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        tokens = container.refresh_tokens_handler().handle(
+            RefreshTokensCommand(refresh_token=serializer.validated_data["refresh_token"])
         )
         return Response(TokenPairSerializer(tokens).data, headers=_NO_STORE)
 

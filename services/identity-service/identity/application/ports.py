@@ -2,9 +2,11 @@
 
 from datetime import datetime
 from typing import Protocol
+from uuid import UUID
 
 from identity.application.dto import TokenPair
 from identity.domain.password import RawPassword
+from identity.domain.refresh_token import RefreshToken
 from identity.domain.user import User
 
 
@@ -30,4 +32,12 @@ class PasswordHasher(Protocol):
 
 
 class TokenIssuer(Protocol):
-    def issue(self, user: User) -> TokenPair: ...
+    def issue(self, user: User, family_id: UUID | None = None) -> TokenPair:
+        """Emite un par de tokens. Sin family_id abre una familia nueva (un login nuevo)."""
+        ...
+
+
+class RefreshTokenVerifier(Protocol):
+    def verify(self, raw_token: str) -> RefreshToken:
+        """Verifica firma, audiencia, tipo y vencimiento. Si algo falla: InvalidRefreshToken."""
+        ...

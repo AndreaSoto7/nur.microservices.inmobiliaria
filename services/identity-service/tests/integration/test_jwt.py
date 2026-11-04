@@ -1,6 +1,7 @@
 """Emisión de JWT RS256 y JWKS con claves reales generadas en el test."""
 
 from datetime import UTC, datetime, timedelta
+from uuid import UUID, uuid4
 
 import jwt
 import pytest
@@ -8,6 +9,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from identity.domain.email import Email
+from identity.domain.errors import InvalidRefreshToken
 from identity.domain.full_name import FullName
 from identity.domain.role import Role
 from identity.domain.user import User
@@ -19,6 +21,7 @@ from identity.infrastructure.security.keys import (
     load_signing_key,
 )
 from identity.infrastructure.security.token_issuer import PyJwtTokenIssuer
+from identity.infrastructure.security.token_verifier import PyJwtRefreshTokenVerifier
 from tests.application.fakes import FixedClock
 
 NOW = datetime.now(UTC).replace(microsecond=0)
@@ -186,3 +189,101 @@ def test_una_clave_rsa_de_menos_de_2048_bits_lanza_signing_key_unavailable():
 
     with pytest.raises(SigningKeyUnavailable):
         load_signing_key(pem=small.decode(), path="")
+
+
+@pytest.fixture
+def verifier(signing_key) -> PyJwtRefreshTokenVerifier:
+    return PyJwtRefreshTokenVerifier(signing_key=signing_key, issuer="identity-service")
+
+
+def test_el_refresh_nuevo_abre_una_familia_y_la_conserva_al_rotar(issuer, verifier, user):
+    first = verifier.verify(issuer.issue(user).refresh_token)
+    other_login = verifier.verify(issuer.issue(user).refresh_token)
+    rotated = verifier.verify(issuer.issue(user, family_id=first.family_id).refresh_token)
+
+    assert other_login.family_id != first.family_id
+    assert rotated.family_id == first.family_id
+    assert rotated.jti != first.jti
+
+
+def test_el_verificador_devuelve_los_datos_del_token(issuer, verifier, user):
+    family_id = uuid4()
+
+    token = verifier.verify(issuer.issue(user, family_id=family_id).refresh_token)
+
+    assert token.user_id == user.id
+    assert token.family_id == family_id
+    assert isinstance(token.jti, UUID)
+    assert token.expires_at == NOW + timedelta(days=7)
+
+
+def test_el_verificador_rechaza_un_access_token(issuer, verifier, user):
+    with pytest.raises(InvalidRefreshToken):
+        verifier.verify(issuer.issue(user).access_token)
+
+
+def test_el_verificador_rechaza_un_token_vencido(signing_key, verifier, user):
+    past = NOW - timedelta(days=8)
+    old_issuer = PyJwtTokenIssuer(
+        signing_key=signing_key,
+        issuer="identity-service",
+        audience="inmobiliaria",
+        access_ttl=timedelta(minutes=15),
+        refresh_ttl=timedelta(days=7),
+        clock=FixedClock(past),
+    )
+
+    with pytest.raises(InvalidRefreshToken):
+        verifier.verify(old_issuer.issue(user).refresh_token)
+
+
+def test_el_verificador_rechaza_un_token_firmado_con_otra_clave(verifier, signing_key, user):
+    other = PyJwtTokenIssuer(
+        signing_key=SigningKey.from_pem(a_pem()),
+        issuer="identity-service",
+        audience="inmobiliaria",
+        access_ttl=timedelta(minutes=15),
+        refresh_ttl=timedelta(days=7),
+        clock=FixedClock(NOW),
+    )
+
+    with pytest.raises(InvalidRefreshToken):
+        verifier.verify(other.issue(user).refresh_token)
+
+
+@pytest.mark.parametrize("missing", ["jti", "sub", "fid", "exp"])
+def test_el_verificador_exige_todos_los_claims(signing_key, verifier, missing):
+    claims = {
+        "sub": str(uuid4()),
+        "iss": "identity-service",
+        "aud": "identity-service",
+        "iat": int(NOW.timestamp()),
+        "exp": int((NOW + timedelta(days=1)).timestamp()),
+        "jti": str(uuid4()),
+        "fid": str(uuid4()),
+    }
+    del claims[missing]
+    token = jwt.encode(
+        claims, signing_key.private_key, algorithm="RS256", headers={"typ": "rt+jwt"}
+    )
+
+    with pytest.raises(InvalidRefreshToken):
+        verifier.verify(token)
+
+
+def test_el_verificador_rechaza_un_sub_que_no_es_uuid(signing_key, verifier):
+    claims = {
+        "sub": "no-uuid",
+        "iss": "identity-service",
+        "aud": "identity-service",
+        "iat": int(NOW.timestamp()),
+        "exp": int((NOW + timedelta(days=1)).timestamp()),
+        "jti": str(uuid4()),
+        "fid": str(uuid4()),
+    }
+    token = jwt.encode(
+        claims, signing_key.private_key, algorithm="RS256", headers={"typ": "rt+jwt"}
+    )
+
+    with pytest.raises(InvalidRefreshToken):
+        verifier.verify(token)

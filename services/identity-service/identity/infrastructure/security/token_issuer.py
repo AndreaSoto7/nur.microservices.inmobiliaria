@@ -1,5 +1,5 @@
 from datetime import timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import jwt
 
@@ -39,7 +39,7 @@ class PyJwtTokenIssuer:
         self._refresh_ttl = refresh_ttl
         self._clock = clock
 
-    def issue(self, user: User) -> TokenPair:
+    def issue(self, user: User, family_id: UUID | None = None) -> TokenPair:
         now = self._clock.now()
         common = {"sub": str(user.id), "iss": self._issuer, "iat": int(now.timestamp())}
         access_token = self._sign(
@@ -59,6 +59,7 @@ class PyJwtTokenIssuer:
             common
             | {
                 "aud": self._issuer,
+                "fid": str(family_id or uuid4()),
                 "tokenType": "refresh",
                 "jti": str(uuid4()),
                 "exp": int((now + self._refresh_ttl).timestamp()),

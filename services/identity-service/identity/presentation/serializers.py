@@ -46,6 +46,10 @@ class BearerField(serializers.CharField):
     pass
 
 
+class RefreshTokensRequestSerializer(serializers.Serializer):
+    refresh_token = StrictCharField(write_only=True, max_length=4096)
+
+
 class TokenPairSerializer(serializers.Serializer):
     """Respuesta del login. Se serializa directamente desde el DTO TokenPair."""
 

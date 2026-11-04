@@ -28,6 +28,32 @@ class UserModelManager(BaseUserManager["UserModel"]):
         return self.create_user(email, password, **extra)
 
 
+class UsedRefreshToken(models.Model):
+    """Refresh tokens ya canjeados. El PK garantiza que dos canjes simultáneos no pasen ambos."""
+
+    jti = models.UUIDField(primary_key=True)
+    family_id = models.UUIDField(db_index=True)
+    user_id = models.UUIDField()
+    expires_at = models.DateTimeField(db_index=True)
+
+    class Meta:
+        db_table = "used_refresh_tokens"
+
+    def __str__(self) -> str:
+        return str(self.jti)
+
+
+class RevokedRefreshFamily(models.Model):
+    family_id = models.UUIDField(primary_key=True)
+    revoked_at = models.DateTimeField()
+
+    class Meta:
+        db_table = "revoked_refresh_families"
+
+    def __str__(self) -> str:
+        return str(self.family_id)
+
+
 class UserModel(AbstractBaseUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(max_length=254, unique=True)
