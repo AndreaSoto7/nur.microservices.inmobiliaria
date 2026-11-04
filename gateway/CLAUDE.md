@@ -7,7 +7,7 @@ Instrucciones para trabajar en el gateway. Complementa al `CLAUDE.md` raíz, que
 | | |
 |---|---|
 | Responsable | @Tiesol |
-| Stack | Go 1.27, librería estándar. Hoy sin dependencias; el plan suma `golang-jwt` (auth) y `golang.org/x/time/rate` (rate limit) |
+| Stack | Go 1.27, librería estándar y `google/uuid` (correlation-id). El plan suma `golang-jwt` (auth) y `golang.org/x/time/rate` (rate limit) |
 | Puerto | 8080 (el único publicado en el host junto con el frontend) |
 | Base / Kafka | Ninguno |
 | Decisión | [ADR 0002](../docs/adr/0002-gateway-go-balanceador-consul.md) |

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/config"
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/middleware"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/problem"
 )
 
@@ -54,19 +55,30 @@ func run(logger *slog.Logger) error {
 	}
 
 	logger.Info("gateway escuchando", "port", cfg.Port)
-	return serve(ctx, listener, newHandler())
+	return serve(ctx, listener, newHandler(logger))
 }
 
 // newHandler atiende /health aquí y no en un http.ServeMux: el mux limpia los paths y responde 301
 // ante `..` o `//`, y esos paths deben llegar a la validación del gateway para responder 400.
-func newHandler() http.Handler {
+// /health queda fuera de la cadena: lo llama Docker cada 10 s y llenaría los logs.
+func newHandler(logger *slog.Logger) http.Handler {
+	notFound := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		problem.Write(w, r, problem.RouteNotFound)
+	})
+	chain := middleware.Chain(notFound,
+		middleware.Recover(logger),
+		middleware.CorrelationID,
+		middleware.Logging(logger),
+		middleware.StripIdentityHeaders,
+	)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && r.URL.Path == "/health" {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"status":"UP"}`))
 			return
 		}
-		problem.Write(w, r, problem.RouteNotFound)
+		chain.ServeHTTP(w, r)
 	})
 }
 
