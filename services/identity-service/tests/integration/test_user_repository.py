@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from django.db import IntegrityError
+from django.db import DatabaseError, IntegrityError
 
 from identity.domain.email import Email
 from identity.domain.errors import EmailAlreadyRegistered
@@ -124,8 +124,38 @@ def test_actualiza_solo_el_hash_de_la_contrasena():
     user = a_user()
     repository.add(user)
 
-    repository.update_password_hash(user.with_password_hash("nuevo-hash"))
+    repository.update_password_hash(
+        user.with_password_hash("nuevo-hash"), previous_hash=user.password_hash
+    )
 
     stored = repository.get_by_id(user.id)
     assert stored.password_hash == "nuevo-hash"
     assert stored.full_name == user.full_name
+
+
+def test_el_rehash_no_pisa_una_contrasena_que_cambio_mientras_tanto():
+    repository = DjangoUserRepository()
+    user = a_user()
+    repository.add(user)
+
+    repository.update_password_hash(
+        user.with_password_hash("hash-de-la-contrasena-vieja"), previous_hash="otro-hash"
+    )
+
+    assert repository.get_by_id(user.id).password_hash == user.password_hash
+
+
+def test_una_falla_al_guardar_el_rehash_no_lanza_error_ni_loguea_el_hash(monkeypatch, caplog):
+    repository = DjangoUserRepository()
+    user = a_user()
+    repository.add(user)
+
+    def broken(**kwargs):
+        raise DatabaseError("sin base")
+
+    monkeypatch.setattr(repositories.UserModel.objects, "filter", broken)
+
+    repository.update_password_hash(user.with_password_hash("hash-secreto"), previous_hash="x")
+
+    assert "actualizar el hash" in caplog.text
+    assert "hash-secreto" not in caplog.text

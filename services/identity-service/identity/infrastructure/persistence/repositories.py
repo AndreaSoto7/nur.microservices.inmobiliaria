@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from uuid import UUID
 
-from django.db import IntegrityError, transaction
+from django.db import DatabaseError, IntegrityError, transaction
 
 from identity.domain.email import Email
 from identity.domain.errors import EmailAlreadyRegistered
@@ -33,8 +33,20 @@ class DjangoUserRepository(UserRepository):
         model = UserModel.objects.filter(id=user_id).first()
         return to_domain(model) if model is not None else None
 
-    def update_password_hash(self, user: User) -> None:
-        UserModel.objects.filter(id=user.id).update(password=user.password_hash)
+    def update_password_hash(self, user: User, previous_hash: str) -> None:
+        try:
+            # El filtro por hash evita restaurar la contraseña vieja si cambió durante este login.
+            UserModel.objects.filter(id=user.id, password=previous_hash).update(
+                password=user.password_hash
+            )
+        except DatabaseError as error:
+            # La contraseña ya se verificó: el próximo login reintenta. Sin exc_info, para que el
+            # hash no llegue al log dentro del error de la base.
+            logger.warning(
+                "No se pudo actualizar el hash del usuario %s: %s",
+                user.id,
+                type(error).__name__,
+            )
 
     def add(self, user: User) -> None:
         try:

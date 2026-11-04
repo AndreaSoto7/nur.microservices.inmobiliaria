@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| fix | Re-hash: una falla al guardar no impide el login, y no pisa una contraseña que cambió mientras tanto | #33 |
 | feat | Limpieza periódica de `used_refresh_tokens`, `revoked_refresh_families` y `outbox` (`run_maintenance`) | #32 |
 | feat | Tope de 30 días para la sesión: el refresh guarda `auth_time` y no vence más allá de ese tope | #31 |
 | feat | Publicar `UserRegistered` en Kafka: schema, outbox en la misma transacción y relay | #28 |
