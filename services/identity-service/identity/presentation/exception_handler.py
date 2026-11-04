@@ -14,6 +14,7 @@ DOMAIN_ERRORS: dict[type[errors.DomainError], tuple[int, str]] = {
     errors.RoleNotAllowed: (400, "Rol no permitido"),
     errors.EmailAlreadyRegistered: (409, "Email ya registrado"),
     errors.InvalidCredentials: (401, "Credenciales inválidas"),
+    errors.InvalidRefreshToken: (401, "Refresh token inválido"),
 }
 DEFAULT_DOMAIN_ERROR = (409, "Regla de negocio no cumplida")
 

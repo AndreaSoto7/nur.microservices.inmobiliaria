@@ -1,11 +1,13 @@
 """Dobles de prueba de los puertos: repositorio en memoria, hasher, emisor de tokens y reloj."""
 
 from datetime import UTC, datetime
+from uuid import UUID, uuid4
 
 from identity.application.dto import TokenPair
 from identity.domain.email import Email
-from identity.domain.errors import EmailAlreadyRegistered
+from identity.domain.errors import EmailAlreadyRegistered, InvalidRefreshToken
 from identity.domain.password import RawPassword
+from identity.domain.refresh_token import RefreshToken, RefreshTokenLedger
 from identity.domain.repository import UserRepository
 from identity.domain.user import User
 
@@ -19,6 +21,9 @@ class InMemoryUserRepository(UserRepository):
 
     def get_by_email(self, email: Email) -> User | None:
         return self.users.get(email.value)
+
+    def get_by_id(self, user_id: UUID) -> User | None:
+        return next((user for user in self.users.values() if user.id == user_id), None)
 
     def add(self, user: User) -> None:
         if user.email.value in self.users:
@@ -41,12 +46,56 @@ class FakePasswordHasher:
 
 
 class FakeTokenIssuer:
-    def issue(self, user: User) -> TokenPair:
+    def __init__(self) -> None:
+        self.family_ids: list[UUID | None] = []
+
+    def issue(self, user: User, family_id: UUID | None = None) -> TokenPair:
+        self.family_ids.append(family_id)
         return TokenPair(
             access_token=f"access-for-{user.id}",
             refresh_token=f"refresh-for-{user.id}",
             expires_in=900,
         )
+
+
+class FakeRefreshTokenVerifier:
+    """Conoce los tokens registrados en `tokens`; cualquier otro es inválido."""
+
+    def __init__(self) -> None:
+        self.tokens: dict[str, RefreshToken] = {}
+
+    def verify(self, raw_token: str) -> RefreshToken:
+        try:
+            return self.tokens[raw_token]
+        except KeyError:
+            raise InvalidRefreshToken() from None
+
+
+class InMemoryRefreshTokenLedger(RefreshTokenLedger):
+    def __init__(self) -> None:
+        self.used: set[UUID] = set()
+        self.revoked: set[UUID] = set()
+
+    def is_family_revoked(self, family_id: UUID) -> bool:
+        return family_id in self.revoked
+
+    def mark_used(self, token: RefreshToken) -> bool:
+        if token.jti in self.used:
+            return False
+        self.used.add(token.jti)
+        return True
+
+    def revoke_family(self, family_id: UUID, now: datetime) -> None:
+        self.revoked.add(family_id)
+
+
+def a_refresh_token(user_id: UUID | None = None, family_id: UUID | None = None) -> RefreshToken:
+    return RefreshToken(
+        jti=uuid4(),
+        user_id=user_id or uuid4(),
+        family_id=family_id or uuid4(),
+        expires_at=datetime(2026, 11, 10, tzinfo=UTC),
+    )
 
 
 class FixedClock:

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from uuid import UUID
 
 from identity.domain.email import Email
 from identity.domain.user import User
@@ -12,6 +13,9 @@ class UserRepository(ABC):
 
     @abstractmethod
     def get_by_email(self, email: Email) -> User | None: ...
+
+    @abstractmethod
+    def get_by_id(self, user_id: UUID) -> User | None: ...
 
     @abstractmethod
     def add(self, user: User) -> None:

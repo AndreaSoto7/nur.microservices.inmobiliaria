@@ -8,7 +8,8 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| fix | Auditoría de la base: registro en Consul sin bloquear y repetido cada 60 s, `/docs`, capas, readiness, errores en problem+json, tipos estrictos y workers con hilos | este PR |
+| feat | Refresh token (`POST /api/v1/auth/refresh`): rotación y revocación por familia | #22 |
+| fix | Auditoría de la base: registro en Consul sin bloquear y repetido cada 60 s, `/docs`, capas, readiness, errores en problem+json, tipos estrictos y workers con hilos | #19 |
 | feat | Login: `AuthenticateUserQuery` sin enumeración de emails, `POST /api/v1/auth/login` y JWKS | #15 |
 | feat | Firma JWT RS256 con `kid` y `typ`, JWKS, refresh con `aud` propio y validación de la configuración JWT | #14 |
 | feat | Registro de usuario, API: repositorio Django, hasher, `POST /api/v1/auth/register` y errores problem+json | #13 |
@@ -19,7 +20,8 @@
 ## Pendientes
 
 - [x] Login con JWT RS256 (`kid`) y JWKS
-- [ ] Refresh token (`POST /api/v1/auth/refresh`) con rotación y revocación
+- [x] Refresh token (`POST /api/v1/auth/refresh`) con rotación y revocación
+- [ ] Borrar periódicamente las filas vencidas de `used_refresh_tokens`
 - [ ] `GET /api/v1/users/me`
 - [ ] Re-hashear la contraseña al iniciar sesión cuando Django suba las iteraciones de PBKDF2 (como efecto aparte, fuera de la consulta)
 - [ ] Publicar `UserRegistered` con outbox y relay a Kafka. Necesita `infra/` con Kafka, el schema del evento en `contracts/events/` y definir la unidad de trabajo (usuario + outbox en la misma transacción)

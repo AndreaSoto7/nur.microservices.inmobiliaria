@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from uuid import uuid4
 
 import pytest
 from django.db import IntegrityError
@@ -10,7 +11,11 @@ from identity.domain.role import Role
 from identity.domain.user import User
 from identity.infrastructure.persistence import repositories
 from identity.infrastructure.persistence.mappers import to_domain, to_model
-from identity.infrastructure.persistence.repositories import DjangoUserRepository
+from identity.infrastructure.persistence.repositories import (
+    DjangoRefreshTokenLedger,
+    DjangoUserRepository,
+)
+from tests.application.fakes import a_refresh_token
 
 pytestmark = pytest.mark.django_db
 
@@ -84,3 +89,31 @@ def test_busca_por_email_y_reconstruye_el_agregado():
 
 def test_buscar_un_email_inexistente_devuelve_none():
     assert DjangoUserRepository().get_by_email(Email("nadie@example.com")) is None
+
+
+def test_busca_por_id():
+    repository = DjangoUserRepository()
+    user = a_user()
+    repository.add(user)
+
+    assert repository.get_by_id(user.id) == user
+    assert repository.get_by_id(uuid4()) is None
+
+
+def test_el_ledger_marca_un_token_usado_una_sola_vez():
+    ledger = DjangoRefreshTokenLedger()
+    token = a_refresh_token()
+
+    assert ledger.mark_used(token) is True
+    assert ledger.mark_used(token) is False
+
+
+def test_el_ledger_revoca_una_familia_de_forma_idempotente():
+    ledger = DjangoRefreshTokenLedger()
+    family_id = uuid4()
+
+    assert ledger.is_family_revoked(family_id) is False
+    ledger.revoke_family(family_id, NOW)
+    ledger.revoke_family(family_id, NOW)
+
+    assert ledger.is_family_revoked(family_id) is True

@@ -7,11 +7,15 @@ from functools import cache
 from django.conf import settings
 from django.db import Error as DatabaseError
 
+from identity.application.commands.refresh_tokens import RefreshTokensHandler
 from identity.application.commands.register_user import RegisterUserHandler
 from identity.application.queries.authenticate_user import AuthenticateUserHandler
 from identity.infrastructure.clock import SystemClock
 from identity.infrastructure.persistence.health import check_database
-from identity.infrastructure.persistence.repositories import DjangoUserRepository
+from identity.infrastructure.persistence.repositories import (
+    DjangoRefreshTokenLedger,
+    DjangoUserRepository,
+)
 from identity.infrastructure.security.keys import (
     SigningKey,
     SigningKeyUnavailable,
@@ -20,6 +24,7 @@ from identity.infrastructure.security.keys import (
 )
 from identity.infrastructure.security.password_hasher import DjangoPasswordHasher
 from identity.infrastructure.security.token_issuer import PyJwtTokenIssuer
+from identity.infrastructure.security.token_verifier import PyJwtRefreshTokenVerifier
 
 logger = logging.getLogger(__name__)
 
@@ -36,15 +41,33 @@ def authenticate_user_handler() -> AuthenticateUserHandler:
     return AuthenticateUserHandler(
         users=DjangoUserRepository(),
         password_hasher=DjangoPasswordHasher(),
-        token_issuer=PyJwtTokenIssuer(
-            signing_key=signing_key(),
-            issuer=settings.JWT_ISSUER,
-            audience=settings.JWT_AUDIENCE,
-            access_ttl=timedelta(seconds=settings.JWT_ACCESS_TTL_SECONDS),
-            refresh_ttl=timedelta(seconds=settings.JWT_REFRESH_TTL_SECONDS),
-            clock=SystemClock(),
-        ),
+        token_issuer=_token_issuer(),
     )
+
+
+def refresh_tokens_handler() -> RefreshTokensHandler:
+    return RefreshTokensHandler(
+        users=DjangoUserRepository(),
+        verifier=_refresh_token_verifier(),
+        ledger=DjangoRefreshTokenLedger(),
+        token_issuer=_token_issuer(),
+        clock=SystemClock(),
+    )
+
+
+def _token_issuer() -> PyJwtTokenIssuer:
+    return PyJwtTokenIssuer(
+        signing_key=signing_key(),
+        issuer=settings.JWT_ISSUER,
+        audience=settings.JWT_AUDIENCE,
+        access_ttl=timedelta(seconds=settings.JWT_ACCESS_TTL_SECONDS),
+        refresh_ttl=timedelta(seconds=settings.JWT_REFRESH_TTL_SECONDS),
+        clock=SystemClock(),
+    )
+
+
+def _refresh_token_verifier() -> PyJwtRefreshTokenVerifier:
+    return PyJwtRefreshTokenVerifier(signing_key=signing_key(), issuer=settings.JWT_ISSUER)
 
 
 @cache
