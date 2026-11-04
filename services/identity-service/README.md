@@ -92,11 +92,15 @@ Al arrancar, el contenedor aplica las migraciones y levanta gunicorn en el puert
 |---|---|
 | `POST /api/v1/auth/register` | Crea un usuario `CLIENT` (por defecto) o `AGENT`. Responde `201 { id }` |
 | `POST /api/v1/auth/login` | Valida credenciales y devuelve `{ accessToken, refreshToken, tokenType, expiresIn }`, con `Cache-Control: no-store` |
+| `POST /api/v1/auth/refresh` | Canjea un refresh token por un par nuevo |
+| `POST /api/v1/auth/logout` | Cierra la sesión del refresh token. Responde 204 |
+| `GET /api/v1/users/me` | Datos del usuario autenticado (requiere access token) |
 | `GET /api/v1/auth/.well-known/jwks.json` | Clave pública para validar los tokens (cacheable 5 min) |
 
 - **Access token** (15 min): `sub`, `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`, `iat`, `exp`, `jti`, `tokenType=access`. Header con `alg=RS256`, `kid` y `typ=at+jwt` (RFC 9068).
 - **Cómo lo validan el gateway y los servicios:** firma con el JWKS, `iss=identity-service`, `aud=inmobiliaria`, `exp` y `typ=at+jwt`.
 - **Refresh token** (7 días): solo `sub`, `iss`, `iat`, `exp`, `jti` y `tokenType=refresh`, con `fid`, `aud=identity-service` y `typ=rt+jwt`. Por eso **ningún otro servicio lo acepta como access token**.
+- **Cerrar sesión:** `POST /api/v1/auth/logout` revoca la familia del refresh token. Los access tokens ya emitidos siguen valiendo hasta su `exp`, porque los servicios los validan sin consultar a identity.
 - **Rotación:** `POST /api/v1/auth/refresh` canjea el refresh token por un par nuevo, y cada uno sirve una sola vez. Si se reutiliza (señal de robo), se revoca toda su familia. Los tokens usados se guardan en `used_refresh_tokens` y las familias revocadas en `revoked_refresh_families`.
 - **`kid`**: huella RFC 7638 de la clave pública. Si se rota la clave, cambia el `kid`, y el gateway y los servicios saben que deben volver a pedir el JWKS.
 - **Clave privada**: solo la tiene identity (`JWT_PRIVATE_KEY_PATH`). Sin clave, `/health/ready` responde `DOWN`.

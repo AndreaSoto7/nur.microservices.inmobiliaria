@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Cerrar sesión (`POST /api/v1/auth/logout`): revoca la familia del refresh token | #24 |
 | feat | `GET /api/v1/users/me`: datos del usuario autenticado, primer endpoint de identity que valida un access token | #23 |
 | feat | Refresh token (`POST /api/v1/auth/refresh`): rotación y revocación por familia | #22 |
 | fix | Auditoría de la base: registro en Consul sin bloquear y repetido cada 60 s, `/docs`, capas, readiness, errores en problem+json, tipos estrictos y workers con hilos | #19 |
@@ -24,6 +25,7 @@
 - [x] Refresh token (`POST /api/v1/auth/refresh`) con rotación y revocación
 - [ ] Borrar periódicamente las filas vencidas de `used_refresh_tokens`
 - [x] `GET /api/v1/users/me`
+- [x] Cerrar sesión (`POST /api/v1/auth/logout`)
 - [ ] Re-hashear la contraseña al iniciar sesión cuando Django suba las iteraciones de PBKDF2 (como efecto aparte, fuera de la consulta)
 - [ ] Publicar `UserRegistered` con outbox y relay a Kafka. Necesita `infra/` con Kafka, el schema del evento en `contracts/events/` y definir la unidad de trabajo (usuario + outbox en la misma transacción)
 
