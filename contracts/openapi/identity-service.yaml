@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: identity-service
-  version: 1.2.1
+  version: 1.2.2
   description: |
     Registro, autenticación y emisión de JWT RS256 de la Plataforma Inmobiliaria.
 
@@ -14,7 +14,7 @@ info:
     - **Cómo valida un consumidor** (gateway y servicios): firma con el JWKS (eligiendo la clave por `kid`), `alg=RS256`,
       `iss=identity-service`, `aud=inmobiliaria`, `exp` y `typ=at+jwt`. Con eso, un refresh token nunca pasa como access token.
     - Los errores siguen RFC 9457 (`application/problem+json`). Además de los documentados en cada operación:
-      identity responde 400 `BAD_REQUEST`, 403 `PERMISSION_DENIED`, 404 `NOT_FOUND`, 405 `METHOD_NOT_ALLOWED`, 406 `NOT_ACCEPTABLE`, 415 `UNSUPPORTED_MEDIA_TYPE` y 500 `INTERNAL_ERROR`; el gateway responde 413, 502, 503 y 504 (`GATEWAY_*`).
+      identity responde 400 `BAD_REQUEST`, 403 `PERMISSION_DENIED`, 404 `NOT_FOUND`, 405 `METHOD_NOT_ALLOWED`, 406 `NOT_ACCEPTABLE`, 415 `UNSUPPORTED_MEDIA_TYPE` y 500 `INTERNAL_ERROR`; el gateway responde 400 (path con `..` o `//`, o body ilegible), 401 (ruta protegida sin token o con token inválido), 404 (ruta desconocida), 413, 502, 503 y 504, todos con `code` `GATEWAY_*`.
 servers:
   - url: http://localhost:8080
     description: API Gateway (desarrollo)
@@ -319,7 +319,9 @@ paths:
                 roles: [CLIENT]
                 registeredAt: '2026-10-16T14:30:00Z'
         '401':
-          description: Falta el access token, es inválido, venció o el usuario está inactivo.
+          description: |
+            Falta el access token, es inválido, venció o el usuario está inactivo.
+            Por el gateway, un token ausente o inválido se corta antes de llegar a identity, con `code` `GATEWAY_UNAUTHORIZED`. El usuario inactivo lo detecta identity, con `AUTH_INVALID_TOKEN`. El cliente trata igual los dos.
           content:
             application/problem+json:
               schema:
