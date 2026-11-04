@@ -10,6 +10,7 @@ from django.db import Error as DatabaseError
 from identity.application.commands.refresh_tokens import RefreshTokensHandler
 from identity.application.commands.register_user import RegisterUserHandler
 from identity.application.queries.authenticate_user import AuthenticateUserHandler
+from identity.application.queries.get_current_user import GetCurrentUserHandler
 from identity.infrastructure.clock import SystemClock
 from identity.infrastructure.persistence.health import check_database
 from identity.infrastructure.persistence.repositories import (
@@ -24,7 +25,10 @@ from identity.infrastructure.security.keys import (
 )
 from identity.infrastructure.security.password_hasher import DjangoPasswordHasher
 from identity.infrastructure.security.token_issuer import PyJwtTokenIssuer
-from identity.infrastructure.security.token_verifier import PyJwtRefreshTokenVerifier
+from identity.infrastructure.security.token_verifier import (
+    PyJwtAccessTokenVerifier,
+    PyJwtRefreshTokenVerifier,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +56,16 @@ def refresh_tokens_handler() -> RefreshTokensHandler:
         ledger=DjangoRefreshTokenLedger(),
         token_issuer=_token_issuer(),
         clock=SystemClock(),
+    )
+
+
+def get_current_user_handler() -> GetCurrentUserHandler:
+    return GetCurrentUserHandler(users=DjangoUserRepository())
+
+
+def access_token_verifier() -> PyJwtAccessTokenVerifier:
+    return PyJwtAccessTokenVerifier(
+        signing_key=signing_key(), issuer=settings.JWT_ISSUER, audience=settings.JWT_AUDIENCE
     )
 
 

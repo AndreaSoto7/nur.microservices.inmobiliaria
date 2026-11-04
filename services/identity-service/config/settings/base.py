@@ -95,7 +95,7 @@ USE_TZ = True
 REST_FRAMEWORK = {
     "DEFAULT_RENDERER_CLASSES": ["djangorestframework_camel_case.render.CamelCaseJSONRenderer"],
     "DEFAULT_PARSER_CLASSES": ["djangorestframework_camel_case.parser.CamelCaseJSONParser"],
-    # Por ahora identity no recibe JWT: sus endpoints son públicos (registro, login, JWKS).
+    # Sin autenticación global: cada vista protegida declara BearerAuthentication.
     "DEFAULT_AUTHENTICATION_CLASSES": [],
     # Mínimo privilegio: por defecto se deniega. Los endpoints públicos declaran AllowAny.
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
