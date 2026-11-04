@@ -101,9 +101,10 @@ Al arrancar, el contenedor aplica las migraciones y levanta gunicorn en el puert
 
 - **Access token** (15 min): `sub`, `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`, `iat`, `exp`, `jti`, `tokenType=access`. Header con `alg=RS256`, `kid` y `typ=at+jwt` (RFC 9068).
 - **Cómo lo validan el gateway y los servicios:** firma con el JWKS, `iss=identity-service`, `aud=inmobiliaria`, `exp` y `typ=at+jwt`.
-- **Refresh token** (7 días): solo `sub`, `iss`, `iat`, `exp`, `jti` y `tokenType=refresh`, con `fid`, `aud=identity-service` y `typ=rt+jwt`. Por eso **ningún otro servicio lo acepta como access token**.
+- **Refresh token** (7 días): solo `sub`, `iss`, `iat`, `exp`, `jti` y `tokenType=refresh`, con `fid`, `auth_time`, `aud=identity-service` y `typ=rt+jwt`. Por eso **ningún otro servicio lo acepta como access token**.
 - **Cerrar sesión:** `POST /api/v1/auth/logout` revoca la familia del refresh token. Los access tokens ya emitidos siguen valiendo hasta su `exp`, porque los servicios los validan sin consultar a identity.
 - **Rotación:** `POST /api/v1/auth/refresh` canjea el refresh token por un par nuevo, y cada uno sirve una sola vez. Si se reutiliza (señal de robo), se revoca toda su familia. Los tokens usados se guardan en `used_refresh_tokens` y las familias revocadas en `revoked_refresh_families`.
+- **Tope de sesión:** cada rotación renueva 7 días, pero nunca pasa de 30 días desde el login (`auth_time`). Después hay que volver a iniciar sesión.
 - **`kid`**: huella RFC 7638 de la clave pública. Si se rota la clave, cambia el `kid`, y el gateway y los servicios saben que deben volver a pedir el JWKS.
 - **Clave privada**: solo la tiene identity (`JWT_PRIVATE_KEY_PATH`). Sin clave, `/health/ready` responde `DOWN`.
 - **Rotar la clave**: exige reiniciar identity, y los tokens firmados con la clave anterior dejan de validar (hasta 15 min los access y 7 días los refresh). Publicar varias claves en el JWKS se agrega solo si hace falta (YAGNI).

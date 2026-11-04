@@ -46,4 +46,4 @@ class RefreshTokensHandler:
             raise InvalidRefreshToken() from None
 
         consume(token, self._ledger, self._clock.now())
-        return self._token_issuer.issue(user, family_id=token.family_id)
+        return self._token_issuer.issue(user, renewing=token)

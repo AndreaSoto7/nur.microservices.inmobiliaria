@@ -2,7 +2,6 @@
 
 from datetime import datetime
 from typing import Protocol
-from uuid import UUID
 
 from identity.application.dto import TokenPair
 from identity.domain.password import RawPassword
@@ -40,8 +39,8 @@ class PasswordHasher(Protocol):
 
 
 class TokenIssuer(Protocol):
-    def issue(self, user: User, family_id: UUID | None = None) -> TokenPair:
-        """Emite un par de tokens. Sin family_id abre una familia nueva (un login nuevo)."""
+    def issue(self, user: User, renewing: RefreshToken | None = None) -> TokenPair:
+        """Emite un par de tokens. Con `renewing` continúa esa sesión; sin él abre una nueva."""
         ...
 
 

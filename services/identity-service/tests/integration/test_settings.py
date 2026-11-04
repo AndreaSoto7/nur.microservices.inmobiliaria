@@ -31,6 +31,7 @@ def test_la_configuracion_por_defecto_es_valida():
         {"JWT_ACCESS_TTL_SECONDS": "86400"},
         {"JWT_ACCESS_TTL_SECONDS": "0"},
         {"JWT_REFRESH_TTL_SECONDS": "600"},
+        {"JWT_SESSION_MAX_SECONDS": "3600"},
         {"JWT_ISSUER": ""},
         {"JWT_AUDIENCE": ""},
     ],

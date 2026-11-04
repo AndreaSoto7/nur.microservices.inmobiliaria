@@ -59,10 +59,11 @@ class FakePasswordHasher:
 
 class FakeTokenIssuer:
     def __init__(self) -> None:
-        self.family_ids: list[UUID | None] = []
+        self.renewed: list[RefreshToken] = []
 
-    def issue(self, user: User, family_id: UUID | None = None) -> TokenPair:
-        self.family_ids.append(family_id)
+    def issue(self, user: User, renewing: RefreshToken | None = None) -> TokenPair:
+        if renewing is not None:
+            self.renewed.append(renewing)
         return TokenPair(
             access_token=f"access-for-{user.id}",
             refresh_token=f"refresh-for-{user.id}",
@@ -107,6 +108,7 @@ def a_refresh_token(user_id: UUID | None = None, family_id: UUID | None = None) 
         user_id=user_id or uuid4(),
         family_id=family_id or uuid4(),
         expires_at=datetime(2026, 11, 10, tzinfo=UTC),
+        session_started_at=datetime(2026, 11, 1, tzinfo=UTC),
     )
 
 

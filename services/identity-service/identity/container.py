@@ -90,6 +90,7 @@ def _token_issuer() -> PyJwtTokenIssuer:
         audience=settings.JWT_AUDIENCE,
         access_ttl=timedelta(seconds=settings.JWT_ACCESS_TTL_SECONDS),
         refresh_ttl=timedelta(seconds=settings.JWT_REFRESH_TTL_SECONDS),
+        session_max=timedelta(seconds=settings.JWT_SESSION_MAX_SECONDS),
         clock=SystemClock(),
     )
 

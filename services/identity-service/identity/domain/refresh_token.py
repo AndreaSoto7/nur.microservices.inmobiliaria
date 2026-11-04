@@ -16,6 +16,7 @@ class RefreshToken:
     user_id: UUID
     family_id: UUID
     expires_at: datetime
+    session_started_at: datetime
 
 
 class RefreshTokenLedger(ABC):
