@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Propiedades del agente: persistencia JPA (migración, mapper, bloqueo optimista), casos de uso de crear, editar, características, las 6 transiciones y galería, listado y detalle, imágenes en disco, y eventos en el outbox validados contra `contracts/events` | este PR |
+| feat | Propiedades del agente: persistencia JPA (migración, mapper, bloqueo optimista), casos de uso de crear, editar, características, las 6 transiciones y galería, listado y detalle, imágenes en disco, y eventos en el outbox validados contra `contracts/events` | #46 |
 | feat | Aggregate `Property` con su máquina de estados, value objects (`Money`, `Location`, `Area`, `PropertyImage`) y eventos de dominio, con 30 tests | #41 |
 | chore | Esqueleto Spring Boot 4.1: capas, `/health` y `/health/ready`, Consul con re-registro, JWT con JWKS, problem+json, `X-Correlation-Id`, logs JSON, outbox y `processed_events`, Dockerfile y compose | #41 |
 
