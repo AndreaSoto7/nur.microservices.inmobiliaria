@@ -14,6 +14,7 @@
 | feat | Rate limit de login y registro: token bucket por IP y ruta, 429 con `Retry-After` y expiración de entradas | #52 |
 | feat | CORS: orígenes por variable de entorno con comparación exacta, preflight antes de la auth y `Vary: Origin` | #53 |
 | feat | Discovery: consulta periódica de réplicas sanas en Consul, con snapshot en memoria que sobrevive a fallas de Consul | #54 |
+| feat | Balanceador: round robin (Strategy) y Circuit Breaker por réplica | este PR |
 
 ## Pendientes
 
@@ -25,7 +26,7 @@
 
 - [ ] Reverse proxy y ruteo por prefijo hacia los nombres de servicio en Consul (tabla de rutas de `gateway/CLAUDE.md`, con `/api/v1/catalog/**` público y `/api/v1/audit/**`; ADR 0005)
 - [x] Discovery: consulta periódica de las réplicas sanas en Consul
-- [ ] Balanceador round robin (Strategy) con marcado de réplicas caídas (Circuit Breaker)
+- [x] Balanceador round robin (Strategy) con marcado de réplicas caídas (Circuit Breaker)
 - [ ] Validar el JWT con el JWKS de identity (`typ=at+jwt`, `aud=inmobiliaria`) y borrar los `X-User-*`
 - [x] CORS para el frontend (`http://localhost:5173`)
 - [x] Rate limit de login y registro (**requisito antes de exponer identity**)
