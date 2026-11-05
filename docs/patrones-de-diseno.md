@@ -8,7 +8,7 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 |---|---|---|---|---|---|
 | Factory Method | Creacional | identity | `identity/domain/user.py` (`User.register`) | Crear un usuario válido exige generar el UUID, rechazar `ADMIN` y registrar `UserRegistered`; un constructor libre permitiría saltarse esas reglas | Un Builder no aporta: los campos son pocos y todos obligatorios |
 | Smart/Dumb Components | Frontend | frontend | `frontend/src/features/auth/containers/*Page.tsx` (smart), `features/auth/components/*Form.tsx` (dumb) | Que un formulario no mezcle la llamada a la API, la sesión y la navegación con el render; así el form se prueba y reutiliza solo | Un componente por pantalla con todo adentro es el "componente Dios" que pide evitar `frontend/CLAUDE.md` |
-| Facade | Estructural | frontend | `frontend/src/features/auth/useAuthActions.ts` (`useLogin`, `useRegister`) | Las páginas necesitan "ingresar" o "registrarse" con su estado (enviando, error), sin conocer `authApi`, React Query ni el manejo de tokens | Llamar a `authApi` desde la página acopla la UI a la API y repite el manejo de errores en cada pantalla |
+| Facade | Estructural | frontend | `frontend/src/features/auth/useAuthActions.ts` (`useLogin`, `useRegister`), `features/catalog/useCatalog.ts`, `features/property-detail/usePropertyDetail.ts` | Las páginas necesitan "ingresar" o "registrarse" con su estado (enviando, error), sin conocer `authApi`, React Query ni el manejo de tokens | Llamar a `authApi` desde la página acopla la UI a la API y repite el manejo de errores en cada pantalla |
 | Repository | DDD | identity | `identity/domain/repository.py`, `identity/infrastructure/persistence/repositories.py` | El dominio no debe conocer el ORM de Django | Usar `UserModel` directo en el handler acoplaría el caso de uso a Django y exigiría una base en cada test |
 | Adapter | Estructural | identity | `identity/infrastructure/security/password_hasher.py` | Adaptar los hashers de Django al puerto `PasswordHasher` de la capa de aplicación | Llamar a `make_password` desde el handler metería a Django en `application` |
 | Adapter | Estructural | identity | `identity/infrastructure/security/token_issuer.py` | Adaptar PyJWT al puerto `TokenIssuer`: la aplicación pide tokens sin saber cómo se firman | Usar `djangorestframework-simplejwt` no sirve: no pone `kid` en el header |
@@ -46,7 +46,6 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Builder | Creacional | listing | Criterios del catálogo público con muchos filtros opcionales |
 | Singleton | Creacional | todos | Productor de Kafka y pool de BD con scope singleton del contenedor de DI |
 | Adapter | Estructural | listing | `ImageStorage` → almacenamiento local o MinIO |
-| Facade | Estructural | frontend | Custom hook por feature (`useCatalog`) que oculta la API y el estado a los componentes smart |
 | Observer / Pub-Sub | Comportamiento | todos | Eventos de dominio y Kafka |
 | Command | Comportamiento | visit, listing | Comandos CQRS ejecutados por `CommandBus` |
 | State | Comportamiento | listing, visit | Transiciones de `PropertyStatus`, `VisitStatus` y del `Lead` |

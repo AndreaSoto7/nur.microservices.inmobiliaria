@@ -1,6 +1,6 @@
 # frontend — React + Vite + TypeScript
 
-Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están la base, el cliente HTTP, la sesión y las pantallas de registro, login y "Mi cuenta"; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están la base, el cliente HTTP, la sesión, registro, login, "Mi cuenta", el catálogo público y el detalle de propiedad; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
@@ -45,10 +45,11 @@ No hay notificaciones: el cliente ve el estado de sus solicitudes en "Mis visita
 frontend/src/
   app/             raíz de composición: App.tsx (rutas), AppLayout (smart), components/AppHeader (dumb)
   core/            cliente HTTP (vía gateway), auth (token, refresh), rutas protegidas, modelos de la API
-    api/           httpClient.ts (apiRequest), problem.ts (ApiError a partir del problem+json)
+    api/           httpClient.ts (apiRequest), problem.ts (ApiError a partir del problem+json), catalogApi.ts
     auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
-    models/        tipos que reflejan contracts/openapi (identity.ts, ...)
-  shared/ui/       dumbs genéricos: Button, TextField, ErrorMessage, LoadingState (después Card, Pagination, EmptyState)
+    models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts)
+  shared/format/   formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones y extras
+  shared/ui/       dumbs genéricos: Button, TextField, ErrorMessage, LoadingState, Pagination, EmptyState
   test/            setup de Vitest, mocks de fetch y renderApp
   features/
     auth/          LoginPage, RegisterPage (smart) · LoginForm, RegisterForm (dumb) · useAuthActions (facade)
@@ -57,7 +58,11 @@ frontend/src/
       containers/  CatalogPage.tsx                                          (smart)
       components/  PropertyFilters.tsx  PropertyCard.tsx  PropertyCardList.tsx   (dumb)
       useCatalog.ts                                                         (facade)
-    property-detail/   favorites/   my-visits/
+      catalogFilters.ts   filtros ↔ URL ↔ query del contrato (funciones puras, con tests)
+    property-detail/
+      containers/  PropertyDetailPage.tsx (smart) · components/ ImageGallery, PropertySpecs (dumb)
+      usePropertyDetail.ts (facade; un 404 es "ya no está disponible", no un error)
+    favorites/   my-visits/
     agent/  properties-admin/  property-form/  visit-requests/  lead-follow-up/
 ```
 
@@ -68,6 +73,14 @@ frontend/src/
 | `AgentPropertiesPage` | `PropertyTable` (`onPublish`, `onPause`, `onEdit`), `StatusBadge` |
 | `VisitRequestsPage` | `VisitRequestList`, `ScheduleVisitDialog` |
 | `LeadFollowUpPage` | `LeadTimeline`, `FollowUpForm`, `CloseLeadDialog` (`onClose(outcome)`) |
+
+## Catálogo
+
+- Ruta `/` (pública). Los filtros viven en la URL (`?zone=…&operation=RENT&features=POOL,GARAGE&page=2`): se comparten, se recargan y funcionan con atrás/adelante. Lo inválido se descarta (`catalogFilters.ts`).
+- `PropertyFilters` edita un borrador y avisa al buscar; el container le pasa `key={filtersKey}` para reiniciarlo cuando cambia la URL. Buscar vuelve a la página 1.
+- `keepPreviousData`: al cambiar de página se sigue viendo la anterior hasta que llega la nueva.
+- Las rutas de imágenes vienen relativas al gateway: `gatewayUrl()` de `core/config.ts` las vuelve absolutas. Si una foto no carga, la tarjeta muestra "Sin foto".
+- Detalle en `/propiedades/:propertyId` (`GET /api/v1/catalog/properties/{id}`): solo `PUBLISHED` o `RESERVED`; un 404 se muestra como "no disponible" y no se reintenta.
 
 ## Sesión y tokens
 
