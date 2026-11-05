@@ -9,14 +9,14 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Contrato inicial para solicitar y consultar visitas y esquemas de VisitRequested y LeadOpened | este PR |
+| feat | Contrato inicial para solicitar y consultar visitas y esquemas de VisitRequested y LeadOpened | #39 |
 
 ## Pendientes
 
 **Base**
 
 - [ ] Scaffold con `/scaffold-servicio visit`
-- [ ] Contrato `contracts/openapi/visit-service.yaml`
+- [x] Contrato `contracts/openapi/visit-service.yaml`
 
 **Consultas y visitas (enunciado)**
 
