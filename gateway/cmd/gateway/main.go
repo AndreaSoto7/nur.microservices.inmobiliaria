@@ -55,13 +55,13 @@ func run(logger *slog.Logger) error {
 	}
 
 	logger.Info("gateway escuchando", "port", cfg.Port)
-	return serve(ctx, listener, newHandler(logger))
+	return serve(ctx, listener, newHandler(logger, cfg))
 }
 
 // newHandler atiende /health aquí y no en un http.ServeMux: el mux limpia los paths y responde 301
 // ante `..` o `//`, y esos paths deben llegar a la validación del gateway para responder 400.
 // /health queda fuera de la cadena: lo llama Docker cada 10 s y llenaría los logs.
-func newHandler(logger *slog.Logger) http.Handler {
+func newHandler(logger *slog.Logger, cfg config.Config) http.Handler {
 	notFound := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		problem.Write(w, r, problem.RouteNotFound)
 	})
@@ -70,6 +70,7 @@ func newHandler(logger *slog.Logger) http.Handler {
 		middleware.CorrelationID,
 		middleware.Logging(logger),
 		middleware.StripIdentityHeaders,
+		middleware.NewRateLimiter(cfg.RateLimitAuthPerMinute, time.Now).Middleware,
 	)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

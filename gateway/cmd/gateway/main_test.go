@@ -9,12 +9,18 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/config"
 )
+
+func newTestHandler() http.Handler {
+	return newHandler(slog.New(slog.DiscardHandler), config.Config{RateLimitAuthPerMinute: 2})
+}
 
 func TestHealthRespondsUp(t *testing.T) {
 	rec := httptest.NewRecorder()
 
-	newHandler(slog.New(slog.DiscardHandler)).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
+	newTestHandler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d", rec.Code)
@@ -31,7 +37,7 @@ func TestHealthRespondsUp(t *testing.T) {
 func TestUnknownPathRespondsNotFoundProblem(t *testing.T) {
 	rec := httptest.NewRecorder()
 
-	newHandler(slog.New(slog.DiscardHandler)).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil))
+	newTestHandler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil))
 
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d", rec.Code)
@@ -48,6 +54,30 @@ func TestUnknownPathRespondsNotFoundProblem(t *testing.T) {
 	}
 }
 
+func TestLoginIsRateLimitedThroughTheChain(t *testing.T) {
+	handler := newTestHandler()
+	login := func() *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", nil))
+		return rec
+	}
+	login()
+	login()
+
+	rec := login()
+
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if id, _ := body["correlationId"].(string); id == "" {
+		t.Error("el 429 no lleva correlationId: el rate limit quedó antes del correlation-id")
+	}
+}
+
 func TestServeStopsWhenContextIsCancelled(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -55,7 +85,7 @@ func TestServeStopsWhenContextIsCancelled(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- serve(ctx, listener, newHandler(slog.New(slog.DiscardHandler))) }()
+	go func() { done <- serve(ctx, listener, newTestHandler()) }()
 
 	url := "http://" + listener.Addr().String() + "/health"
 	resp, err := http.Get(url)
