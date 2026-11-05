@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: listing-service
-  version: 0.1.0
+  version: 0.2.0
   description: |
     Propiedades, galería, favoritos y catálogo público de la Plataforma Inmobiliaria.
 
@@ -10,18 +10,409 @@ info:
     - **Autenticación:** `Authorization: Bearer <access token>` emitido por identity-service. Se valida con su JWKS:
       `alg=RS256`, `iss=identity-service`, `aud=inmobiliaria`, `exp` y `typ=at+jwt`. Los roles salen del claim `roles`.
       Son públicos el catálogo (`GET /api/v1/catalog/**`) y las imágenes (`GET /api/v1/properties/{propertyId}/images/{imageId}`).
+    - **Autorización:** las operaciones de `/api/v1/properties` son del rol `AGENT`, y cada agente solo ve y modifica
+      sus propiedades (el `agentId` es el `sub` del JWT). Una propiedad de otro agente responde 404, igual que una
+      que no existe: así no se revela qué IDs existen.
+    - **Comandos (CQRS):** crear devuelve solo el ID; editar y las transiciones de estado responden 204 sin body.
+      Para ver el resultado se consulta `GET /api/v1/properties/{propertyId}`.
     - Los errores siguen RFC 9457 (`application/problem+json`) con `code` estable y `correlationId`.
       Genéricos: 400 `BAD_REQUEST` / `VALIDATION_ERROR`, 401 `AUTH_UNAUTHORIZED`, 403 `PERMISSION_DENIED`, 404 `NOT_FOUND`,
-      405 `METHOD_NOT_ALLOWED`, 409 `PROPERTY_*` (reglas de negocio y transiciones inválidas) y 500 `INTERNAL_ERROR`.
-    - Esta versión solo documenta los health checks del esqueleto. Los endpoints de negocio se agregan aquí antes de implementarlos (contract-first).
+      405 `METHOD_NOT_ALLOWED`, 415 `UNSUPPORTED_MEDIA_TYPE` y 500 `INTERNAL_ERROR`.
+      Datos inválidos que detecta el dominio: 400 `PROPERTY_INVALID_*` y `PROPERTY_IMAGE_*`.
+      Reglas de negocio y transiciones inválidas: 409 `PROPERTY_*`.
+    - Catálogo público y favoritos: se agregan aquí antes de implementarlos (contract-first).
 servers:
   - url: http://localhost:8080
     description: API Gateway (desarrollo)
+security:
+  - bearerAuth: []
 tags:
+  - name: properties
+    description: Propiedades del agente (lado comando y sus vistas)
+  - name: images
+    description: Galería de una propiedad
   - name: health
     description: Liveness y readiness (no se exponen por el gateway)
 
 paths:
+  /api/v1/properties:
+    post:
+      tags: [properties]
+      operationId: createProperty
+      summary: Crear una propiedad
+      description: |
+        Rol `AGENT`. La propiedad nace en `DRAFT`, del agente que llama.
+        Para publicarla faltan las características (`PUT .../features`) y al menos una imagen.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PropertyData' }
+            example:
+              title: Casa con jardín en Equipetrol
+              description: Casa de dos plantas con jardín y garaje para dos autos.
+              propertyType: HOUSE
+              operationType: SALE
+              price: { amount: 1285000.00, currency: BOB }
+              location: { zone: Equipetrol, address: 'Calle 7 Oeste #120', latitude: -17.7633, longitude: -63.1956 }
+      responses:
+        '201':
+          description: Propiedad creada en `DRAFT`.
+          headers:
+            Location:
+              required: true
+              schema: { type: string }
+              example: /api/v1/properties/3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreatedResource' }
+              example: { id: 3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01 }
+        '400': { $ref: '#/components/responses/InvalidData' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+    get:
+      tags: [properties]
+      operationId: listAgentProperties
+      summary: Listar mis propiedades
+      description: Rol `AGENT`. Devuelve las propiedades del agente que llama, en todos los estados.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: status
+          in: query
+          required: false
+          description: Filtra por estado.
+          schema: { $ref: '#/components/schemas/PropertyStatus' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: sort
+          in: query
+          required: false
+          description: Orden. Por defecto `updatedAt,desc`.
+          schema:
+            type: string
+            enum: ['updatedAt,desc', 'updatedAt,asc', 'createdAt,desc', 'createdAt,asc', 'price,asc', 'price,desc']
+            default: 'updatedAt,desc'
+      responses:
+        '200':
+          description: Una página de propiedades.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PropertySummaryPage' }
+              example:
+                data:
+                  - id: 3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
+                    title: Casa con jardín en Equipetrol
+                    propertyType: HOUSE
+                    operationType: SALE
+                    status: PUBLISHED
+                    price: { amount: 1285000.00, currency: BOB }
+                    zone: Equipetrol
+                    coverImageUrl: /api/v1/properties/3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01/images/5a1f0c2e-7b3d-4e6f-9a10-1b2c3d4e5f60
+                    updatedAt: '2026-11-05T14:30:00Z'
+                page: { number: 1, size: 20, totalElements: 1, totalPages: 1 }
+        '400': { $ref: '#/components/responses/InvalidData' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /api/v1/properties/{propertyId}:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    get:
+      tags: [properties]
+      operationId: getProperty
+      summary: Ver una propiedad mía
+      description: Rol `AGENT`, dueño de la propiedad. Cualquier estado.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: La propiedad.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PropertyDetail' }
+              example:
+                id: 3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
+                agentId: 8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+                title: Casa con jardín en Equipetrol
+                description: Casa de dos plantas con jardín y garaje para dos autos.
+                propertyType: HOUSE
+                operationType: SALE
+                status: DRAFT
+                price: { amount: 1285000.00, currency: BOB }
+                location: { zone: Equipetrol, address: 'Calle 7 Oeste #120', latitude: -17.7633, longitude: -63.1956 }
+                bedrooms: 3
+                bathrooms: 2
+                areaM2: 240.5
+                features: [GARAGE, GARDEN]
+                images:
+                  - id: 5a1f0c2e-7b3d-4e6f-9a10-1b2c3d4e5f60
+                    url: /api/v1/properties/3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01/images/5a1f0c2e-7b3d-4e6f-9a10-1b2c3d4e5f60
+                    contentType: image/jpeg
+                publishedAt: null
+                createdAt: '2026-11-05T14:00:00Z'
+                updatedAt: '2026-11-05T14:30:00Z'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PropertyNotFound' }
+
+    put:
+      tags: [properties]
+      operationId: editProperty
+      summary: Editar los datos de una propiedad
+      description: |
+        Rol `AGENT`, dueño. Reemplaza título, descripción, precio y ubicación (el tipo y la operación no cambian).
+        No se puede editar una propiedad `SOLD` o `RENTED`. Si está `PUBLISHED` o `RESERVED`, se publica `PropertyUpdated`.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EditPropertyRequest' }
+            example:
+              title: Casa con jardín y piscina en Equipetrol
+              description: Casa de dos plantas con jardín, piscina y garaje para dos autos.
+              price: { amount: 1250000.00, currency: BOB }
+              location: { zone: Equipetrol, address: 'Calle 7 Oeste #120' }
+      responses:
+        '204': { description: Propiedad editada. }
+        '400': { $ref: '#/components/responses/InvalidData' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PropertyNotFound' }
+        '409': { $ref: '#/components/responses/BusinessRule' }
+
+  /api/v1/properties/{propertyId}/features:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    put:
+      tags: [properties]
+      operationId: updatePropertyFeatures
+      summary: Registrar las características
+      description: |
+        Rol `AGENT`, dueño. Reemplaza dormitorios, baños, superficie y extras.
+        No se puede en `SOLD` o `RENTED`. Si está `PUBLISHED` o `RESERVED`, se publica `PropertyUpdated`.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PropertyFeatures' }
+            example: { bedrooms: 3, bathrooms: 2, areaM2: 240.5, features: [GARAGE, GARDEN] }
+      responses:
+        '204': { description: Características registradas. }
+        '400': { $ref: '#/components/responses/InvalidData' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PropertyNotFound' }
+        '409': { $ref: '#/components/responses/BusinessRule' }
+
+  /api/v1/properties/{propertyId}/publish:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    post:
+      tags: [properties]
+      operationId: publishProperty
+      summary: Publicar o reanudar
+      description: |
+        Rol `AGENT`, dueño. Desde `DRAFT` (nueva) o `PAUSED` (reanudada).
+        Exige dormitorios, baños y superficie (409 `PROPERTY_INCOMPLETE`) y al menos una imagen (409 `PROPERTY_WITHOUT_IMAGES`).
+        Publica `PropertyPublished`.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '204': { description: Propiedad publicada. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PropertyNotFound' }
+        '409': { $ref: '#/components/responses/BusinessRule' }
+
+  /api/v1/properties/{propertyId}/pause:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    post:
+      tags: [properties]
+      operationId: pauseProperty
+      summary: Pausar
+      description: Rol `AGENT`, dueño. Solo desde `PUBLISHED`. Sale del catálogo. Publica `PropertyPaused`.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '204': { description: Propiedad pausada. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PropertyNotFound' }
+        '409': { $ref: '#/components/responses/BusinessRule' }
+
+  /api/v1/properties/{propertyId}/reserve:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    post:
+      tags: [properties]
+      operationId: reserveProperty
+      summary: Reservar
+      description: |
+        Rol `AGENT`, dueño. Solo desde `PUBLISHED`. Publica `PropertyReserved` con `actor: AGENT`.
+        También la reserva el sistema cuando una oportunidad se cierra como ganada (`LeadClosed`, ADR 0005), sin pasar por HTTP.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '204': { description: Propiedad reservada. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PropertyNotFound' }
+        '409': { $ref: '#/components/responses/BusinessRule' }
+
+  /api/v1/properties/{propertyId}/release-reservation:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    post:
+      tags: [properties]
+      operationId: releasePropertyReservation
+      summary: Liberar la reserva
+      description: |
+        Rol `AGENT`, dueño. Solo desde `RESERVED`; vuelve a `PUBLISHED`. Publica `PropertyPublished` con `previousStatus: RESERVED`.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '204': { description: Reserva liberada. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PropertyNotFound' }
+        '409': { $ref: '#/components/responses/BusinessRule' }
+
+  /api/v1/properties/{propertyId}/mark-sold:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    post:
+      tags: [properties]
+      operationId: markPropertySold
+      summary: Marcar como vendida
+      description: |
+        Rol `AGENT`, dueño. Solo `SALE` (409 `PROPERTY_OPERATION_MISMATCH`), desde `PUBLISHED` o `RESERVED`. Es definitivo.
+        Publica `PropertySold`.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '204': { description: Propiedad vendida. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PropertyNotFound' }
+        '409': { $ref: '#/components/responses/BusinessRule' }
+
+  /api/v1/properties/{propertyId}/mark-rented:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    post:
+      tags: [properties]
+      operationId: markPropertyRented
+      summary: Marcar como alquilada
+      description: |
+        Rol `AGENT`, dueño. Solo `RENT` (409 `PROPERTY_OPERATION_MISMATCH`), desde `PUBLISHED` o `RESERVED`.
+        Publica `PropertyRented`.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '204': { description: Propiedad alquilada. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PropertyNotFound' }
+        '409': { $ref: '#/components/responses/BusinessRule' }
+
+  /api/v1/properties/{propertyId}/images:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+    post:
+      tags: [images]
+      operationId: addPropertyImage
+      summary: Subir una imagen
+      description: |
+        Rol `AGENT`, dueño. Una imagen por request, JPG o PNG (se valida el contenido real, no la extensión) y hasta 5 MB.
+        Como máximo 5 por propiedad (409 `PROPERTY_IMAGE_LIMIT`). No se puede en `SOLD` o `RENTED`.
+        Se guarda con un nombre generado: el nombre original del archivo no se usa.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+            encoding:
+              file:
+                contentType: image/jpeg, image/png
+      responses:
+        '201':
+          description: Imagen agregada al final de la galería.
+          headers:
+            Location:
+              required: true
+              schema: { type: string }
+              example: /api/v1/properties/3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01/images/5a1f0c2e-7b3d-4e6f-9a10-1b2c3d4e5f60
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CreatedResource' }
+              example: { id: 5a1f0c2e-7b3d-4e6f-9a10-1b2c3d4e5f60 }
+        '400': { $ref: '#/components/responses/InvalidData' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/PropertyNotFound' }
+        '409': { $ref: '#/components/responses/BusinessRule' }
+        '413':
+          description: El archivo supera 5 MB.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: https://inmobiliaria.local/problems/property-image-too-large
+                title: Dato inválido
+                status: 413
+                detail: Cada imagen pesa como máximo 5 MB
+                code: PROPERTY_IMAGE_TOO_LARGE
+                correlationId: 0b8f1c7e-5d2a-4f3b-9c6d-7e8f9a0b1c2d
+
+  /api/v1/properties/{propertyId}/images/{imageId}:
+    parameters:
+      - $ref: '#/components/parameters/PropertyId'
+      - name: imageId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [images]
+      operationId: getPropertyImage
+      summary: Ver una imagen
+      description: |
+        **Público** si la propiedad está en el catálogo (`PUBLISHED` o `RESERVED`). En `DRAFT` o `PAUSED`, solo lo ve
+        el agente dueño (con su token); para cualquier otro responde 404. En `SOLD` o `RENTED` sigue visible, para el
+        historial de visit.
+        Son las rutas que viajan en `coverImageUrl` e `imageUrls` de los eventos.
+      security:
+        - {}
+        - bearerAuth: []
+      responses:
+        '200':
+          description: La imagen.
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              example: public, max-age=86400
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+            image/png:
+              schema: { type: string, format: binary }
+        '404': { $ref: '#/components/responses/PropertyNotFound' }
+
   /health:
     get:
       tags: [health]
@@ -76,7 +467,240 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  parameters:
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: Si no llega o no cumple el formato, se genera uno. Se devuelve en la respuesta.
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9-]{1,64}$'
+    PropertyId:
+      name: propertyId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Número de página, desde 1.
+      schema: { type: integer, minimum: 1, default: 1 }
+    Size:
+      name: size
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
+  responses:
+    InvalidData:
+      description: Request mal formado, campos inválidos o un dato que el dominio rechaza.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            validation:
+              value:
+                type: https://inmobiliaria.local/problems/validation-error
+                title: Error de validación
+                status: 400
+                detail: Hay campos con valores inválidos
+                code: VALIDATION_ERROR
+                correlationId: 0b8f1c7e-5d2a-4f3b-9c6d-7e8f9a0b1c2d
+                errors:
+                  - field: title
+                    message: no debe estar vacío
+            invalidPrice:
+              value:
+                type: https://inmobiliaria.local/problems/property-invalid-price
+                title: Dato inválido
+                status: 400
+                detail: El precio debe ser mayor a 0
+                code: PROPERTY_INVALID_PRICE
+                correlationId: 0b8f1c7e-5d2a-4f3b-9c6d-7e8f9a0b1c2d
+    Unauthorized:
+      description: Falta el access token o no es válido.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://inmobiliaria.local/problems/unauthorized
+            title: No autenticado
+            status: 401
+            detail: Falta el access token o no es válido
+            code: AUTH_UNAUTHORIZED
+            correlationId: 0b8f1c7e-5d2a-4f3b-9c6d-7e8f9a0b1c2d
+    Forbidden:
+      description: El usuario no tiene el rol `AGENT`.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://inmobiliaria.local/problems/permission-denied
+            title: Sin permiso
+            status: 403
+            detail: Tu rol no puede realizar esta operación
+            code: PERMISSION_DENIED
+            correlationId: 0b8f1c7e-5d2a-4f3b-9c6d-7e8f9a0b1c2d
+    PropertyNotFound:
+      description: La propiedad no existe o no es del agente que llama (no se distinguen).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://inmobiliaria.local/problems/property-not-found
+            title: Propiedad no encontrada
+            status: 404
+            detail: La propiedad no existe
+            code: PROPERTY_NOT_FOUND
+            correlationId: 0b8f1c7e-5d2a-4f3b-9c6d-7e8f9a0b1c2d
+    BusinessRule:
+      description: |
+        Una regla de negocio rechazó la operación:
+        `PROPERTY_INVALID_TRANSITION` (el estado no lo permite), `PROPERTY_OPERATION_MISMATCH` (vender un alquiler o al revés),
+        `PROPERTY_INCOMPLETE`, `PROPERTY_WITHOUT_IMAGES`, `PROPERTY_IMAGE_LIMIT` o `PROPERTY_CONCURRENT_MODIFICATION`
+        (otra operación cambió la propiedad al mismo tiempo: reintentar).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example:
+            type: https://inmobiliaria.local/problems/property-invalid-transition
+            title: Regla de negocio incumplida
+            status: 409
+            detail: No se puede pausar una propiedad en estado DRAFT
+            instance: /api/v1/properties/3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01/pause
+            code: PROPERTY_INVALID_TRANSITION
+            correlationId: 0b8f1c7e-5d2a-4f3b-9c6d-7e8f9a0b1c2d
+
   schemas:
+    PropertyType:
+      type: string
+      enum: [HOUSE, APARTMENT]
+    OperationType:
+      type: string
+      enum: [SALE, RENT]
+    PropertyStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED, PAUSED, RESERVED, SOLD, RENTED]
+    Feature:
+      type: string
+      enum: [GARAGE, GARDEN, POOL, COMMON_AREAS, BALCONY, ELEVATOR, SECURITY, FURNISHED, PET_FRIENDLY, AIR_CONDITIONING]
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: number
+          exclusiveMinimum: 0
+          description: Máximo 2 decimales. Para `RENT` es el precio mensual.
+          example: 1285000.00
+        currency:
+          type: string
+          const: BOB
+    Location:
+      type: object
+      required: [zone]
+      properties:
+        zone: { type: string, minLength: 1, maxLength: 100, example: Equipetrol }
+        address: { type: string, maxLength: 255 }
+        latitude: { type: number, minimum: -90, maximum: 90, description: Va junto con `longitude`. }
+        longitude: { type: number, minimum: -180, maximum: 180 }
+    EditPropertyRequest:
+      type: object
+      required: [title, price, location]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 150 }
+        description: { type: string, maxLength: 5000, default: '' }
+        price: { $ref: '#/components/schemas/Money' }
+        location: { $ref: '#/components/schemas/Location' }
+    PropertyData:
+      allOf:
+        - $ref: '#/components/schemas/EditPropertyRequest'
+        - type: object
+          required: [propertyType, operationType]
+          properties:
+            propertyType: { $ref: '#/components/schemas/PropertyType' }
+            operationType: { $ref: '#/components/schemas/OperationType' }
+    PropertyFeatures:
+      type: object
+      required: [bedrooms, bathrooms, areaM2, features]
+      properties:
+        bedrooms: { type: integer, minimum: 0, maximum: 100 }
+        bathrooms: { type: integer, minimum: 0, maximum: 100 }
+        areaM2: { type: number, exclusiveMinimum: 0, description: 'Superficie en m², hasta 2 decimales.' }
+        features:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/Feature' }
+    PropertyImage:
+      type: object
+      required: [id, url, contentType]
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, description: 'Ruta relativa al gateway. La primera imagen es la portada.' }
+        contentType: { type: string, enum: [image/jpeg, image/png] }
+    PropertyDetail:
+      type: object
+      required: [id, agentId, title, description, propertyType, operationType, status, price, location, features, images, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        agentId: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        propertyType: { $ref: '#/components/schemas/PropertyType' }
+        operationType: { $ref: '#/components/schemas/OperationType' }
+        status: { $ref: '#/components/schemas/PropertyStatus' }
+        price: { $ref: '#/components/schemas/Money' }
+        location: { $ref: '#/components/schemas/Location' }
+        bedrooms: { type: [integer, 'null'], description: null hasta registrar las características. }
+        bathrooms: { type: [integer, 'null'] }
+        areaM2: { type: [number, 'null'] }
+        features:
+          type: array
+          items: { $ref: '#/components/schemas/Feature' }
+        images:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/PropertyImage' }
+        publishedAt: { type: [string, 'null'], format: date-time, description: Primera publicación. }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PropertySummary:
+      type: object
+      required: [id, title, propertyType, operationType, status, price, zone, coverImageUrl, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        propertyType: { $ref: '#/components/schemas/PropertyType' }
+        operationType: { $ref: '#/components/schemas/OperationType' }
+        status: { $ref: '#/components/schemas/PropertyStatus' }
+        price: { $ref: '#/components/schemas/Money' }
+        zone: { type: string }
+        coverImageUrl: { type: [string, 'null'] }
+        updatedAt: { type: string, format: date-time }
+    PageMeta:
+      type: object
+      required: [number, size, totalElements, totalPages]
+      properties:
+        number: { type: integer, minimum: 1 }
+        size: { type: integer, minimum: 1, maximum: 100 }
+        totalElements: { type: integer, minimum: 0 }
+        totalPages: { type: integer, minimum: 0 }
+    PropertySummaryPage:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/PropertySummary' }
+        page: { $ref: '#/components/schemas/PageMeta' }
+    CreatedResource:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
     Health:
       type: object
       required: [status]
@@ -104,6 +728,3 @@ components:
             properties:
               field: { type: string, example: title }
               message: { type: string, example: no debe estar vacío }
-
-security:
-  - bearerAuth: []
