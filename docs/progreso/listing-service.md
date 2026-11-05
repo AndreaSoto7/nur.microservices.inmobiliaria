@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| fix | El relay del outbox respeta la interrupción del hilo al apagarse (nota de la revisión de #45) | este PR |
 | feat | Servicio completo: casos de uso de propiedades, galería, favoritos y catálogo público (CQRS), persistencia JPA y proyección, outbox con relay a Kafka, política `LeadClosed` → reserva, API REST, Swagger en `/docs` y contrato OpenAPI, con 127 tests (contrato de eventos e integración con Postgres) | #45 |
 | feat | Aggregate `Property` con su máquina de estados, value objects (`Money`, `Location`, `Area`, `PropertyImage`) y eventos de dominio, con 30 tests | #41 |
 | chore | Esqueleto Spring Boot 4.1: capas, `/health` y `/health/ready`, Consul con re-registro, JWT con JWKS, problem+json, `X-Correlation-Id`, logs JSON, outbox y `processed_events`, Dockerfile y compose | #41 |
@@ -18,7 +19,7 @@
 
 - [x] Scaffold con `/scaffold-servicio listing` (capas, health, Consul, problem+json, Dockerfile)
 - [x] Contrato `contracts/openapi/listing-service.yaml` con todos los endpoints de negocio
-- [ ] Probar el arranque con `docker compose up listing-service`: la app ya corre contra Postgres real en el test de integración, pero la imagen Docker no se construyó en este PR
+- [x] Probar el arranque con `docker compose up listing-service`: lo verificó la revisión de #45 (imagen `healthy` y prueba punta a punta con identity, Kafka y Consul)
 - [x] `springdoc-openapi` en `/docs`
 - [ ] Elegir linter de Java (Spotless o Checkstyle)
 - [x] `Property.reconstitute(...)` para que el mapper cargue una propiedad guardada (sin eventos ni validar transiciones), con test de ida y vuelta
