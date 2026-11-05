@@ -1,6 +1,7 @@
 # Progreso — visit-service
 
 - **Responsable:** _(completar)_
+- **En curso:** @JoseDani258 prepara los contratos para solicitar una visita y consultar su detalle.
 - **Stack:** NestJS
 - **Instrucciones:** [`services/visit-service/CLAUDE.md`](../../services/visit-service/CLAUDE.md)
 
@@ -8,7 +9,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| | _(todavía nada)_ | |
+| feat | Contrato inicial para solicitar y consultar visitas y esquemas de VisitRequested y LeadOpened | este PR |
 
 ## Pendientes
 

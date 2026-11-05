@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inmobiliaria.local/contracts/events/visit/lead-opened.v1.schema.json",
+  "title": "LeadOpened v1 (payload)",
+  "description": "Una consulta o solicitud de visita abre una oportunidad para el par cliente y propiedad.",
+  "type": "object",
+  "required": [
+    "leadId",
+    "propertyId",
+    "clientId",
+    "agentId"
+  ],
+  "properties": {
+    "leadId": {
+      "$ref": "#/$defs/uuid",
+      "description": "Coincide con aggregateId del envelope."
+    },
+    "propertyId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "clientId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "agentId": {
+      "$ref": "#/$defs/uuid"
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    }
+  },
+  "examples": [
+    {
+      "leadId": "5142a8be-97ea-479b-9a40-02162994fb36",
+      "propertyId": "3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01",
+      "clientId": "81b4586e-348a-48ba-bc93-93341e3b0b4c",
+      "agentId": "8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+    }
+  ]
+}
