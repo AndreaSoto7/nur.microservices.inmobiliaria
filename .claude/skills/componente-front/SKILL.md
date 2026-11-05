@@ -8,14 +8,14 @@ argument-hint: "[pantalla o componente]"
 
 Pantalla o componente: $ARGUMENTS
 
-Sigue `.claude/rules/frontend-smart-dumb.md`. El frontend es React + Vite + TypeScript (`docs/adr/0004-frontend-react.md`). Revisa en ese ADR qué librerías de router y de datos eligió el equipo.
+Sigue `frontend/CLAUDE.md` (Smart/Dumb, estructura, qué API usa cada pantalla y reglas). El frontend es React + Vite + TypeScript (`docs/adr/0004-frontend-react.md`). Revisa en ese ADR qué librerías de router y de datos eligió el equipo.
 
 ## 1. Descomponer antes de programar
 
 Dibuja el árbol de componentes y márcalo así:
 
 ```
-CatalogPage (SMART)  ← useCatalog (facade): search API vía gateway, filtros en la URL
+CatalogPage (SMART)  ← useCatalog (facade): catálogo de listing vía gateway, filtros en la URL
 ├── PropertyFilters (DUMB)    props: filters, zones   callbacks: onFiltersChange
 ├── PropertyCardList (DUMB)   props: properties       callbacks: onSelect, onToggleFavorite
 │   └── PropertyCard (DUMB)   props: property         callbacks: onSelect, onToggleFavorite

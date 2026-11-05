@@ -20,7 +20,7 @@ type Kind struct {
 	Detail string
 }
 
-// Errores del gateway, según la tabla de la rule stack-gateway.
+// Errores del gateway, según la tabla "Errores propios" de gateway/CLAUDE.md.
 var (
 	BadRequest = Kind{http.StatusBadRequest, "GATEWAY_BAD_REQUEST",
 		"Petición inválida", "La ruta o el cuerpo de la petición no son válidos."}

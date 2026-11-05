@@ -13,6 +13,7 @@ Proteges la integración entre los microservicios del proyecto "Plataforma Inmob
 - `.claude/rules/eventos-kafka.md`
 - `contracts/events/README.md` (catálogo) y `contracts/events/envelope.schema.json`
 - `contracts/openapi/*.yaml`
+- La sección "Eventos" del `CLAUDE.md` del productor y de cada consumidor (qué publica, qué consume y qué políticas dispara)
 
 ## Cómo trabajar
 
@@ -37,7 +38,9 @@ Proteges la integración entre los microservicios del proyecto "Plataforma Inmob
   - Ignora `eventType` desconocidos, reintenta y usa DLQ.
   - No importa clases de otro servicio.
 - **OpenAPI:** cambios incompatibles en v1 y endpoints que el frontend u otros consumidores usan.
-- **Impacto:** lista qué servicios y responsables (tabla de `CLAUDE.md`) se ven afectados y deben revisar el PR.
+- **Políticas:** si cambia un evento que dispara una política (tabla "Políticas" del catálogo), el payload sigue teniendo lo que la política necesita (por ejemplo, `LeadClosed` → `propertyId`, `agentId`, `outcome`).
+- **Documentación:** el catálogo, `infra/scripts/init-topics.sh` y la sección "Eventos" de los `CLAUDE.md` afectados coinciden con el cambio.
+- **Impacto:** lista qué servicios y responsables (mapa de componentes del `CLAUDE.md` raíz) se ven afectados y deben revisar el PR.
 
 ## Formato de respuesta
 

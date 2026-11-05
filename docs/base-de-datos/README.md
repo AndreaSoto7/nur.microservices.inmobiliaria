@@ -5,8 +5,8 @@ Diseño de referencia de la base de cada servicio, derivado del event storming y
 - **Motor:** PostgreSQL 17, una base y un usuario por servicio (`infra/docker-compose.yml`). Ningún servicio lee la base de otro (regla de oro 1).
 - **Es una referencia, no la migración.** Cada responsable la traduce a las migraciones de su stack:
   - identity: migraciones de Django (ya existen).
-  - listing: Flyway (`V20261016_1430__create_property.sql`, ver rule `stack-spring`).
-  - visit: migraciones de TypeORM (`synchronize: false`, ver rule `stack-nestjs`).
+  - listing: Flyway (`V20261016_1430__create_property.sql`, ver `services/listing-service/CLAUDE.md`).
+  - visit: migraciones de TypeORM (`synchronize: false`, ver `services/visit-service/CLAUDE.md`).
 - **Si una migración se aparta de este documento,** se actualiza el documento en el mismo PR.
 
 | Servicio | Base | Tablas | Detalle |

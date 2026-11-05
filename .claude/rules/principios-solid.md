@@ -15,7 +15,8 @@ Aplica a todo el código del proyecto. Si una solución viola uno de estos princ
   - `PublishPropertyHandler` orquesta el caso de uso; `Property.publish()` valida la regla; `KafkaEventPublisher` publica.
   - Un controlador no valida reglas de negocio ni habla con Kafka.
 - **O — Abierto/cerrado.** Agrega comportamiento sin modificar lo que ya funciona.
-  - Un canal de notificación nuevo (email, in-app) es una implementación nueva de `NotificationChannel`, no un `if` más.
+  - Una política nueva ante un evento es un handler nuevo registrado en el consumidor, no un `if` más dentro de otro handler.
+  - Otro algoritmo de balanceo en el gateway es otra implementación de la Strategy, sin tocar el proxy.
 - **L — Sustitución de Liskov.** Cualquier implementación de un puerto debe poder reemplazar a otra sin romper al que la usa.
   - `InMemoryPropertyRepository` (tests) y `JpaPropertyRepository` cumplen el mismo contrato, incluidos los errores.
 - **I — Segregación de interfaces.** Interfaces chicas y enfocadas en quien las consume.

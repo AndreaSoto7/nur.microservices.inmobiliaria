@@ -1,6 +1,6 @@
 # gateway
 
-Único punto de entrada del cliente a la plataforma. Es propio, en Go. La decisión está en el [ADR 0002](../docs/adr/0002-gateway-go-balanceador-consul.md) y el diseño en la rule `.claude/rules/stack-gateway.md`.
+Único punto de entrada del cliente a la plataforma. Es propio, en Go. La decisión está en el [ADR 0002](../docs/adr/0002-gateway-go-balanceador-consul.md) y el diseño completo en [`CLAUDE.md`](CLAUDE.md).
 
 No tiene lógica de negocio, base de datos ni Kafka, y no se registra en Consul.
 
@@ -38,9 +38,8 @@ Todas tienen valor por defecto, y un valor inválido impide arrancar. Están en 
 | Prefijo | Servicio en Consul |
 |---|---|
 | `/api/v1/auth/**`, `/api/v1/users/**` | `identity-service` |
-| `/api/v1/properties/**`, `/api/v1/favorites/**` | `listing-service` |
-| `/api/v1/search/**` | `search-service` |
+| `/api/v1/properties/**`, `/api/v1/favorites/**`, `/api/v1/catalog/**` | `listing-service` |
 | `/api/v1/inquiries/**`, `/api/v1/visits/**`, `/api/v1/leads/**` | `visit-service` |
-| `/api/v1/notifications/**` | `notification-service` |
+| `/api/v1/audit/**` | `audit-service` (opcional) |
 
-El path se reenvía sin reescribirlo. `GET /health` lo responde el propio gateway.
+El path se reenvía sin reescribirlo. `GET /health` lo responde el propio gateway. Rutas públicas y reglas de acceso: [`CLAUDE.md`](CLAUDE.md#rutas). El ruteo todavía no está implementado (ver `docs/progreso/gateway.md`).

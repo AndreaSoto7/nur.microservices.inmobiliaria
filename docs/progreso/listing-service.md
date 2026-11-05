@@ -2,7 +2,7 @@
 
 - **Responsable:** _(completar)_
 - **Stack:** Spring Boot
-- **Rules:** `stack-spring`, `ddd-clean-architecture`, `eventos-kafka`, `service-discovery`
+- **Instrucciones:** [`services/listing-service/CLAUDE.md`](../../services/listing-service/CLAUDE.md)
 
 ## Historial
 
@@ -25,7 +25,7 @@
 - [ ] Galería de imágenes (`POST /properties/{id}/images`, puerto `ImageStorage`)
 - [ ] Listar las propiedades del agente
 
-**Catálogo público, lado query (ADR 0005: antes era search-service)**
+**Catálogo público, lado query (ADR 0005)**
 
 - [ ] Proyección de lectura propia del catálogo, separada del aggregate `Property`
 - [ ] Buscar con filtros: zona (sin distinguir mayúsculas), tipo, operación, precio, dormitorios y características, con paginación y orden

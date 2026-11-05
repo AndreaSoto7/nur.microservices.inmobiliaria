@@ -5,10 +5,11 @@ Hay un archivo por servicio, `<servicio>-service.yaml` (por ejemplo, `listing-se
 | Archivo | Dueño |
 |---|---|
 | `identity-service.yaml` | responsable de identity |
-| `listing-service.yaml` | responsable de listing |
+| `listing-service.yaml` | responsable de listing (incluye el catálogo público `/api/v1/catalog/**`) |
 | `visit-service.yaml` | responsable de visit |
-| `search-service.yaml` | responsable de search |
-| `notification-service.yaml` | responsable de notification |
+| `audit-service.yaml` | responsable de audit (opcional) |
+
+Las rutas que le corresponden a cada servicio están en el mapa de rutas de la rule `api-rest` y en la ficha del `CLAUDE.md` del servicio.
 
 ## Reglas
 

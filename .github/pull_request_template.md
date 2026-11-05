@@ -4,8 +4,8 @@
 
 ## Servicio(s) afectado(s)
 
-- [ ] identity  - [ ] listing  - [ ] visit  - [ ] search  - [ ] notification
-- [ ] gateway  - [ ] frontend  - [ ] contracts  - [ ] infra  - [ ] docs / .claude
+- [ ] identity  - [ ] listing  - [ ] visit  - [ ] audit
+- [ ] gateway  - [ ] frontend  - [ ] contracts  - [ ] infra  - [ ] docs / .claude / CLAUDE.md
 
 ## Contratos
 
@@ -32,4 +32,5 @@
 - [ ] Sin secretos; `.env.example` actualizado
 - [ ] Patrones registrados en `docs/patrones-de-diseno.md`
 - [ ] `docs/progreso/<servicio>.md` actualizado (historial y pendientes)
+- [ ] `CLAUDE.md` del componente al día si cambiaron eventos, tablas, rutas, comandos o estructura
 - [ ] Rama actualizada con `main` (rebase)

@@ -4,7 +4,7 @@
 
 - **Responsable:** _(completar)_
 - **Stack:** por decidir (sugerencia: Go)
-- **Rules:** `ddd-clean-architecture`, `eventos-kafka`, `service-discovery` y la del stack elegido
+- **Instrucciones:** [`services/audit-service/CLAUDE.md`](../../services/audit-service/CLAUDE.md)
 
 ## Historial
 

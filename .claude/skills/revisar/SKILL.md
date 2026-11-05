@@ -21,13 +21,15 @@ allowed-tools:
 
 ## 2. Verificación automática
 
-Por cada servicio tocado, corre build, tests y lint con los comandos de su rule (`.claude/rules/stack-*.md`) y reporta lo que falle.
+Por cada componente tocado, corre build, tests y lint con los comandos de la sección "Comandos" de su `CLAUDE.md` y reporta lo que falle.
+
+Verifica también que el `CLAUDE.md` del componente siga describiendo lo que hay: si el cambio agregó o cambió eventos, tablas, rutas, comandos o estructura, y el `CLAUDE.md` no lo refleja, es un hallazgo 🟡.
 
 ## 3. Checklists (sin agente)
 
 Recórrelos tú mismo. Reporta cada punto como ✅, ❌ o N/A.
 
-**Si cambiaron controladores, DTOs, rutas, `contracts/openapi/` o `gateway/`** (rule `api-rest`, y `stack-gateway` si es el gateway):
+**Si cambiaron controladores, DTOs, rutas, `contracts/openapi/` o `gateway/`** (rule `api-rest`, y `gateway/CLAUDE.md` si es el gateway):
 
 1. Recursos en plural y kebab-case bajo `/api/v1`; acciones de dominio como `POST /{recurso}/{id}/{accion}`.
 2. Métodos HTTP con su semántica real.
@@ -39,7 +41,7 @@ Recórrelos tú mismo. Reporta cada punto como ✅, ❌ o N/A.
 8. **La implementación coincide con `contracts/openapi/<servicio>-service.yaml`:** rutas, campos, tipos, status y errores. Cualquier diferencia es un hallazgo.
 9. JSON en camelCase, fechas ISO-8601 UTC, dinero como `{ amount, currency }`, IDs UUID.
 
-**Si cambió `frontend/`** (rule `frontend-smart-dumb`):
+**Si cambió `frontend/`** (`frontend/CLAUDE.md`):
 
 1. Ningún "componente Dios": fetch, estado, lógica y render en un mismo componente.
 2. Los dumb no usan hooks de datos ni del router, no llaman a la API y no modifican sus props.
@@ -49,7 +51,7 @@ Recórrelos tú mismo. Reporta cada punto como ✅, ❌ o N/A.
 
 ## 3.5. Agentes revisores
 
-Los agentes consumen muchos tokens: **lanza un solo agente por PR**, el del riesgo principal, y solo si aplica. Pásale la lista de archivos y el comando de diff.
+Los agentes consumen muchos tokens: **lanza un solo agente por PR**, el del riesgo principal, y solo si aplica. Pásale la lista de archivos, el comando de diff y la ruta del `CLAUDE.md` del componente revisado.
 
 | Si el cambio principal es… | Agente |
 |---|---|

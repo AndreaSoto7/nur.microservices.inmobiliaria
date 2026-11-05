@@ -12,7 +12,7 @@ Sigue `.claude/rules/patrones-diseno.md` y `.claude/rules/principios-solid.md`.
 
 ## 1. Nombrar el problema
 
-Escribe en una o dos frases el problema concreto. Por ejemplo: "cada canal de notificación nuevo obliga a modificar el handler con otro `if`".
+Escribe en una o dos frases el problema concreto. Por ejemplo: "cada filtro nuevo del catálogo obliga a modificar la consulta con otro `if`".
 
 Si no hay un problema real, dilo y recomienda no aplicar el patrón (KISS / YAGNI).
 

@@ -8,7 +8,7 @@ argument-hint: "[MÉTODO /ruta] [descripción]"
 
 Endpoint: $ARGUMENTS
 
-Sigue `.claude/rules/api-rest.md` al pie de la letra.
+Sigue `.claude/rules/api-rest.md` al pie de la letra, y el `CLAUDE.md` del servicio (rutas del gateway que le corresponden, casos de uso y decisiones técnicas).
 
 ## 1. Diseño (antes de escribir código)
 
@@ -25,6 +25,7 @@ Define y muestra al usuario:
 
 - Edita `contracts/openapi/<servicio>-service.yaml` (por ejemplo, `listing-service.yaml`) con `operationId`, schemas reutilizables en `components`, ejemplos de request y response, y respuestas de error con `application/problem+json`.
 - Si el frontend u otro servicio consume este endpoint, sugiere que el contrato vaya en su propio commit o PR para que lo revisen.
+- Si el endpoint usa un prefijo nuevo o cambia si es público, actualiza el mapa de rutas de la rule `api-rest` y `gateway/CLAUDE.md` (y avisa al responsable del gateway).
 
 ## 3. Implementación
 

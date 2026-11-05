@@ -5,7 +5,7 @@ Registro, autenticación, usuarios y roles. Emite los JWT RS256 que validan el g
 - **Stack:** Django 5.2 LTS + Django REST Framework, Python 3.13.
 - **Puerto:** 8001, solo dentro de la red de Docker. Se publica en el host únicamente con `infra/docker-compose.debug.yml`.
 - **Contrato:** [`contracts/openapi/identity-service.yaml`](../../contracts/openapi/identity-service.yaml). Swagger UI en `/docs`.
-- **Rules:** `.claude/rules/stack-django.md`, `ddd-clean-architecture.md` y `service-discovery.md`.
+- **Instrucciones para agentes:** [`CLAUDE.md`](CLAUDE.md) (dominio, casos de uso, decisiones técnicas y comandos).
 
 ## Estructura
 

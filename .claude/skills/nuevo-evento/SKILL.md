@@ -27,9 +27,10 @@ Revisa `contracts/events/README.md`:
    - JSON Schema draft 2020-12, solo con el `payload`. El envelope es común.
    - `additionalProperties: true`, para que agregar campos no rompa a nadie.
    - Campos obligatorios mínimos y un ejemplo en `examples`.
-2. Agrega la fila al catálogo de `contracts/events/README.md`: evento, versión, productor, topic, consumidores y descripción.
-3. El payload incluye lo que los consumidores necesitan, para evitar llamadas HTTP entre servicios. Nunca incluye contraseñas, tokens ni datos personales innecesarios.
-4. Sugiere abrir el PR del contrato **con los responsables de los servicios consumidores como revisores** antes de implementar.
+2. Agrega la fila al catálogo de `contracts/events/README.md`: evento, versión, productor, topic, consumidores y descripción. Si el evento dispara una política en otro servicio, agrégala también a la tabla "Políticas" del catálogo.
+3. Actualiza la sección "Eventos" del `CLAUDE.md` del productor y de cada consumidor. Si es un topic nuevo, agrégalo a `infra/scripts/init-topics.sh`.
+4. El payload incluye lo que los consumidores necesitan, para evitar llamadas HTTP entre servicios. Nunca incluye contraseñas, tokens ni datos personales innecesarios.
+5. Sugiere abrir el PR del contrato **con los responsables de los servicios consumidores como revisores** antes de implementar.
 
 ## 3. Productor
 
@@ -46,6 +47,7 @@ Si el consumidor es de otra persona, deja anotado lo que necesita y avísale.
 - **Idempotencia:** tabla `processed_events` por `eventId`. En proyecciones, upsert por `aggregateId` y descarte de eventos viejos.
 - Reintentos con backoff y luego `<topic>.dlq`.
 - Se traduce al modelo propio (anti-corruption layer).
+- Si el evento dispara un comando (política), sigue la sección "Políticas" de la rule `ddd-clean-architecture`.
 - **Test:** procesar dos veces el mismo evento deja el mismo estado.
 
 ## Checklist

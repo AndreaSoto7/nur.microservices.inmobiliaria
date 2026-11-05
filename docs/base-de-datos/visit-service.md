@@ -1,6 +1,6 @@
 # Base de datos — visit-service
 
-- **Base:** `visit` (PostgreSQL 17). Migraciones de **TypeORM** con `synchronize: false` (rule `stack-nestjs`). El índice de exclusión y los índices parciales se escriben con `queryRunner.query(...)`.
+- **Base:** `visit` (PostgreSQL 17). Migraciones de **TypeORM** con `synchronize: false` (`services/visit-service/CLAUDE.md`). El índice de exclusión y los índices parciales se escriben con `queryRunner.query(...)`.
 - **Aggregates:**
   - `Inquiry`: tabla `inquiries`.
   - `Visit`: tabla `visits`.

@@ -159,13 +159,13 @@ Se construye **solo si las tres cadenas ya funcionan**. No agrega cadenas (solo 
 - Guarda el `payload` de todos los topics **excepto** `identity.user.events`, que lleva email y nombre.
 - Expone `GET /api/v1/audit/events` con filtros por `aggregateId`, `eventType` y rango de fechas, solo para `ADMIN`.
 - Con auditoría, identity publica también `UserLoggedIn` y `UserRolesAssigned`, sin email ni nombre: `userId` y, en el segundo, los roles.
-- Stack, base de datos y responsable se deciden en el PR que lo arranque. Sugerencia: Go (ya hay rule `stack-go`) y PostgreSQL.
+- Stack, base de datos y responsable se deciden en el PR que lo arranque. Sugerencia: Go (las convenciones de Go están en `gateway/CLAUDE.md`) y PostgreSQL.
 
 ### 6. CQRS sin search-service
 
 - **Dentro de listing:** el lado comando es el aggregate `Property`. El lado consulta (catálogo público con filtros por zona, tipo, precio y características) son query handlers que leen una proyección de lectura propia, sin pasar por el dominio.
 - **Entre servicios:** la copia local de propiedades en visit es un modelo de lectura alimentado por eventos.
-- La ruta exacta del catálogo se define en `contracts/openapi/listing-service.yaml` con `/nuevo-endpoint`.
+- Ruta propuesta del catálogo: `/api/v1/catalog/**` → listing (pública). Se confirma en `contracts/openapi/listing-service.yaml` con `/nuevo-endpoint`.
 
 ## Justificación
 
@@ -190,6 +190,6 @@ Se construye **solo si las tres cadenas ya funcionan**. No agrega cadenas (solo 
   - [x] `CLAUDE.md`, `docs/enunciado.md` y `docs/progreso/`: servicios en alcance y tareas nuevas (este PR).
   - [x] `infra/scripts/init-topics.sh`: crear `visit.lead.events` (este PR).
   - [ ] Schemas de cada evento con `/nuevo-evento`, cuando el productor lo implemente. `VisitRejected` y `VisitCancelled` llevan `reason` y `actor` (`CLIENT`, `AGENT` o `SYSTEM`). `LeadClosed` lleva `propertyId`, `agentId`, `clientId` y `outcome`.
-  - [ ] Gateway (responsable del gateway): quitar `/api/v1/search/**` y `/api/v1/notifications/**`, y rutear el catálogo público a listing.
-  - [ ] Rules y skills de `.claude/` que nombran a search y notification como ejemplos (`api-rest`, `ddd-clean-architecture`, `eventos-kafka`, `stack-go`, …): limpiarlas en otro PR.
+  - [x] Gateway: tabla de rutas sin search ni notification y con `/api/v1/catalog/**` y `/api/v1/audit/**` (`gateway/CLAUDE.md`, rule `api-rest`). El ruteo en código todavía no existe.
+  - [x] Rules, skills y agentes de `.claude/` sin search ni notification; instrucciones por componente en su propio `CLAUDE.md`.
   - [ ] Al implementar cada política, registrarla en `docs/patrones-de-diseno.md`.

@@ -2,7 +2,7 @@
 
 - **Responsable:** _(completar)_
 - **Stack:** NestJS
-- **Rules:** `stack-nestjs`, `ddd-clean-architecture`, `eventos-kafka`, `service-discovery`
+- **Instrucciones:** [`services/visit-service/CLAUDE.md`](../../services/visit-service/CLAUDE.md)
 
 ## Historial
 

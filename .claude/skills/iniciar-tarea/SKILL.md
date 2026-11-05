@@ -17,9 +17,10 @@ Tarea solicitada: $ARGUMENTS
 
 ## 1. Entender la tarea
 
-- Identifica el **servicio** (`identity`, `listing`, `visit`, `search`, `notification`, `gateway`, `frontend`, `contracts`, `infra`, `docs`) y el **tipo** (`feat`, `fix`, `refactor`, `test`, `docs`, `chore`).
+- Identifica el **componente** (`identity`, `listing`, `visit`, `audit`, `gateway`, `frontend`, `contracts`, `infra`, `docs`) y el **tipo** (`feat`, `fix`, `refactor`, `test`, `docs`, `chore`).
+- **Lee el `CLAUDE.md` del componente** (tabla "Mapa de componentes" del `CLAUDE.md` raíz): ahí están su dominio, sus casos de uso, sus eventos, su base y su estructura. El plan debe salir de ahí.
 - Si falta información, pregunta antes de seguir.
-- Revisa la tabla de responsables en `CLAUDE.md`. Si la tarea toca un servicio que tiene otro responsable, adviértelo y sugiere coordinar (issue o PR revisado por esa persona).
+- Revisa el responsable en el mapa de componentes. Si la tarea toca un componente con otro responsable, adviértelo y sugiere coordinar (issue o PR revisado por esa persona).
 
 ## 2. Preparar el repositorio
 
@@ -45,8 +46,8 @@ Presenta un plan corto con los archivos que se crearán o modificarán, agrupado
 - **infrastructure:** repositorio, migración, outbox, productor o consumidor.
 - **presentation:** endpoint, DTOs, mapeo de errores.
 - **tests:** de dominio, de aplicación y de integración.
-- **docs:** patrón aplicado (`docs/patrones-de-diseno.md`), ADR si hay una decisión de arquitectura.
+- **docs:** patrón aplicado (`docs/patrones-de-diseno.md`), ADR si hay una decisión de arquitectura, `docs/progreso/<componente>.md` y el `CLAUDE.md` del componente si cambia algo que describe.
 
-Indica qué rules de `.claude/rules/` aplican y qué skills conviene usar después: `/caso-de-uso`, `/nuevo-endpoint`, `/nuevo-evento`, `/aplicar-patron`.
+Indica qué rules y skills aplican (sección "Qué usar al trabajar aquí" del `CLAUDE.md` del componente).
 
 **Espera la confirmación del usuario antes de escribir código.**
