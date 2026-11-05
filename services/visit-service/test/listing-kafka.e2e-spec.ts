@@ -8,6 +8,7 @@ import { AppModule } from '../src/app.module.js';
 import { createDataSource } from '../src/database/create-data-source.js';
 import { listingPropertyTopic as topic } from '../src/properties/listing-events.controller.js';
 import { connectListingConsumer } from '../src/properties/listing-kafka.js';
+import { OutboxRelay } from '../src/shared/messaging/outbox-relay.js';
 
 const broker = process.env.VISIT_TEST_KAFKA_BROKER;
 const databaseUrl = process.env.VISIT_TEST_DATABASE_URL;
@@ -30,7 +31,11 @@ integration('Listing → Kafka → Visit', () => {
     await admin.connect();
     try {
       await admin.createTopics({
-        topics: [{ topic }, { topic: topic + '.dlq' }],
+        topics: [
+          { topic },
+          { topic: topic + '.dlq' },
+          { topic: 'visit.visit.events' },
+        ],
       });
     } finally {
       await admin.disconnect();
@@ -154,4 +159,70 @@ integration('Listing → Kafka → Visit', () => {
       ),
     );
   }, 15_000);
+
+  it('publica las filas pendientes con su clave y registra la confirmación de Kafka', async () => {
+    if (!broker) throw new Error('Falta Kafka de prueba');
+    const eventId = randomUUID();
+    const visitId = randomUUID();
+    const eventTopic = 'visit.visit.events';
+    const envelope = {
+      eventId,
+      eventType: 'VisitRequested',
+      eventVersion: 1,
+      occurredAt: new Date().toISOString(),
+      producer: 'visit-service',
+      aggregateType: 'Visit',
+      aggregateId: visitId,
+      correlationId: randomUUID(),
+      payload: {
+        visitId,
+        propertyId: randomUUID(),
+        clientId: randomUUID(),
+        agentId: randomUUID(),
+        proposedAt: new Date(Date.now() + 86400000).toISOString(),
+      },
+    };
+    const consumer = new Kafka({
+      brokers: [broker],
+      logLevel: logLevel.NOTHING,
+    }).consumer({
+      groupId: 'visit-outbox-test-' + randomUUID(),
+    });
+    const received: { key: string | undefined; value: string | undefined }[] =
+      [];
+    await consumer.connect();
+    try {
+      await consumer.subscribe({ topics: [eventTopic], fromBeginning: true });
+      await consumer.run({
+        eachMessage: async ({ message }) => {
+          received.push({
+            key: message.key?.toString(),
+            value: message.value?.toString(),
+          });
+        },
+      });
+      await database.query(
+        'INSERT INTO outbox (id, topic, aggregate_id, envelope) VALUES ($1,$2,$3,$4)',
+        [eventId, eventTopic, visitId, envelope],
+      );
+      app.get(OutboxRelay).start([broker]);
+      const deadline = Date.now() + 10000;
+      let published: Date | null = null;
+      do {
+        const [row] = await database.query<{ published_at: Date | null }[]>(
+          'SELECT published_at FROM outbox WHERE id = $1',
+          [eventId],
+        );
+        published = row.published_at;
+        if (published && received.length > 0) break;
+        await delay(100);
+      } while (Date.now() < deadline);
+
+      expect(published).toBeInstanceOf(Date);
+      expect(received).toEqual([{ key: visitId, value: expect.any(String) }]);
+      expect(JSON.parse(received[0].value!)).toEqual(envelope);
+    } finally {
+      await consumer.disconnect();
+    }
+  }, 15000);
 });

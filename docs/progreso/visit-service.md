@@ -34,6 +34,8 @@
 
 **Eventos**
 
+- [x] Publicador de `outbox` integrado en Visit
+
 - [ ] Outbox: `InquiryReceived`, `VisitRequested`, `VisitScheduled`, `VisitRejected`, `VisitCancelled`, `VisitCompleted`, `LeadOpened`, `LeadFollowUpRegistered`, `LeadClosed`
 - [x] Proyección de propiedades idempotente (`processed_events`)
 
