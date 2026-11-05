@@ -1,0 +1,349 @@
+openapi: 3.1.0
+info:
+  title: visit-service
+  version: 0.1.0
+  description: |
+    Propuesta inicial para solicitar y consultar una visita.
+    La relación con Listing se verifica en la copia local alimentada por listing.property.events.
+    Identity emite el access token RS256. Visit verifica firma con JWKS, kid, exp,
+    iss=identity-service, aud=inmobiliaria y typ=at+jwt.
+servers:
+  - url: http://localhost:8080
+    description: API Gateway (desarrollo)
+security:
+  - bearerAuth: []
+tags:
+  - name: visits
+  - name: health
+paths:
+  /api/v1/visits:
+    post:
+      tags: [visits]
+      operationId: requestVisit
+      summary: Solicitar una visita
+      description: |
+        Requiere rol CLIENT. El clientId proviene de sub en el JWT.
+        El agentId se obtiene de PropertySnapshot para el propertyId indicado.
+        La propiedad debe figurar como PUBLISHED en la copia local.
+        La fecha propuesta debe ser futura y se admite una sola visita REQUESTED
+        por cliente y propiedad. La solicitud se crea en REQUESTED.
+        Si todavía no hay una oportunidad abierta para el par cliente/propiedad,
+        se abre una según la política 3.4 del ADR 0005.
+        Una creación exitosa conserva su resultado durante 24 horas por cliente,
+        operación y clave de idempotencia. El mismo cuerpo devuelve el mismo ID
+        y Location aunque hayan cambiado la disponibilidad o la fecha.
+        La misma clave con un cuerpo distinto responde 422. La comparación
+        ignora el orden de los campos JSON.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RequestVisit'}
+            example:
+              propertyId: 3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
+              proposedAt: '2026-11-12T18:00:00Z'
+              clientNote: Prefiero una visita por la tarde.
+      responses:
+        '201':
+          description: Solicitud registrada o resultado recuperado por idempotencia.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+            Location:
+              required: true
+              schema: {type: string}
+              example: /api/v1/visits/05de258b-be6c-4f61-b6ac-ac67cc961b03
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CreatedVisit'}
+              example: {id: 05de258b-be6c-4f61-b6ac-ac67cc961b03}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: La propiedad no está en la copia local de Visit.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+              example:
+                type: https://inmobiliaria.local/problems/property-not-found
+                title: Propiedad no disponible para solicitar visita
+                status: 404
+                code: PROPERTY_NOT_FOUND
+                correlationId: request-123
+        '409':
+          description: Estado de la propiedad, fecha propuesta o solicitud pendiente incompatible.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+              examples:
+                propertyUnavailable:
+                  value:
+                    type: https://inmobiliaria.local/problems/property-unavailable
+                    title: La propiedad debe estar publicada
+                    status: 409
+                    code: PROPERTY_UNAVAILABLE
+                    correlationId: request-123
+                invalidProposedDate:
+                  value:
+                    type: https://inmobiliaria.local/problems/visit-invalid-proposed-date
+                    title: La fecha propuesta debe ser futura
+                    status: 409
+                    code: VISIT_INVALID_PROPOSED_DATE
+                    correlationId: request-123
+                pendingRequest:
+                  value:
+                    type: https://inmobiliaria.local/problems/visit-already-requested
+                    title: Ya tienes una solicitud pendiente para esta propiedad
+                    status: 409
+                    code: VISIT_ALREADY_REQUESTED
+                    correlationId: request-123
+        '422':
+          description: La clave de idempotencia ya se usó para otro cuerpo.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+              example:
+                type: https://inmobiliaria.local/problems/idempotency-key-reused
+                title: Clave de idempotencia reutilizada con datos distintos
+                status: 422
+                code: IDEMPOTENCY_KEY_REUSED
+                correlationId: request-123
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/visits/{visitId}:
+    get:
+      tags: [visits]
+      operationId: getVisitById
+      summary: Consultar una visita propia
+      description: |
+        Accede el CLIENT que la solicitó o el AGENT asignado a esa visita.
+        Un usuario con alguno de esos roles recibe 404 si la visita no existe
+        o no le corresponde. Un usuario sin esos roles recibe 403.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: visitId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+          example: 05de258b-be6c-4f61-b6ac-ac67cc961b03
+      responses:
+        '200':
+          description: Estado y datos de la visita.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Visit'}
+              example:
+                id: 05de258b-be6c-4f61-b6ac-ac67cc961b03
+                propertyId: 3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
+                status: REQUESTED
+                proposedAt: '2026-11-12T18:00:00Z'
+                requestedAt: '2026-11-05T14:00:00Z'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: La visita no existe o no corresponde al usuario autenticado.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+              example:
+                type: https://inmobiliaria.local/problems/visit-not-found
+                title: Visita no encontrada
+                status: 404
+                code: VISIT_NOT_FOUND
+                correlationId: request-123
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Comprobar que el proceso HTTP responde
+      security: []
+      servers:
+        - url: http://visit-service:8003
+          description: Red interna de Docker
+      responses:
+        '200':
+          description: El proceso está vivo y responde aunque fallen dependencias externas.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Health'}
+              example: {status: UP}
+  /health/ready:
+    get:
+      tags: [health]
+      operationId: getReadiness
+      summary: Comprobar las dependencias operativas de Visit
+      security: []
+      servers:
+        - url: http://visit-service:8003
+          description: Red interna de Docker
+      responses:
+        '200':
+          description: Las dependencias configuradas están disponibles.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Health'}
+              example: {status: UP}
+        '503':
+          description: Alguna dependencia configurada no está disponible.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Health'}
+              example: {status: DOWN}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      description: Si no llega o no es válido se genera uno.
+      schema: {$ref: '#/components/schemas/CorrelationId'}
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: {$ref: '#/components/schemas/Uuid'}
+      example: 6c9e2908-7a19-485d-80b8-62db26387253
+  headers:
+    CorrelationId:
+      description: Identificador efectivo de esta solicitud.
+      schema: {$ref: '#/components/schemas/CorrelationId'}
+  responses:
+    InvalidRequest:
+      description: Campos, JSON, UUID o clave de idempotencia inválidos o ausentes.
+      headers:
+        X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          example:
+            type: https://inmobiliaria.local/problems/validation-error
+            title: Datos inválidos
+            status: 400
+            code: VALIDATION_ERROR
+            correlationId: request-123
+            errors:
+              - {field: propertyId, message: Debe ser un UUID.}
+    Unauthorized:
+      description: Access token ausente o inválido.
+      headers:
+        X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+        WWW-Authenticate:
+          schema: {type: string}
+          example: Bearer
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          example:
+            type: https://inmobiliaria.local/problems/auth-invalid-token
+            title: Se requiere autenticación
+            status: 401
+            code: AUTH_INVALID_TOKEN
+            correlationId: request-123
+    Forbidden:
+      description: El usuario no tiene el rol requerido.
+      headers:
+        X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          example:
+            type: https://inmobiliaria.local/problems/permission-denied
+            title: Acceso denegado
+            status: 403
+            code: PERMISSION_DENIED
+            correlationId: request-123
+    InternalError:
+      description: Error inesperado durante la operación.
+      headers:
+        X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          example:
+            type: https://inmobiliaria.local/problems/internal-error
+            title: Error interno
+            status: 500
+            code: INTERNAL_ERROR
+            correlationId: request-123
+  schemas:
+    Uuid:
+      type: string
+      format: uuid
+      pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    UtcDateTime:
+      type: string
+      format: date-time
+      pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$'
+    CorrelationId:
+      type: string
+      pattern: '^[A-Za-z0-9._-]{1,128}$'
+    RequestVisit:
+      type: object
+      required: [propertyId, proposedAt]
+      additionalProperties: false
+      properties:
+        propertyId: {$ref: '#/components/schemas/Uuid'}
+        proposedAt: {$ref: '#/components/schemas/UtcDateTime'}
+        clientNote: {type: string, maxLength: 500}
+    CreatedVisit:
+      type: object
+      required: [id]
+      additionalProperties: false
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+    Visit:
+      type: object
+      required: [id, propertyId, status, proposedAt, requestedAt]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        propertyId: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, enum: [REQUESTED, SCHEDULED, COMPLETED, CANCELLED, REJECTED]}
+        proposedAt: {$ref: '#/components/schemas/UtcDateTime'}
+        requestedAt: {$ref: '#/components/schemas/UtcDateTime'}
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [UP, DOWN]}
+    Problem:
+      type: object
+      required: [type, title, status, code, correlationId]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer, minimum: 400, maximum: 599}
+        detail: {type: string}
+        instance: {type: string}
+        code: {type: string, pattern: '^[A-Z][A-Z0-9_]*$'}
+        correlationId: {$ref: '#/components/schemas/CorrelationId'}
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: {type: string}
+              message: {type: string}

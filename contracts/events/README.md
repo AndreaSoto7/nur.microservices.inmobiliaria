@@ -61,4 +61,6 @@ Detalle y reglas en el [ADR 0005](../../docs/adr/0005-realinear-servicios-y-cade
 
 - [x] `identity/user-registered.v1.schema.json`
 - [x] `listing/property-published.v1.schema.json` (ejemplo de referencia; el responsable de listing puede ajustarlo antes de la primera implementación)
+- [x] [`visit/visit-requested.v1.schema.json`](visit/visit-requested.v1.schema.json)
+- [x] [`visit/lead-opened.v1.schema.json`](visit/lead-opened.v1.schema.json)
 - [ ] El resto se crea con `/nuevo-evento` cuando el servicio productor lo implemente.

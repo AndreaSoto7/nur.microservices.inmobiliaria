@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inmobiliaria.local/contracts/events/visit/visit-requested.v1.schema.json",
+  "title": "VisitRequested v1 (payload)",
+  "description": "Un cliente solicita una visita a una propiedad publicada. La visita queda en REQUESTED.",
+  "type": "object",
+  "required": [
+    "visitId",
+    "propertyId",
+    "clientId",
+    "agentId",
+    "proposedAt"
+  ],
+  "properties": {
+    "visitId": {
+      "$ref": "#/$defs/uuid",
+      "description": "Coincide con aggregateId del envelope."
+    },
+    "propertyId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "clientId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "agentId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "proposedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    }
+  },
+  "examples": [
+    {
+      "visitId": "05de258b-be6c-4f61-b6ac-ac67cc961b03",
+      "propertyId": "3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01",
+      "clientId": "81b4586e-348a-48ba-bc93-93341e3b0b4c",
+      "agentId": "8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "proposedAt": "2026-11-12T18:00:00Z"
+    }
+  ]
+}

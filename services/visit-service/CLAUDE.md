@@ -10,7 +10,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 | Stack | NestJS (TypeScript estricto), npm |
 | Puerto | 8003 |
 | Base | `visit` (PostgreSQL 17) → [`docs/base-de-datos/visit-service.md`](../../docs/base-de-datos/visit-service.md) |
-| API | `contracts/openapi/visit-service.yaml` (por crear) · Swagger UI en `/docs` |
+| API | [`contracts/openapi/visit-service.yaml`](../../contracts/openapi/visit-service.yaml) (contrato inicial propuesto) · Swagger UI en `/docs` |
 | Rutas del gateway | `/api/v1/inquiries/**`, `/api/v1/visits/**`, `/api/v1/leads/**` |
 | Publica | `visit.inquiry.events`, `visit.visit.events`, `visit.lead.events` |
 | Consume | `listing.property.events` |
@@ -47,13 +47,14 @@ Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es 
 | _(política interna)_ | `OpenLeadCommand` | `LeadOpened` |
 | `registerVisitTracing` | `RegisterLeadFollowUpCommand` | `LeadFollowUpRegistered` |
 | `closeOportunityCommand` | `CloseLeadCommand` | `LeadClosed` (lo consume listing) |
+| — | `GetVisitByIdQuery` (cliente dueño o agente asignado) | — |
 | — | `ListMyVisitsQuery` (cliente), `ListAgentVisitsQuery`, `ListAgentInquiriesQuery`, `ListAgentLeadsQuery` | — |
 
 `VisitRejected` y `VisitCancelled` llevan `reason` y `actor` (`CLIENT`, `AGENT` o `SYSTEM`). `LeadClosed` lleva `propertyId`, `agentId`, `clientId` y `outcome`.
 
 ## Eventos y políticas
 
-- **Publica** con outbox, clave = id del aggregate. Catálogo en `contracts/events/README.md`.
+- **Publica** con outbox, clave = id del aggregate. Catálogo en `contracts/events/README.md`. El primer contrato define [`VisitRequested`](../../contracts/events/visit/visit-requested.v1.schema.json) y [`LeadOpened`](../../contracts/events/visit/lead-opened.v1.schema.json).
 - **Consume** `listing.property.events` (consumer group `visit-service`, desde el principio, idempotente con `processed_events`):
   1. **Copia local:** upsert de `PropertySnapshot` solo si `occurredAt` es más nuevo que el último aplicado.
   2. **Política 3.2 — `PropertyReserved`:** `RejectVisitCommand` por cada visita `REQUESTED` de la propiedad, con `reason: PROPERTY_RESERVED` y `actor: SYSTEM`. Las `SCHEDULED` se mantienen.

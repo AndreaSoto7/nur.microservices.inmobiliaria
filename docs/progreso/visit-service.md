@@ -1,6 +1,7 @@
 # Progreso — visit-service
 
 - **Responsable:** _(completar)_
+- **En curso:** @JoseDani258 prepara los contratos para solicitar una visita y consultar su detalle.
 - **Stack:** NestJS
 - **Instrucciones:** [`services/visit-service/CLAUDE.md`](../../services/visit-service/CLAUDE.md)
 
@@ -8,14 +9,14 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| | _(todavía nada)_ | |
+| feat | Contrato inicial para solicitar y consultar visitas y esquemas de VisitRequested y LeadOpened | #39 |
 
 ## Pendientes
 
 **Base**
 
 - [ ] Scaffold con `/scaffold-servicio visit`
-- [ ] Contrato `contracts/openapi/visit-service.yaml`
+- [x] Contrato `contracts/openapi/visit-service.yaml`
 
 **Consultas y visitas (enunciado)**
 
