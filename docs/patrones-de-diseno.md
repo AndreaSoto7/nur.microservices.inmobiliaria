@@ -16,11 +16,6 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Command | Comportamiento | identity | `identity/application/commands/register_user.py` | Encapsular la intención de registrar un usuario, separada de HTTP (CQRS) | Sin `CommandBus` (Mediator): con pocos casos de uso, el handler se invoca directo desde la vista (KISS) |
 | Factory Method | Creacional | listing | `domain/model/Property.java` (`Property.create`) | Una propiedad debe nacer en `DRAFT`, con id generado por el dominio, título, precio y zona válidos, y registrar `PropertyCreated`; con un constructor público se podría crear en cualquier estado | Un Builder sobra: los datos obligatorios son pocos; los opcionales (características, imágenes) entran después por métodos con sus propias reglas |
 | Service Registry + Self-Registration | Microservicios | listing | `application.properties` (`spring.cloud.consul.*`), `infrastructure/config/ConsulReregistration.java` | Las réplicas de listing (`--scale listing-service=3`) cambian de IP; el gateway necesita saber cuáles están vivas | Registrar a mano en el compose no sigue a `--scale`; el re-registro cada 60 s cubre los reinicios de Consul en modo dev |
-| Repository | DDD | listing | `domain/repository/PropertyRepository.java`, `infrastructure/persistence/JpaPropertyRepository.java` + `PropertyMapper` | El aggregate no debe conocer JPA; se guarda y carga completo (extras y galería) con bloqueo optimista | Usar `PropertyJpaEntity` como modelo de dominio metería anotaciones de JPA en el dominio y setters públicos |
-| Command | Comportamiento | listing | `application/command/ChangePropertyStatusCommand.java` (sealed) + `ChangePropertyStatusHandler` | Seis transiciones con la misma orquestación (cargar, verificar dueño, invocar, guardar, publicar) | Un handler por transición repetía el mismo código seis veces; `sealed` + `switch` obliga a manejar cualquier transición nueva |
-| Adapter | Estructural | listing | `application/port/ImageStorage.java`, `infrastructure/storage/LocalImageStorage.java` | Guardar la galería sin que la aplicación sepa si es disco o un object storage | Escribir con `Files` desde el handler acoplaba el caso de uso al disco y lo hacía difícil de probar |
-| Outbox | Integración | listing | `infrastructure/messaging/OutboxEventPublisher.java`, `PropertyIntegrationEvents.java` | Guardar la propiedad y avisar a visit son dos sistemas: el evento se inserta en `outbox` en la misma transacción | Publicar en Kafka desde el handler pierde el evento si Kafka está caído o si la transacción hace rollback |
-| CQRS | Arquitectura | listing | `application/query/PropertyReadRepository.java`, `infrastructure/persistence/JpaPropertyReadRepository.java` | Las vistas del agente (listado paginado, detalle) se arman directo desde las filas, sin reconstruir el aggregate | Pasar por el aggregate para leer obliga a cargar todo y a mapear dos veces |
 
 ## Planificados (candidatos, mover a "Aplicados" al implementarlos)
 
@@ -40,6 +35,7 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Repository | DDD | todos | Un repositorio por aggregate; el dominio no conoce el ORM |
 | Builder | Creacional | listing | Criterios del catálogo público con muchos filtros opcionales |
 | Singleton | Creacional | todos | Productor de Kafka y pool de BD con scope singleton del contenedor de DI |
+| Adapter | Estructural | listing | `ImageStorage` → almacenamiento local o MinIO |
 | Facade | Estructural | frontend | Custom hook por feature (`useCatalog`) que oculta la API y el estado a los componentes smart |
 | Observer / Pub-Sub | Comportamiento | todos | Eventos de dominio y Kafka |
 | Command | Comportamiento | visit, listing | Comandos CQRS ejecutados por `CommandBus` |
