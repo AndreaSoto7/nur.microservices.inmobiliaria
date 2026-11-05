@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Catálogo público con filtros en la URL (zona, tipo, operación, precio, dormitorios, características), orden y paginación, y detalle de propiedad con galería | este PR |
+| feat | Catálogo público con filtros en la URL (zona, tipo, operación, precio, dormitorios, características), orden y paginación, y detalle de propiedad con galería | #49 |
 | feat | Imagen Docker con nginx sin root, CSP y cabeceras de seguridad, SPA con caché correcta y servicio `frontend` en el compose | #48 |
 | feat | Proyecto base (Vite 8, React 19, TS estricto, React Router 7, TanStack Query 5, Vitest, ESLint + Prettier), cliente HTTP vía gateway con renovación de sesión, registro, login, logout, ruta protegida y "Mi cuenta" | #42 |
 
