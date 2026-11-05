@@ -17,6 +17,7 @@
 | feat | Balanceador: round robin (Strategy) y Circuit Breaker por réplica | #55 |
 | feat | Tabla de rutas por prefijo, públicas y protegidas, y validación de paths (400 y 404) | #57 |
 | feat | Paquete `auth`: validación del access token con el JWKS de identity (RS256, `iss`, `aud`, `exp` y `typ=at+jwt`), con caché y recarga limitada | #58 |
+| feat | Eslabón de auth en la cadena: 401 con `WWW-Authenticate`, 503 si no hay JWKS, y discovery y balanceador cableados en `main` | #59 |
 
 ## Pendientes
 
@@ -29,7 +30,7 @@
 - [ ] Reverse proxy y ruteo por prefijo hacia los nombres de servicio en Consul (tabla de rutas de `gateway/CLAUDE.md`, con `/api/v1/catalog/**` público y `/api/v1/audit/**`; ADR 0005)
 - [x] Discovery: consulta periódica de las réplicas sanas en Consul
 - [x] Balanceador round robin (Strategy) con marcado de réplicas caídas (Circuit Breaker)
-- [ ] Validar el JWT con el JWKS de identity (`typ=at+jwt`, `aud=inmobiliaria`) y borrar los `X-User-*`
+- [x] Validar el JWT con el JWKS de identity (`typ=at+jwt`, `aud=inmobiliaria`) y borrar los `X-User-*`
 - [x] CORS para el frontend (`http://localhost:5173`)
 - [x] Rate limit de login y registro (**requisito antes de exponer identity**)
 - [ ] Comprobar en Docker qué IP ve el gateway: si todos llegan con la misma, el límite pasa a ser global

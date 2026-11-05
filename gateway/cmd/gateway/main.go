@@ -13,7 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/auth"
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/balancer"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/config"
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/discovery"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/middleware"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/problem"
 )
@@ -54,14 +57,19 @@ func run(logger *slog.Logger) error {
 		return fmt.Errorf("abrir el puerto %s: %w", cfg.Port, err)
 	}
 
+	replicas := discovery.NewClient(cfg.ConsulAddr, config.Services(), logger)
+	go replicas.Run(ctx, cfg.DiscoveryInterval)
+	picker := balancer.New(replicas, &balancer.RoundRobin{}, cfg.ReplicaDownDuration, time.Now)
+	validator := auth.NewValidator(auth.NewKeySet(picker, time.Now), cfg.JWTIssuer, cfg.JWTAudience, time.Now)
+
 	logger.Info("gateway escuchando", "port", cfg.Port)
-	return serve(ctx, listener, newHandler(logger, cfg))
+	return serve(ctx, listener, newHandler(logger, cfg, validator))
 }
 
 // newHandler atiende /health aquí y no en un http.ServeMux: el mux limpia los paths y responde 301
 // ante `..` o `//`, y esos paths deben llegar a la validación del gateway para responder 400.
 // /health queda fuera de la cadena: lo llama Docker cada 10 s y llenaría los logs.
-func newHandler(logger *slog.Logger, cfg config.Config) http.Handler {
+func newHandler(logger *slog.Logger, cfg config.Config, validator middleware.TokenValidator) http.Handler {
 	// Todavía no hay proxy: una ruta válida no tiene a dónde ir.
 	noUpstream := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		problem.Write(w, r, problem.NoHealthyInstance)
@@ -74,6 +82,7 @@ func newHandler(logger *slog.Logger, cfg config.Config) http.Handler {
 		middleware.StripIdentityHeaders,
 		middleware.Routing,
 		middleware.NewRateLimiter(cfg.RateLimitAuthPerMinute, time.Now).Middleware,
+		middleware.Auth(validator, logger),
 	)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

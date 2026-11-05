@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/auth"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/config"
 )
 
@@ -19,7 +20,33 @@ func newTestHandler() http.Handler {
 	return newHandler(slog.New(slog.DiscardHandler), config.Config{
 		RateLimitAuthPerMinute: 2,
 		CORSOrigins:            []string{testOrigin},
-	})
+	}, rejectAllTokens{})
+}
+
+type rejectAllTokens struct{}
+
+func (rejectAllTokens) Validate(context.Context, string) error {
+	return auth.ErrInvalidToken
+}
+
+func TestProtectedRouteRequiresToken(t *testing.T) {
+	rec := httptest.NewRecorder()
+
+	newTestHandler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil))
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d", rec.Code)
+	}
+}
+
+func TestPublicRouteDoesNotRequireToken(t *testing.T) {
+	rec := httptest.NewRecorder()
+
+	newTestHandler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/catalog/properties", nil))
+
+	if rec.Code == http.StatusUnauthorized {
+		t.Error("una ruta pública exigió token")
+	}
 }
 
 func TestHealthRespondsUp(t *testing.T) {
