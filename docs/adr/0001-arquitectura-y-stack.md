@@ -1,6 +1,6 @@
 # 0001 — Arquitectura de microservicios y stack por servicio
 
-- **Estado:** Aceptado (stack por servicio) · Propuesto (puntos pendientes)
+- **Estado:** Aceptado (stack por servicio) · Propuesto (puntos pendientes) · Servicios en alcance modificados por [0005](0005-realinear-servicios-y-cadenas-de-eventos.md): sin search ni notification
 - **Fecha:** 2026-10-16
 - **Autores:** equipo del proyecto
 

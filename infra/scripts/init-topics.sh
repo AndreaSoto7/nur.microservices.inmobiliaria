@@ -15,11 +15,13 @@ create() {
     --topic "$topic.dlq" --partitions 1 --replication-factor 1
 }
 
-# Sin vencimiento: search y visit se reconstruyen leyendo desde el principio.
+# Sin vencimiento: visit se reconstruye leyendo desde el principio.
 create listing.property.events --config retention.ms=-1
 # Retención por defecto: lleva datos personales, que no se guardan para siempre.
 create identity.user.events
 create visit.inquiry.events
 create visit.visit.events
+# listing lo consume: una oportunidad ganada reserva la propiedad (ADR 0005).
+create visit.lead.events
 
 echo "Topics listos"

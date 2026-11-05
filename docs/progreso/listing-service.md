@@ -25,6 +25,12 @@
 - [ ] Galería de imágenes (`POST /properties/{id}/images`, puerto `ImageStorage`)
 - [ ] Listar las propiedades del agente
 
+**Catálogo público, lado query (ADR 0005: antes era search-service)**
+
+- [ ] Proyección de lectura propia del catálogo, separada del aggregate `Property`
+- [ ] Buscar con filtros: zona (sin distinguir mayúsculas), tipo, operación, precio, dormitorios y características, con paginación y orden
+- [ ] Detalle público de una propiedad
+
 **Favoritos (ADR 0003)**
 
 - [ ] Guardar un favorito (solo si la propiedad está `PUBLISHED`), quitarlo y listar los míos
@@ -34,3 +40,7 @@
 - [ ] `GET /properties/{propertyId}/images/{imageId}` público (las rutas de `PropertyPublished` apuntan ahí)
 - [ ] Antes de escribir los schemas: agregar `previousStatus` a `PropertyPublished` para distinguir una propiedad nueva de una reanudada
 - [ ] Outbox y relay a Kafka: `PropertyPublished`, `PropertyUpdated`, `PropertyPaused`, `PropertyReserved`, `PropertySold`, `PropertyRented` (primero los schemas en `contracts/events/`)
+
+**Política (ADR 0005, sección 3.1)**
+
+- [ ] Consumir `visit.lead.events` (idempotente, `processed_events`): con `LeadClosed` y `outcome: WON`, enviar `ReservePropertyCommand` con `actor: SYSTEM`. Solo reserva si está `PUBLISHED` y el agente coincide; si no, `WARN` y sigue
