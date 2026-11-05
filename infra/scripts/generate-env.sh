@@ -17,6 +17,7 @@ umask 077
 cat > "$ENV_FILE" <<ENV
 IDENTITY_SECRET_KEY=$(openssl rand -hex 32)
 IDENTITY_DB_PASSWORD=$(openssl rand -hex 16)
+LISTING_DB_PASSWORD=$(openssl rand -hex 16)
 IDENTITY_JWT_PRIVATE_KEY='$private_key'
 ENV
 

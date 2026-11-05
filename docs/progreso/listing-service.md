@@ -8,20 +8,29 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| | _(todavía nada)_ | |
+| feat | Aggregate `Property` con su máquina de estados, value objects (`Money`, `Location`, `Area`, `PropertyImage`) y eventos de dominio, con 30 tests | #41 |
+| chore | Esqueleto Spring Boot 4.1: capas, `/health` y `/health/ready`, Consul con re-registro, JWT con JWKS, problem+json, `X-Correlation-Id`, logs JSON, outbox y `processed_events`, Dockerfile y compose | #41 |
 
 ## Pendientes
 
 **Base**
 
-- [ ] Scaffold con `/scaffold-servicio listing` (capas, health, Consul, problem+json, Dockerfile)
-- [ ] Contrato `contracts/openapi/listing-service.yaml`
+- [x] Scaffold con `/scaffold-servicio listing` (capas, health, Consul, problem+json, Dockerfile)
+- [x] Contrato `contracts/openapi/listing-service.yaml` (stub con health; faltan los endpoints de negocio)
+- [ ] Probar el arranque con Postgres real (`docker compose up listing-service`): el esqueleto se probó sin base
+- [ ] `springdoc-openapi` en `/docs`
+- [ ] Elegir linter de Java (Spotless o Checkstyle)
+- [ ] `Property.reconstitute(...)` para que el mapper cargue una propiedad guardada (sin eventos ni validar transiciones), con test de ida y vuelta
+- [ ] Puertos `PropertyRepository` (en `domain/repository`) y `Clock`; errores de aplicación `PropertyNotFoundException` (404) y `NotPropertyOwnerException` (403)
+- [ ] Persistencia: migración de `properties`, `property_features`, `property_images`, `*JpaEntity`, mapper y adaptador del repositorio
+- [ ] Decidir si agregar una imagen a una propiedad visible emite también `PropertyUpdated` (cambia la portada del catálogo)
 
 **Propiedades (enunciado: agentes)**
 
-- [ ] Crear y editar una propiedad (`Property` con `Money`, `Location`, `Area`, características)
-- [ ] Publicar y pausar (`PropertyStatus`)
-- [ ] Reservar, liberar la reserva y marcar como vendida o alquilada (máquina de estados de la rule `ddd-clean-architecture`)
+- [x] Dominio: `Property` con `Money`, `Location`, `Area`, características, galería y máquina de estados completa, con test de la tabla entera (falta exponerlo)
+- [ ] Casos de uso y endpoints: crear y editar una propiedad
+- [ ] Casos de uso y endpoints: publicar y pausar
+- [ ] Casos de uso y endpoints: reservar, liberar la reserva y marcar como vendida o alquilada
 - [ ] Galería de imágenes (`POST /properties/{id}/images`, puerto `ImageStorage`)
 - [ ] Listar las propiedades del agente
 
