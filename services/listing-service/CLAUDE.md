@@ -1,16 +1,16 @@
 # listing-service — Spring Boot (Java)
 
-Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya está el esqueleto y el dominio `Property`; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, que siempre aplica. El servicio ya implementa todo el alcance obligatorio: propiedades, galería, estados, favoritos, catálogo público, outbox y la política `LeadClosed`. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
 | | |
 |---|---|
-| Responsable | _(completar)_ |
+| Responsable | Asa (@AndreaSoto7) |
 | Stack | Spring Boot 4.1 · Java 21 · Spring Cloud 2025.1, Maven con wrapper |
 | Puerto | 8002 |
 | Base | `listing` (PostgreSQL 17) → [`docs/base-de-datos/listing-service.md`](../../docs/base-de-datos/listing-service.md) |
-| API | `contracts/openapi/listing-service.yaml` · Swagger UI en `/docs` (pendiente) |
+| API | `contracts/openapi/listing-service.yaml` · Swagger UI en `/docs` |
 | Rutas del gateway | `/api/v1/properties/**`, `/api/v1/favorites/**`, `/api/v1/catalog/**` (público) |
 | Publica | `listing.property.events` |
 | Consume | `visit.lead.events` (`LeadClosed`) |
@@ -76,8 +76,8 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 ## CQRS: catálogo público
 
 - El lado comando es el aggregate `Property`. El lado consulta es la tabla `property_catalog`, una proyección desnormalizada que se actualiza **en la misma transacción** que cada comando (upsert al publicar, editar o reservar; borrado al pausar, vender o alquilar).
-- Endpoints públicos (propuestos; se confirman en el OpenAPI): `GET /api/v1/catalog/properties` con filtros `zone`, `type`, `operation`, `minPrice`, `maxPrice`, `bedrooms`, `features`, paginación y orden (rule `api-rest`), y `GET /api/v1/catalog/properties/{propertyId}`.
-- Los filtros combinables son buen lugar para **Specification** o un **Builder** de criterios (registrar en `docs/patrones-de-diseno.md`).
+- Endpoints públicos (detalle en el OpenAPI): `GET /api/v1/catalog/properties` con filtros `zone` (sin distinguir mayúsculas), `type`, `operation`, `minPrice`, `maxPrice`, `minBedrooms`, `features` (todas las pedidas), paginación y orden por `price`, `publishedAt`, `areaM2` o `bedrooms`, y `GET /api/v1/catalog/properties/{propertyId}`.
+- Los filtros se arman con un **Builder** (`CatalogCriteria`) y se traducen a SQL con **Specification** (`CatalogSqlSpecifications`). La proyección la escribe `JdbcCatalogProjection` (puerto `CatalogProjection`) y la lee `JdbcCatalogReadModel`.
 
 ## Estructura (paquete base `com.inmobiliaria.listing`)
 
@@ -89,18 +89,25 @@ domain/
   repository/     PropertyRepository, FavoriteRepository (interfaces)
   exception/      DomainException (→ 409), InvalidStateTransitionException (→ 409), InvalidValueException (→ 400)
 application/
-  command/        PublishPropertyCommand + PublishPropertyHandler, ...
-  query/          SearchCatalogQuery, ListAgentPropertiesQuery, ...
-  policy/         ReserveOnLeadWonPolicy (reacciona a LeadClosed)
-  port/           EventPublisher, ImageStorage, Clock
+  command/        un Command + Handler por caso de uso; PropertyCommandSupport (cargar, verificar dueño, guardar,
+                  proyectar y publicar en una transacción); ImageTypeDetector (MIME real por magic bytes)
+  query/          SearchCatalogQuery, ListAgentPropertiesQuery, ...; CatalogReadModel y PropertyReadModel (puertos)
+  policy/         ReserveOnLeadWonPolicy y LeadClosedNotification (reacciona a LeadClosed)
+  port/           EventPublisher, CatalogProjection, ImageStorage, ProcessedEventStore, Clock
+  common/         CommandMetadata (actor, usuario, correlationId, causationId), PageRequest, PageResult, ImageUrls
+  exception/      PropertyNotFoundException (404), NotPropertyOwnerException (403), FavoriteNotFoundException (404)
 infrastructure/
-  persistence/    *JpaEntity, Spring Data repositories, adaptadores, mappers, proyección del catálogo
-  messaging/      OutboxEntity, OutboxRelay (@Scheduled), KafkaEventPublisher, LeadEventsConsumer, mappers
-  storage/        LocalImageStorage (Adapter)
-  config/         SecurityConfig (resource server JWT con JWKS), ProblemJsonSecurityHandler (401/403), ConsulReregistration
+  persistence/    *JpaEntity, PropertyMapper, JpaPropertyRepository, JpaFavoriteRepository,
+                  JdbcCatalogProjection, JdbcCatalogReadModel, JdbcPropertyReadModel, CatalogSqlSpecifications
+  messaging/      OutboxEventPublisher + PropertyIntegrationEventMapper (dominio → contrato), OutboxRelay (@Scheduled),
+                  LeadEventsConsumer + LeadEventTranslator (anti-corruption layer), JdbcProcessedEventStore
+  storage/        LocalImageStorage (Adapter, volumen listing-images)
+  config/         ApplicationConfig (arma los handlers), SecurityConfig, ProblemJsonSecurityHandler (401/403),
+                  KafkaConfig (reintentos + DLQ), OpenApiConfig, SystemClock, ConsulReregistration
   web/            CorrelationIdFilter (X-Correlation-Id → MDC)
 presentation/
-  rest/           controllers, DTOs (records), GlobalExceptionHandler (@RestControllerAdvice → ProblemDetail), ReadinessController
+  rest/           PropertyController, PropertyImageController, CatalogController, FavoriteController, DTOs (records),
+                  GlobalExceptionHandler (@RestControllerAdvice → ProblemDetail), ReadinessController
 ```
 
 ## Decisiones técnicas
@@ -112,8 +119,9 @@ presentation/
 - **Errores:** `ProblemDetail` de Spring 6+ con `code` y `correlationId`.
 - **Seguridad:** `spring-boot-starter-oauth2-resource-server` con `jwk-set-uri` hacia identity; roles del claim `roles`. Configurar el decoder para aceptar `typ=at+jwt` y rechazar `rt+jwt`.
 - **Kafka:** `spring-kafka`. El `OutboxRelay` publica con `KafkaTemplate` y clave `aggregateId`.
-- **Imágenes:** `POST /api/v1/properties/{id}/images` (multipart) → puerto `ImageStorage` (Adapter). `GET /api/v1/properties/{id}/images/{imageId}` es público y responde 404 si la propiedad está en `DRAFT` o `PAUSED`. Validar el MIME real y 5 MB por imagen (rule `seguridad`).
-- **OpenAPI:** `springdoc-openapi` en `/docs`, igual a `contracts/openapi/listing-service.yaml`.
+- **Imágenes:** `POST /api/v1/properties/{id}/images` (multipart, campo `files`) → puerto `ImageStorage` (Adapter). `GET /api/v1/properties/{id}/images/{imageId}` es público y responde 404 si la propiedad está en `DRAFT` o `PAUSED`. El MIME real se detecta por magic bytes (JPG o PNG) y el límite es 5 MB por imagen (rule `seguridad`). Los archivos van a `IMAGE_STORAGE_DIR` (en Docker, el volumen `listing-images`, compartido entre réplicas) con nombre `{propertyId}/{imageId}.{jpg|png}`.
+- **Consumidor:** 3 intentos con backoff exponencial y luego `visit.lead.events.dlq`. Un mensaje ilegible va directo a la DLQ. `OUTBOX_RELAY_ENABLED` y `KAFKA_CONSUMER_ENABLED` permiten correr sin Kafka en local.
+- **OpenAPI:** `springdoc-openapi` en `/docs` (JSON en `/v3/api-docs`), igual a `contracts/openapi/listing-service.yaml`.
 
 ## Registro en Consul
 
@@ -144,7 +152,11 @@ spring.cloud.consul.discovery.health-check-critical-timeout=1m
 ./mvnw verify
 ```
 
-Usa siempre el wrapper y commitea `.mvn/wrapper/`. Tests: JUnit 5, AssertJ, Mockito, `@WebMvcTest`, `@DataJpaTest`.
+Usa siempre el wrapper y commitea `.mvn/wrapper/`. Tests: JUnit 5 y AssertJ.
+
+- **Dominio y aplicación:** sin Spring, con fakes en memoria (`src/test/.../support`: `PropertyMother`, `InMemoryPropertyRepository`, `FakeEventPublisher`, ...).
+- **Contrato de eventos:** `PropertyEventContractTest` valida cada evento contra `contracts/events/` (envelope y payload).
+- **Integración:** `ListingApiIntegrationTest` levanta la app contra PostgreSQL real con Testcontainers (migraciones, JPA, catálogo, outbox y la política). Necesita Docker; sin Docker se salta.
 
 ## Qué usar al trabajar aquí
 
