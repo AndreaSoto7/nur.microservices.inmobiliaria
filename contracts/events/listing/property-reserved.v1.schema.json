@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inmobiliaria.local/contracts/events/listing/property-reserved.v1.schema.json",
+  "title": "PropertyReserved v1 (payload)",
+  "description": "Una propiedad publicada pasó a RESERVED: sigue en el catálogo, pero no recibe visitas nuevas. visit reacciona rechazando las solicitudes REQUESTED (política 3.2 del ADR 0005). Si la reservó la política LeadClosed (actor SYSTEM), el envelope trae en causationId el eventId de ese LeadClosed.",
+  "type": "object",
+  "required": ["propertyId", "agentId", "status", "actor"],
+  "properties": {
+    "propertyId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "Igual al aggregateId del envelope." },
+    "agentId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
+    "status": { "type": "string", "const": "RESERVED" },
+    "actor": { "type": "string", "enum": ["AGENT", "SYSTEM"], "description": "AGENT: la reservó el agente desde la API. SYSTEM: la reservó la política porque una oportunidad se cerró como ganada." }
+  },
+  "additionalProperties": true,
+  "examples": [
+    {
+      "propertyId": "3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01",
+      "agentId": "8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "status": "RESERVED",
+      "actor": "SYSTEM"
+    }
+  ]
+}

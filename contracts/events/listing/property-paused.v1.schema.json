@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inmobiliaria.local/contracts/events/listing/property-paused.v1.schema.json",
+  "title": "PropertyPaused v1 (payload)",
+  "description": "El agente pausó una propiedad publicada: sale del catálogo y no recibe consultas ni visitas nuevas. Solo lleva el cambio de estado; los datos de la propiedad ya llegaron con PropertyPublished o PropertyUpdated, y al reanudarla llega un PropertyPublished completo.",
+  "type": "object",
+  "required": ["propertyId", "agentId", "status"],
+  "properties": {
+    "propertyId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "Igual al aggregateId del envelope." },
+    "agentId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
+    "status": { "type": "string", "const": "PAUSED" }
+  },
+  "additionalProperties": true,
+  "examples": [
+    {
+      "propertyId": "3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01",
+      "agentId": "8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "status": "PAUSED"
+    }
+  ]
+}
