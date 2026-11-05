@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Servicio completo: casos de uso de propiedades, galería, favoritos y catálogo público (CQRS), persistencia JPA y proyección, outbox con relay a Kafka, política `LeadClosed` → reserva, API REST, Swagger en `/docs` y contrato OpenAPI, con 127 tests (contrato de eventos e integración con Postgres) | este PR |
+| feat | Servicio completo: casos de uso de propiedades, galería, favoritos y catálogo público (CQRS), persistencia JPA y proyección, outbox con relay a Kafka, política `LeadClosed` → reserva, API REST, Swagger en `/docs` y contrato OpenAPI, con 127 tests (contrato de eventos e integración con Postgres) | #45 |
 | feat | Aggregate `Property` con su máquina de estados, value objects (`Money`, `Location`, `Area`, `PropertyImage`) y eventos de dominio, con 30 tests | #41 |
 | chore | Esqueleto Spring Boot 4.1: capas, `/health` y `/health/ready`, Consul con re-registro, JWT con JWKS, problem+json, `X-Correlation-Id`, logs JSON, outbox y `processed_events`, Dockerfile y compose | #41 |
 
