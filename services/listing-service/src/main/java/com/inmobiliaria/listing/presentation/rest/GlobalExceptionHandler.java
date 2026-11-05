@@ -1,5 +1,6 @@
 package com.inmobiliaria.listing.presentation.rest;
 
+import com.inmobiliaria.listing.application.exception.PropertyNotFoundException;
 import com.inmobiliaria.listing.domain.exception.DomainException;
 import com.inmobiliaria.listing.domain.exception.InvalidValueException;
 import com.inmobiliaria.listing.infrastructure.web.CorrelationIdFilter;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
@@ -56,6 +58,24 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
         problem.setTitle("Regla de negocio incumplida");
         return build(problem, e.code());
+    }
+
+    /** No existe o es de otro agente: el contrato no los distingue. */
+    @ExceptionHandler(PropertyNotFoundException.class)
+    ResponseEntity<ProblemDetail> handleNotFound(PropertyNotFoundException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+        problem.setTitle("Propiedad no encontrada");
+        return build(problem, PropertyNotFoundException.CODE);
+    }
+
+    /** El límite de multipart (5 MB) se corta antes de llegar al dominio. */
+    @Override
+    protected ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.PAYLOAD_TOO_LARGE,
+                "Cada imagen pesa como máximo 5 MB");
+        problem.setTitle("Dato inválido");
+        return new ResponseEntity<>(enrich(problem, "PROPERTY_IMAGE_TOO_LARGE"), headers, HttpStatus.PAYLOAD_TOO_LARGE);
     }
 
     /** Lo lanza @PreAuthorize: sin esto caería en el 500 de abajo. */

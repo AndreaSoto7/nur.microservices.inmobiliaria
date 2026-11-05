@@ -29,6 +29,8 @@ Las variables están en [`.env.example`](.env.example). Spring las toma del ento
 |---|---|
 | `GET /health` | Liveness, lo usa Consul. No revisa dependencias |
 | `GET /health/ready` | Readiness: revisa la base |
+| `/api/v1/properties/**` | Propiedades del agente (rol `AGENT`): crear, listar, ver, editar, características, transiciones e imágenes. Detalle en [`contracts/openapi/listing-service.yaml`](../../contracts/openapi/listing-service.yaml) |
+| `GET /api/v1/properties/{id}/images/{imageId}` | Imagen pública si la propiedad está en el catálogo |
 
 ## Tests
 
@@ -36,4 +38,4 @@ Las variables están en [`.env.example`](.env.example). Spring las toma del ento
 ./mvnw test
 ```
 
-Los tests no necesitan base, Kafka ni Consul.
+Los de dominio y aplicación no necesitan nada. Los de integración levantan un PostgreSQL 17 con Testcontainers: necesitan **Docker corriendo**. Los eventos del outbox se validan contra los JSON Schema de `contracts/events/`.
