@@ -173,6 +173,70 @@ paths:
                 correlationId: request-123
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/visits/{visitId}/schedule:
+    post:
+      tags: [visits]
+      operationId: scheduleVisit
+      summary: Programar una solicitud pendiente
+      description: |
+        Solo el AGENT asignado puede programar una visita REQUESTED.
+        La fecha de inicio debe ser futura. Visit fija la duración en 60 minutos
+        y rechaza horarios superpuestos de un mismo agente. Dos visitas
+        consecutivas pueden compartir la hora de fin e inicio.
+        Un reintento con la misma clave, visita y cuerpo devuelve el resultado
+        original durante 24 horas. Reutilizar la clave con otros datos devuelve 422.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: visitId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ScheduleVisit'}
+      responses:
+        '200':
+          description: Visita programada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ScheduledVisit'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: La visita no existe o pertenece a otro agente.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: |
+            VISIT_NOT_REQUESTED si la visita ya no está pendiente.
+            VISIT_INVALID_SCHEDULE si la fecha de inicio no es futura.
+            VISIT_SCHEDULE_CONFLICT si el agente tiene otra visita en ese horario.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
   /health:
     get:
       tags: [health]
@@ -323,6 +387,24 @@ components:
         status: {type: string, enum: [REQUESTED, SCHEDULED, COMPLETED, CANCELLED, REJECTED]}
         proposedAt: {$ref: '#/components/schemas/UtcDateTime'}
         requestedAt: {$ref: '#/components/schemas/UtcDateTime'}
+        scheduledStart: {$ref: '#/components/schemas/UtcDateTime'}
+        scheduledEnd: {$ref: '#/components/schemas/UtcDateTime'}
+    ScheduleVisit:
+      type: object
+      required: [scheduledStart]
+      additionalProperties: false
+      properties:
+        scheduledStart: {$ref: '#/components/schemas/UtcDateTime'}
+      example: {scheduledStart: '2026-11-12T19:00:00Z'}
+    ScheduledVisit:
+      type: object
+      required: [id, status, scheduledStart, scheduledEnd]
+      additionalProperties: false
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, const: SCHEDULED}
+        scheduledStart: {$ref: '#/components/schemas/UtcDateTime'}
+        scheduledEnd: {$ref: '#/components/schemas/UtcDateTime'}
     Health:
       type: object
       required: [status]
