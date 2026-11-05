@@ -11,7 +11,7 @@
 | docs | Contrato de identity: errores 400, 401 y 404 `GATEWAY_*` que responde el gateway | #34 |
 | chore | Scaffold: config validada, errores problem+json, `GET /health`, apagado limpio, Dockerfile y lint. Go 1.27 y Alpine 3.22, a registrar en el ADR de versiones | #35 |
 | feat | Cadena de middlewares: recover, correlation-id, logs JSON y borrado de `X-User-*` | #51 |
-| feat | Rate limit de login y registro: token bucket por IP y ruta, 429 con `Retry-After` y expiración de entradas | este PR |
+| feat | Rate limit de login y registro: token bucket por IP y ruta, 429 con `Retry-After` y expiración de entradas | #52 |
 
 ## Pendientes
 
