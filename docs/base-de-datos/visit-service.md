@@ -189,7 +189,23 @@ CREATE INDEX lead_follow_ups_lead_idx ON lead_follow_ups (lead_id, created_at);
 
 -- ─── Mensajería ─────────────────────────────────────────────────────────────
 -- outbox y processed_events: ver docs/base-de-datos/README.md
+
+-- Reintentos HTTP de las operaciones de creación.
+CREATE TABLE idempotency_records (
+    client_id       uuid         NOT NULL,
+    operation       varchar(50)  NOT NULL,
+    idempotency_key uuid         NOT NULL,
+    request_hash    char(64)     NOT NULL CHECK (request_hash ~ '^[0-9a-f]{64}$'),
+    response_status smallint     NOT NULL CHECK (response_status BETWEEN 200 AND 599),
+    response_body   jsonb        NOT NULL,
+    response_headers jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    expires_at      timestamptz  NOT NULL DEFAULT (now() + interval '24 hours'),
+    PRIMARY KEY (client_id, operation, idempotency_key)
+);
+CREATE INDEX idempotency_records_expiration_idx ON idempotency_records (expires_at);
 ```
+
+La clave de idempotencia se guarda por cliente y operación. El hash SHA-256 identifica el cuerpo normalizado. La respuesta incluye el estado, el cuerpo y las cabeceras que se deben repetir, como `Location`. El registro vence a las 24 horas y la aplicación deberá ignorarlo al vencer.
 
 ## Del event storming a la base
 
