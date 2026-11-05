@@ -74,6 +74,30 @@ public class Property {
         return property;
     }
 
+    /**
+     * Reconstruye una propiedad guardada (lo usa el mapper de persistencia). No valida transiciones ni
+     * registra eventos: el estado ya pasó por las reglas cuando se guardó.
+     */
+    public static Property reconstitute(PropertyId id, UUID agentId, String title, String description,
+            PropertyType type, OperationType operation, PropertyStatus status, Money price, Location location,
+            Integer bedrooms, Integer bathrooms, Area area, Set<Feature> features, List<PropertyImage> images,
+            Instant publishedAt, Instant createdAt, Instant updatedAt) {
+        Property property = new Property(id, agentId, type, operation, createdAt);
+        property.title = title;
+        property.description = description == null ? "" : description;
+        property.status = Objects.requireNonNull(status, "status");
+        property.price = Objects.requireNonNull(price, "price");
+        property.location = Objects.requireNonNull(location, "location");
+        property.bedrooms = bedrooms;
+        property.bathrooms = bathrooms;
+        property.area = area;
+        property.features.addAll(features);
+        property.images.addAll(images);
+        property.publishedAt = publishedAt;
+        property.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt");
+        return property;
+    }
+
     // ─── Edición ─────────────────────────────────────────────────────────────
 
     public void edit(String title, String description, Money price, Location location, Instant now) {
