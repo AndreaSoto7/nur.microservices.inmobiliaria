@@ -29,7 +29,11 @@
 
 - **React + Vite + TypeScript** en `frontend/`.
 - **Puerto de desarrollo:** el que Vite usa por defecto, **5173**. Es el origen permitido por el CORS del gateway.
-- **Librerías:** el responsable del frontend elige el router y el manejo de datos del servidor, y las anota en este ADR antes de pasarlo a `Aceptado`.
+- **Librerías** (elegidas al crear el proyecto, 2026-11-05):
+  - **Router:** React Router 7, en modo declarativo (`<Routes>`). Es el estándar de facto y alcanza para rutas protegidas y filtros del catálogo en la URL. Se descartó TanStack Router: más tipado, pero otra curva para el equipo.
+  - **Datos del servidor:** TanStack Query 5. Da `loading`, `error` y `success` por consulta o mutación, que es justo lo que pide `frontend/CLAUDE.md`, con caché y reintentos. Se descartó guardar todo en un store global (Redux o Zustand): sería estado del servidor duplicado a mano.
+  - **Tests y calidad:** Vitest + React Testing Library; ESLint + Prettier.
+  - **TypeScript:** 6.0. La plantilla de Vite trae TypeScript 7, pero typescript-eslint todavía no lo soporta.
 
 ## Justificación
 

@@ -1,13 +1,13 @@
 # frontend — React + Vite + TypeScript
 
-Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Todavía no hay código: lo que sigue es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están la base, el cliente HTTP, la sesión y las pantallas de registro, login y "Mi cuenta"; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
 | | |
 |---|---|
 | Responsable | _(completar)_ |
-| Stack | React + Vite + TypeScript estricto ([ADR 0004](../docs/adr/0004-frontend-react.md)) |
+| Stack | React 19 + Vite 8 + TypeScript 6 estricto, React Router 7, TanStack Query 5 ([ADR 0004](../docs/adr/0004-frontend-react.md)) |
 | Puerto | 5173 (el de Vite por defecto y el que permite el CORS del gateway) |
 | Backend | Solo el gateway: `import.meta.env.VITE_API_BASE_URL` (`http://localhost:8080` en desarrollo) |
 | Contratos | `contracts/openapi/*.yaml` (los tipos de la API los reflejan) |
@@ -43,9 +43,16 @@ No hay notificaciones: el cliente ve el estado de sus solicitudes en "Mis visita
 
 ```
 frontend/src/
+  app/             raíz de composición: App.tsx (rutas), AppLayout (smart), components/AppHeader (dumb)
   core/            cliente HTTP (vía gateway), auth (token, refresh), rutas protegidas, modelos de la API
-  shared/ui/       dumbs genéricos: Button, Card, Pagination, EmptyState, ErrorMessage
+    api/           httpClient.ts (apiRequest), problem.ts (ApiError a partir del problem+json)
+    auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
+    models/        tipos que reflejan contracts/openapi (identity.ts, ...)
+  shared/ui/       dumbs genéricos: Button, TextField, ErrorMessage, LoadingState (después Card, Pagination, EmptyState)
+  test/            setup de Vitest, mocks de fetch y renderApp
   features/
+    auth/          LoginPage, RegisterPage (smart) · LoginForm, RegisterForm (dumb) · useAuthActions (facade)
+    account/       AccountPage (smart) · ProfileCard (dumb)
     catalog/
       containers/  CatalogPage.tsx                                          (smart)
       components/  PropertyFilters.tsx  PropertyCard.tsx  PropertyCardList.tsx   (dumb)
@@ -61,6 +68,15 @@ frontend/src/
 | `AgentPropertiesPage` | `PropertyTable` (`onPublish`, `onPause`, `onEdit`), `StatusBadge` |
 | `VisitRequestsPage` | `VisitRequestList`, `ScheduleVisitDialog` |
 | `LeadFollowUpPage` | `LeadTimeline`, `FollowUpForm`, `CloseLeadDialog` (`onClose(outcome)`) |
+
+## Sesión y tokens
+
+- **Access token** (15 min), solo en memoria. **Refresh token**, en `localStorage` (`core/auth/tokenStore.ts`). Tiene que ser compartido entre pestañas: identity no da período de gracia, y con copias por pestaña la segunda reutilizaría un token ya canjeado y se revocaría la sesión. identity lo entrega en el body, sin cookie httpOnly, así que un XSS podría leerlo: por eso la CSP del servidor que sirva el build está pendiente.
+- Una llamada con `auth: true` que responde 401 renueva la sesión **una vez** y se repite (`core/auth/session.ts`). El canje se serializa como pide el contrato: *single-flight* en la pestaña y un Web Lock entre pestañas, que relee el token adentro.
+- **Solo un 401 del refresh cierra la sesión.** Con 5xx, 429 o sin red se conserva para reintentar. Si se cierra la sesión mientras hay un canje en curso, el par nuevo se revoca y no revive la sesión.
+- Cerrar sesión en una pestaña la cierra en las demás (evento `storage`) y borra la caché de React Query.
+- Al cargar la página, `AuthProvider` intenta recuperar la sesión con el refresh token. Si identity lo rechaza, el usuario queda anónimo.
+- `RequireAuth` es comodidad de UI: la autorización real la hace cada servicio con el JWT.
 
 ## Reglas
 
@@ -85,4 +101,4 @@ npm run build
 - **Rules que se cargan solas:** `testing`, `patrones-diseno` (Facade, Smart/Dumb), `principios-solid`, `seguridad`.
 - **Skills:** `/componente-front` para cada pantalla, `/revisar`, `/crear-pr`.
 - **Agente revisor:** ninguno por defecto: `/revisar` tiene el checklist de frontend. `revisor-seguridad` si se toca el manejo de tokens.
-- **Pendiente de decidir:** router y librería de datos (completar el ADR 0004).
+- **Librerías:** React Router 7 y TanStack Query 5, decididas en el ADR 0004.

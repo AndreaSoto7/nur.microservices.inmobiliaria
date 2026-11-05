@@ -7,6 +7,8 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Patrón | Categoría | Servicio | Archivo(s) | Problema que resuelve | Por qué este y no otro |
 |---|---|---|---|---|---|
 | Factory Method | Creacional | identity | `identity/domain/user.py` (`User.register`) | Crear un usuario válido exige generar el UUID, rechazar `ADMIN` y registrar `UserRegistered`; un constructor libre permitiría saltarse esas reglas | Un Builder no aporta: los campos son pocos y todos obligatorios |
+| Smart/Dumb Components | Frontend | frontend | `frontend/src/features/auth/containers/*Page.tsx` (smart), `features/auth/components/*Form.tsx` (dumb) | Que un formulario no mezcle la llamada a la API, la sesión y la navegación con el render; así el form se prueba y reutiliza solo | Un componente por pantalla con todo adentro es el "componente Dios" que pide evitar `frontend/CLAUDE.md` |
+| Facade | Estructural | frontend | `frontend/src/features/auth/useAuthActions.ts` (`useLogin`, `useRegister`) | Las páginas necesitan "ingresar" o "registrarse" con su estado (enviando, error), sin conocer `authApi`, React Query ni el manejo de tokens | Llamar a `authApi` desde la página acopla la UI a la API y repite el manejo de errores en cada pantalla |
 | Repository | DDD | identity | `identity/domain/repository.py`, `identity/infrastructure/persistence/repositories.py` | El dominio no debe conocer el ORM de Django | Usar `UserModel` directo en el handler acoplaría el caso de uso a Django y exigiría una base en cada test |
 | Adapter | Estructural | identity | `identity/infrastructure/security/password_hasher.py` | Adaptar los hashers de Django al puerto `PasswordHasher` de la capa de aplicación | Llamar a `make_password` desde el handler metería a Django en `application` |
 | Adapter | Estructural | identity | `identity/infrastructure/security/token_issuer.py` | Adaptar PyJWT al puerto `TokenIssuer`: la aplicación pide tokens sin saber cómo se firman | Usar `djangorestframework-simplejwt` no sirve: no pone `kid` en el header |
@@ -39,4 +41,3 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Command | Comportamiento | visit, listing | Comandos CQRS ejecutados por `CommandBus` |
 | State | Comportamiento | listing, visit | Transiciones de `PropertyStatus`, `VisitStatus` y del `Lead` |
 | Specification | DDD | visit, listing | "Se puede solicitar visita si está PUBLISHED"; filtros combinables del catálogo |
-| Smart/Dumb Components | Frontend | frontend | Separar lógica de presentación |
