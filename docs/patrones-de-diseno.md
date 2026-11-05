@@ -28,6 +28,8 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Mapper (traductor de eventos) | Integración | listing | `infrastructure/messaging/PropertyIntegrationEventMapper.java` | Los eventos de dominio son internos; los de integración son contratos públicos (`contracts/events/listing/`) | Serializar los eventos de dominio tal cual rompería a visit con cualquier refactor del aggregate |
 | Chain of Responsibility | Comportamiento | gateway | `gateway/internal/middleware/middleware.go` (`Chain`), `gateway/cmd/gateway/main.go` | Cada request debe pasar por varios controles (recover, correlation-id, logs, identidad…) y cualquiera puede cortarla, sin que el proxy los conozca | Una función gigante con todos los controles acopla todo y no se puede probar eslabón por eslabón. Es también un Decorator de `http.Handler`; lo que la hace cadena es que un eslabón puede cortar |
 | Service Registry (cliente) | Microservicios | gateway | `gateway/internal/discovery/discovery.go` | Las réplicas nacen y mueren con IP distinta: el gateway no puede tener direcciones fijas. Consulta en Consul las sanas y guarda un snapshot, así una request nunca espera a Consul | El DNS de Docker Compose resuelve nombres, pero no tiene health checks ni registro explícito (ADR 0002) |
+| Strategy | Comportamiento | gateway | `gateway/internal/balancer/balancer.go` (`Strategy`), `round_robin.go` | Hoy se reparte con round robin, pero otro algoritmo (menos conexiones) no debería obligar a tocar el proxy ni el Circuit Breaker | Un `switch` por algoritmo dentro del balanceador crece con cada caso y mezcla el reparto con el marcado de réplicas |
+| Circuit Breaker | Resiliencia | gateway | `gateway/internal/balancer/balancer.go` (`MarkDown`, `Pick`) | El health check de Consul tarda hasta 10 s en notar una réplica caída: mientras tanto, parte de las requests fallaría | Reintentar en otra réplica podría duplicar un `POST`. Un breaker por servicio apagaría también las réplicas sanas |
 
 ## Planificados (candidatos, mover a "Aplicados" al implementarlos)
 
@@ -35,9 +37,7 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 |---|---|---|---|
 | API Gateway | Microservicios | gateway | Único punto de entrada: auth, CORS, rate limit, ruteo, balanceo de carga (ADR 0002) |
 | Service Registry + Self-Registration | Microservicios | todos + gateway | Cada servicio se registra solo en Consul; el gateway descubre las réplicas sanas |
-| Circuit Breaker | Resiliencia | gateway | Marcar como caída una réplica que falla, como respaldo de los health checks de Consul |
 | Proxy | Estructural | gateway | Reverse proxy entre el cliente y las réplicas: controla el acceso y oculta su ubicación |
-| Strategy | Comportamiento | gateway | Algoritmo de balanceo intercambiable (round robin) |
 | Mediator | Comportamiento | visit, listing | `CommandBus` / `QueryBus` desacoplan los controladores de los handlers |
 | Database per Service | Microservicios | todos | Persistencia independiente |
 | CQRS | Arquitectura | listing, visit | Proyección `property_catalog` como lado query en listing; copia local de propiedades en visit alimentada por eventos |
