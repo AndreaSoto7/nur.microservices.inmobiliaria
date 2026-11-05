@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inmobiliaria.local/contracts/events/listing/property-rented.v1.schema.json",
+  "title": "PropertyRented v1 (payload)",
+  "description": "El agente marcó como alquilada una propiedad en alquiler (desde PUBLISHED o RESERVED). Sale del catálogo. visit rechaza las solicitudes REQUESTED y cancela las visitas SCHEDULED futuras (política 3.3 del ADR 0005).",
+  "type": "object",
+  "required": ["propertyId", "agentId", "status", "operationType"],
+  "properties": {
+    "propertyId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "Igual al aggregateId del envelope." },
+    "agentId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
+    "status": { "type": "string", "const": "RENTED" },
+    "operationType": { "type": "string", "const": "RENT", "description": "Solo una propiedad en alquiler se puede alquilar." }
+  },
+  "additionalProperties": true,
+  "examples": [
+    {
+      "propertyId": "7b1e4c2a-9d3f-4a6b-8c5e-2f1a0b9c8d7e",
+      "agentId": "8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "status": "RENTED",
+      "operationType": "RENT"
+    }
+  ]
+}

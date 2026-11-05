@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inmobiliaria.local/contracts/events/listing/property-updated.v1.schema.json",
+  "title": "PropertyUpdated v1 (payload)",
+  "description": "Se editaron los datos o las características de una propiedad visible (PUBLISHED o RESERVED). Lleva el estado completo, igual que PropertyPublished: el consumidor reemplaza su copia sin llamar a listing por HTTP. Los cambios de una propiedad en DRAFT o PAUSED no se publican.",
+  "type": "object",
+  "required": [
+    "propertyId",
+    "agentId",
+    "title",
+    "description",
+    "propertyType",
+    "operationType",
+    "price",
+    "location",
+    "bedrooms",
+    "bathrooms",
+    "areaM2",
+    "features",
+    "coverImageUrl",
+    "imageUrls",
+    "status",
+    "publishedAt"
+  ],
+  "properties": {
+    "propertyId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", "description": "Igual al aggregateId del envelope." },
+    "agentId": { "type": "string", "format": "uuid", "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 150 },
+    "description": { "type": "string", "maxLength": 5000 },
+    "propertyType": { "type": "string", "enum": ["HOUSE", "APARTMENT"] },
+    "operationType": { "type": "string", "enum": ["SALE", "RENT"] },
+    "price": {
+      "type": "object",
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": { "type": "number", "exclusiveMinimum": 0, "description": "Máximo 2 decimales. Para RENT es el precio mensual. El consumidor lo decodifica sin pérdida (decimal o json.Number), nunca a float64." },
+        "currency": { "type": "string", "const": "BOB", "description": "Moneda única de la plataforma." }
+      }
+    },
+    "location": {
+      "type": "object",
+      "required": ["zone"],
+      "properties": {
+        "zone": { "type": "string", "minLength": 1 },
+        "address": { "type": "string" },
+        "latitude": { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "bedrooms": { "type": "integer", "minimum": 0 },
+    "bathrooms": { "type": "integer", "minimum": 0 },
+    "areaM2": { "type": "number", "exclusiveMinimum": 0 },
+    "features": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[A-Z_]+$" },
+      "uniqueItems": true
+    },
+    "coverImageUrl": { "type": ["string", "null"], "pattern": "^/api/v1/properties/[0-9a-fA-F-]{36}/images/[0-9a-fA-F-]{36}$", "description": "Ruta relativa al gateway (GET público). null si no hay imágenes." },
+    "imageUrls": { "type": "array", "items": { "type": "string", "pattern": "^/api/v1/properties/[0-9a-fA-F-]{36}/images/[0-9a-fA-F-]{36}$" } },
+    "status": { "type": "string", "enum": ["PUBLISHED", "RESERVED"], "description": "Estado actual: una edición no cambia el estado." },
+    "publishedAt": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$", "description": "Fecha de la primera publicación." }
+  },
+  "additionalProperties": true,
+  "examples": [
+    {
+      "propertyId": "3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01",
+      "agentId": "8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "title": "Casa con jardín y piscina en Equipetrol",
+      "description": "Casa de dos plantas con jardín, piscina y garaje para dos autos.",
+      "propertyType": "HOUSE",
+      "operationType": "SALE",
+      "price": { "amount": 1250000.0, "currency": "BOB" },
+      "location": { "zone": "Equipetrol", "address": "Calle 7 Oeste #120", "latitude": -17.7633, "longitude": -63.1956 },
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "areaM2": 240.5,
+      "features": ["GARAGE", "GARDEN", "POOL"],
+      "coverImageUrl": "/api/v1/properties/3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01/images/5a1f0c2e-7b3d-4e6f-9a10-1b2c3d4e5f60",
+      "imageUrls": ["/api/v1/properties/3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01/images/5a1f0c2e-7b3d-4e6f-9a10-1b2c3d4e5f60"],
+      "status": "PUBLISHED",
+      "publishedAt": "2026-10-16T14:30:00Z"
+    }
+  ]
+}

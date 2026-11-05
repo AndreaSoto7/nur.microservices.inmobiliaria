@@ -61,7 +61,7 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 
 ## Eventos
 
-- **Publica** en `listing.property.events` (clave `propertyId`, retención infinita) con outbox: `PropertyPublished`, `PropertyUpdated`, `PropertyPaused`, `PropertyReserved`, `PropertySold`, `PropertyRented`. Los payloads llevan lo que visit necesita (`agentId`, `status`, `operationType`, `title`, `zone`) para no llamar por HTTP. Schema de referencia: `contracts/events/listing/property-published.v1.schema.json`. Agregar `previousStatus` antes de implementar.
+- **Publica** en `listing.property.events` (clave `propertyId`, retención infinita) con outbox: `PropertyPublished`, `PropertyUpdated`, `PropertyPaused`, `PropertyReserved`, `PropertySold`, `PropertyRented`. Los payloads llevan lo que visit necesita (`agentId`, `status`, `operationType`, `title`, `zone`) para no llamar por HTTP. Schemas: `contracts/events/listing/property-*.v1.schema.json`. `PropertyPublished` y `PropertyUpdated` llevan el estado completo; `PropertyPaused`, `PropertyReserved` (con `actor`: `AGENT` o `SYSTEM`), `PropertySold` y `PropertyRented`, solo el cambio de estado. `PropertyPublished` lleva `previousStatus`.
 - **Consume** `visit.lead.events` (consumer group `listing-service`, desde el principio, idempotente con `processed_events`).
 
 ### Política: una oportunidad ganada reserva la propiedad (ADR 0005, 3.1)

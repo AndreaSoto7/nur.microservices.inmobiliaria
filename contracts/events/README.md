@@ -60,5 +60,6 @@ Detalle y reglas en el [ADR 0005](../../docs/adr/0005-realinear-servicios-y-cade
 ## Schemas definidos
 
 - [x] `identity/user-registered.v1.schema.json`
+- [x] listing: [`property-updated`](listing/property-updated.v1.schema.json), [`property-paused`](listing/property-paused.v1.schema.json), [`property-reserved`](listing/property-reserved.v1.schema.json), [`property-sold`](listing/property-sold.v1.schema.json) y [`property-rented`](listing/property-rented.v1.schema.json) (v1). `PropertyPublished` ganó el campo opcional `previousStatus` (`DRAFT`, `PAUSED` o `RESERVED`), que listing siempre envía
 - [x] `listing/property-published.v1.schema.json` (ejemplo de referencia; el responsable de listing puede ajustarlo antes de la primera implementación)
 - [ ] El resto se crea con `/nuevo-evento` cuando el servicio productor lo implemente.
