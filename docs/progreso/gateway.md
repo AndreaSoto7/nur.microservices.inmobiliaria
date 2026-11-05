@@ -13,7 +13,7 @@
 | feat | Cadena de middlewares: recover, correlation-id, logs JSON y borrado de `X-User-*` | #51 |
 | feat | Rate limit de login y registro: token bucket por IP y ruta, 429 con `Retry-After` y expiración de entradas | #52 |
 | feat | CORS: orígenes por variable de entorno con comparación exacta, preflight antes de la auth y `Vary: Origin` | #53 |
-| feat | Discovery: consulta periódica de réplicas sanas en Consul, con snapshot en memoria que sobrevive a fallas de Consul | este PR |
+| feat | Discovery: consulta periódica de réplicas sanas en Consul, con snapshot en memoria que sobrevive a fallas de Consul | #54 |
 
 ## Pendientes
 
