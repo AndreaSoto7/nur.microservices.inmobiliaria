@@ -21,12 +21,17 @@ cd services/listing-service
 ./mvnw spring-boot:run        # Windows: mvnw.cmd spring-boot:run
 ```
 
-Las variables están en [`.env.example`](.env.example). Spring las toma del entorno: expórtalas o cárgalas en la configuración de ejecución del IDE.
+Las variables están en [`.env.example`](.env.example). Spring las toma del entorno: expórtalas o cárgalas en la configuración de ejecución del IDE. Para correr sin Kafka, `OUTBOX_RELAY_ENABLED=false` y `KAFKA_CONSUMER_ENABLED=false`.
 
 ## Endpoints
 
 | Ruta | Para qué |
 |---|---|
+| `/api/v1/properties/**` | Propiedades del agente: crear, editar, características, galería y estados (rol `AGENT`) |
+| `/api/v1/catalog/properties` | Catálogo público con filtros, paginación y orden (sin token) |
+| `/api/v1/favorites/**` | Favoritos del usuario (`CLIENT` o `AGENT`) |
+| `GET /api/v1/properties/{id}/images/{imageId}` | Imagen pública de una propiedad publicada o reservada |
+| `GET /docs` | Swagger UI (contrato: `contracts/openapi/listing-service.yaml`) |
 | `GET /health` | Liveness, lo usa Consul. No revisa dependencias |
 | `GET /health/ready` | Readiness: revisa la base |
 
@@ -36,4 +41,4 @@ Las variables están en [`.env.example`](.env.example). Spring las toma del ento
 ./mvnw test
 ```
 
-Los tests no necesitan base, Kafka ni Consul.
+Los tests de dominio, aplicación y contrato no necesitan nada. `ListingApiIntegrationTest` levanta PostgreSQL con Testcontainers: necesita Docker y, si no está, se salta. Kafka y Consul nunca hacen falta.

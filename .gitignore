@@ -46,6 +46,8 @@ build/
 # ── Archivos subidos en desarrollo (imágenes de propiedades)
 uploads/
 storage/
+# ...pero no los paquetes de código que se llaman storage (listing: infrastructure/storage).
+!**/src/**/storage/
 
 # ── IDEs y sistema operativo ───────────────────────────────
 .idea/

@@ -1,0 +1,12 @@
+package com.inmobiliaria.listing.infrastructure.persistence;
+
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+interface FavoriteSpringDataRepository extends JpaRepository<FavoriteJpaEntity, UUID> {
+
+    Optional<FavoriteJpaEntity> findByUserIdAndPropertyId(UUID userId, UUID propertyId);
+
+    boolean existsByUserIdAndPropertyId(UUID userId, UUID propertyId);
+}

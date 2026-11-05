@@ -41,8 +41,12 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/health", "/health/ready", "/error").permitAll()
+                        .requestMatchers("/docs", "/docs/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/**", "/api/v1/properties/*/images/*")
                         .permitAll()
+                        // El rol se revisa antes de validar el cuerpo: un CLIENT recibe 403, no 400.
+                        .requestMatchers("/api/v1/properties/**").hasRole("AGENT")
+                        .requestMatchers("/api/v1/favorites/**").hasAnyRole("CLIENT", "AGENT")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))

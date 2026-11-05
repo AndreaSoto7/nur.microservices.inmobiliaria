@@ -8,7 +8,7 @@ Hay un archivo por componente. Lo que el componente **es** (dominio, eventos, es
 | Archivo | Responsable |
 |---|---|
 | [identity-service.md](identity-service.md) | @Tiesol |
-| [listing-service.md](listing-service.md) | _(completar)_ |
+| [listing-service.md](listing-service.md) | @AndreaSoto7 |
 | [visit-service.md](visit-service.md) | _(completar)_ |
 | [audit-service.md](audit-service.md) | _(completar)_ · opcional (ADR 0005) |
 | [gateway.md](gateway.md) | @Tiesol |

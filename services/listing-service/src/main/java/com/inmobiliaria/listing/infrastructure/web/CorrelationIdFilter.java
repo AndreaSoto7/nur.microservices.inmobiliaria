@@ -26,6 +26,12 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
     // Un valor arbitrario del cliente iría a los logs y al JSON de error: solo se acepta este formato.
     private static final Pattern VALID = Pattern.compile("[A-Za-z0-9-]{1,64}");
 
+    /** El id de la petición en curso; fuera de una petición HTTP genera uno nuevo. */
+    public static String current() {
+        String correlationId = MDC.get(MDC_KEY);
+        return correlationId != null ? correlationId : UUID.randomUUID().toString();
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {

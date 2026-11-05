@@ -1,5 +1,7 @@
 package com.inmobiliaria.listing.presentation.rest;
 
+import com.inmobiliaria.listing.application.exception.ApplicationException;
+import com.inmobiliaria.listing.application.exception.NotPropertyOwnerException;
 import com.inmobiliaria.listing.domain.exception.DomainException;
 import com.inmobiliaria.listing.domain.exception.InvalidValueException;
 import com.inmobiliaria.listing.infrastructure.web.CorrelationIdFilter;
@@ -9,6 +11,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 /**
@@ -39,8 +43,36 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             405, "METHOD_NOT_ALLOWED",
             406, "NOT_ACCEPTABLE",
             409, "CONFLICT",
+            413, "CONTENT_TOO_LARGE",
             415, "UNSUPPORTED_MEDIA_TYPE",
             500, "INTERNAL_ERROR");
+
+    /** Recurso que no existe o que no es del usuario (application/exception). */
+    @ExceptionHandler(ApplicationException.class)
+    ResponseEntity<ProblemDetail> handleApplication(ApplicationException e) {
+        boolean forbidden = e instanceof NotPropertyOwnerException;
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                forbidden ? HttpStatus.FORBIDDEN : HttpStatus.NOT_FOUND, e.getMessage());
+        problem.setTitle(forbidden ? "Sin permiso" : "No encontrado");
+        return build(problem, e.code());
+    }
+
+    /** Dos ediciones a la vez sobre la misma propiedad (@Version): el segundo reintenta. */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    ResponseEntity<ProblemDetail> handleConcurrentUpdate(OptimisticLockingFailureException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+                "La propiedad cambió mientras la editabas; vuelve a intentarlo");
+        problem.setTitle("Edición concurrente");
+        return build(problem, "PROPERTY_CONCURRENT_UPDATE");
+    }
+
+    /** Parámetros que no se pueden interpretar (un enum o un orden desconocido). */
+    @ExceptionHandler(IllegalArgumentException.class)
+    ResponseEntity<ProblemDetail> handleIllegalArgument(IllegalArgumentException e) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+        problem.setTitle("Solicitud inválida");
+        return build(problem, "BAD_REQUEST");
+    }
 
     /** Datos inválidos que detecta el dominio (precio, zona, título, imagen): 400, como la validación. */
     @ExceptionHandler(InvalidValueException.class)
@@ -74,6 +106,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR, "Ocurrió un error inesperado");
         problem.setTitle("Error interno");
         return build(problem, "INTERNAL_ERROR");
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONTENT_TOO_LARGE, "Cada imagen pesa como máximo 5 MB");
+        problem.setTitle("Archivo demasiado grande");
+        return new ResponseEntity<>(enrich(problem, "PROPERTY_IMAGE_TOO_LARGE"), headers,
+                HttpStatus.CONTENT_TOO_LARGE);
     }
 
     @Override

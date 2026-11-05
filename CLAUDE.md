@@ -22,7 +22,7 @@ Agentes publican casas y departamentos (venta o alquiler). Los interesados busca
 | Componente | Instrucciones | Stack | Responsable | Puerto | Base | Responsabilidad |
 |---|---|---|---|---|---|---|
 | identity-service | [`services/identity-service/CLAUDE.md`](services/identity-service/CLAUDE.md) | Django + DRF | @Tiesol | 8001 | `identity` | Registro, login, roles y emisión de JWT RS256 |
-| listing-service | [`services/listing-service/CLAUDE.md`](services/listing-service/CLAUDE.md) | Spring Boot | _(completar)_ | 8002 | `listing` | Propiedades, galería, estados, favoritos y catálogo público (lado query). Reserva al ganarse una oportunidad |
+| listing-service | [`services/listing-service/CLAUDE.md`](services/listing-service/CLAUDE.md) | Spring Boot | @AndreaSoto7 | 8002 | `listing` | Propiedades, galería, estados, favoritos y catálogo público (lado query). Reserva al ganarse una oportunidad |
 | visit-service | [`services/visit-service/CLAUDE.md`](services/visit-service/CLAUDE.md) | NestJS | _(completar)_ | 8003 | `visit` | Consultas, visitas y oportunidades (`Lead`). Rechaza o cancela visitas cuando la propiedad se reserva, vende o alquila |
 | audit-service (opcional) | [`services/audit-service/CLAUDE.md`](services/audit-service/CLAUDE.md) | por decidir | _(completar)_ | 8004 | `audit` | Registro de solo inserción de todos los eventos, para `ADMIN` |
 | gateway | [`gateway/CLAUDE.md`](gateway/CLAUDE.md) | Go (propio) | @Tiesol | 8080 | — | Único punto de entrada: ruteo, JWT, CORS, rate limit, balanceo y discovery |
