@@ -1,6 +1,6 @@
 # visit-service — NestJS (TypeScript)
 
-Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, que siempre aplica. Todavía no hay código: lo que sigue es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, que siempre aplica. La base local y el modelo inicial de visitas están en desarrollo. Consulta el [README](README.md) para ejecutar la base. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 

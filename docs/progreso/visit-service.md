@@ -13,6 +13,8 @@
 
 ## Pendientes
 
+> @JoseDani258 está preparando la base local de Visit en una rama separada.
+
 **Base**
 
 - [ ] Scaffold con `/scaffold-servicio visit`
