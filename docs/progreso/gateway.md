@@ -15,6 +15,7 @@
 | feat | CORS: orígenes por variable de entorno con comparación exacta, preflight antes de la auth y `Vary: Origin` | #53 |
 | feat | Discovery: consulta periódica de réplicas sanas en Consul, con snapshot en memoria que sobrevive a fallas de Consul | #54 |
 | feat | Balanceador: round robin (Strategy) y Circuit Breaker por réplica | #55 |
+| feat | Tabla de rutas por prefijo, públicas y protegidas, y validación de paths (400 y 404) | este PR |
 
 ## Pendientes
 

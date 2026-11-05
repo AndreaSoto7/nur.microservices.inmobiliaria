@@ -62,15 +62,17 @@ func run(logger *slog.Logger) error {
 // ante `..` o `//`, y esos paths deben llegar a la validación del gateway para responder 400.
 // /health queda fuera de la cadena: lo llama Docker cada 10 s y llenaría los logs.
 func newHandler(logger *slog.Logger, cfg config.Config) http.Handler {
-	notFound := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		problem.Write(w, r, problem.RouteNotFound)
+	// Todavía no hay proxy: una ruta válida no tiene a dónde ir.
+	noUpstream := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		problem.Write(w, r, problem.NoHealthyInstance)
 	})
-	chain := middleware.Chain(notFound,
+	chain := middleware.Chain(noUpstream,
 		middleware.Recover(logger),
 		middleware.CorrelationID,
 		middleware.Logging(logger),
 		middleware.CORS(cfg.CORSOrigins),
 		middleware.StripIdentityHeaders,
+		middleware.Routing,
 		middleware.NewRateLimiter(cfg.RateLimitAuthPerMinute, time.Now).Middleware,
 	)
 
