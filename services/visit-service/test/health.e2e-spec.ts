@@ -3,14 +3,18 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
+import { VisitDatabase } from '../src/database/visit-database.js';
 
 describe('Salud de Visit', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(VisitDatabase)
+      .useValue({
+        connect: () => Promise.reject(new Error('PostgreSQL no disponible')),
+      })
+      .compile();
     app = moduleRef.createNestApplication<INestApplication<App>>();
     await app.init();
   });
@@ -19,7 +23,11 @@ describe('Salud de Visit', () => {
     await app.close();
   });
 
-  it.each(['/health', '/health/ready'])('%s responde 200 y UP', (path) =>
-    request(app.getHttpServer()).get(path).expect(200, { status: 'UP' }),
-  );
+  it('mantiene liveness mientras PostgreSQL no responde', () =>
+    request(app.getHttpServer()).get('/health').expect(200, { status: 'UP' }));
+
+  it('marca readiness como DOWN mientras PostgreSQL no responde', () =>
+    request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(503, { status: 'DOWN' }));
 });

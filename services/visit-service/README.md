@@ -16,7 +16,16 @@ npm run start:dev
 | Ruta | Respuesta |
 | --- | --- |
 | `GET /health` | `200 {"status":"UP"}` si el proceso HTTP responde |
-| `GET /health/ready` | `200 {"status":"UP"}` si responde el proceso HTTP. La conexión a PostgreSQL se verifica por separado con `migration:show` |
+| `GET /health/ready` | `200 {"status":"UP"}` si PostgreSQL responde y la tabla de visitas está disponible. En caso contrario devuelve `503 {"status":"DOWN"}` |
+
+## Solicitar y consultar una visita
+
+Configura `DATABASE_URL` y `JWT_JWKS_URL` en el entorno o en el archivo `.env` del servicio. La URL de JWKS debe apuntar a Identity y ser accesible desde donde corre NestJS. Para una prueba local, la base de Visit debe tener una copia de la propiedad en estado `PUBLISHED`.
+
+- `POST /api/v1/visits` requiere un access token de un cliente y un UUID en `Idempotency-Key`. El cuerpo lleva `propertyId`, `proposedAt` en UTC y, opcionalmente, `clientNote`. La respuesta `201` incluye un ID y la cabecera `Location`.
+- `GET /api/v1/visits/{visitId}` devuelve la solicitud al cliente que la creó o al agente asignado.
+
+El servicio guarda los eventos `VisitRequested` y `LeadOpened` en la tabla `outbox`. Queda pendiente consumir los eventos de Listing y publicar los eventos de Visit en Kafka.
 
 ## Docker local
 
@@ -50,4 +59,4 @@ npm run lint
 npm test
 ```
 
-El modelo de dominio inicia cada visita en `REQUESTED` y exige que la fecha propuesta sea posterior a la fecha de solicitud. La propiedad y sus participantes se referencian por ID. La migración crea las tablas de Visit. Queda pendiente conectar el flujo HTTP a PostgreSQL y a los demás servicios. El contrato se revisa en el PR #39.
+El modelo de dominio inicia cada visita en `REQUESTED` y exige que la fecha propuesta sea posterior a la fecha de solicitud. La propiedad y sus participantes se referencian por ID. Para incluir las pruebas de los endpoints, configura `VISIT_TEST_DATABASE_URL` con una base PostgreSQL desechable y vuelve a ejecutar `npm test`. El contrato se integró en el PR #39.

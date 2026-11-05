@@ -1,7 +1,7 @@
 # Progreso — visit-service
 
 - **Responsable:** _(completar)_
-- **En curso:** @JoseDani258 prepara los contratos para solicitar una visita y consultar su detalle.
+- **En curso:** @JoseDani258 implementa el primer flujo de solicitudes de visita.
 - **Stack:** NestJS
 - **Instrucciones:** [`services/visit-service/CLAUDE.md`](../../services/visit-service/CLAUDE.md)
 
@@ -24,11 +24,12 @@
 
 - [ ] Snapshot local de propiedades: consumir `listing.property.events` (sin llamar a listing por HTTP)
 - [ ] Enviar una consulta sobre una propiedad (`Inquiry`)
-- [ ] Solicitar una visita (`Visit` en `REQUESTED`, solo si la propiedad está `PUBLISHED`)
-- [ ] El cliente consulta el estado de sus solicitudes
+- [x] Solicitar una visita (`Visit` en `REQUESTED`, solo si la propiedad está `PUBLISHED`)
+- [x] El cliente consulta el detalle y estado de una solicitud propia
 - [ ] El agente revisa las consultas y solicitudes recibidas
 - [ ] Programar, rechazar, cancelar y completar visitas (máquina de estados de `Visit`)
-- [ ] Abrir la oportunidad (`Lead`) con la primera consulta o solicitud de visita (política interna, ADR 0005 sección 3.4)
+- [x] Abrir la oportunidad (`Lead`) con la primera solicitud de visita (ADR 0005 sección 3.4)
+- [ ] Abrir la oportunidad con la primera consulta
 - [ ] Registrar el seguimiento del interesado y cerrar la oportunidad como `WON` o `LOST` (`Lead`)
 
 **Eventos**

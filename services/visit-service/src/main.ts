@@ -1,8 +1,11 @@
 import { ConsoleLogger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { existsSync } from 'node:fs';
 import { AppModule } from './app.module.js';
 
 async function bootstrap(): Promise<void> {
+  const envFile = '.env';
+  if (existsSync(envFile)) process.loadEnvFile(envFile);
   const port = Number(process.env.SERVICE_PORT ?? '8003');
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error('SERVICE_PORT debe ser un puerto TCP entre 1 y 65535.');
