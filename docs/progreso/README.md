@@ -10,8 +10,9 @@ Hay un archivo por servicio. Cada uno tiene dos secciones:
 | [identity-service.md](identity-service.md) | @Tiesol |
 | [listing-service.md](listing-service.md) | _(completar)_ |
 | [visit-service.md](visit-service.md) | _(completar)_ |
-| [search-service.md](search-service.md) | _(completar)_ |
-| [notification-service.md](notification-service.md) | _(completar)_ |
+| [audit-service.md](audit-service.md) | _(completar)_ · opcional (ADR 0005) |
+| [search-service.md](search-service.md) | Fuera de alcance (ADR 0005) |
+| [notification-service.md](notification-service.md) | Fuera de alcance (ADR 0005) |
 | [gateway.md](gateway.md) | @Tiesol |
 | [frontend.md](frontend.md) | _(completar)_ |
 | [infra.md](infra.md) | Zona compartida |

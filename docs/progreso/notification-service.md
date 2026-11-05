@@ -1,5 +1,7 @@
 # Progreso — notification-service
 
+> **Fuera de alcance por tiempo** ([ADR 0005](../adr/0005-realinear-servicios-y-cadenas-de-eventos.md)). Se retoma solo si sobra tiempo, con un ADR propio.
+
 - **Responsable:** _(completar)_
 - **Stack:** Go
 - **Rules:** `stack-go`, `ddd-clean-architecture`, `eventos-kafka`, `service-discovery`
