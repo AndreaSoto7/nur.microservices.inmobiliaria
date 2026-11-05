@@ -1,16 +1,16 @@
 # listing-service — Spring Boot (Java)
 
-Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, que siempre aplica. Todavía no hay código: lo que sigue es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya está el esqueleto y el dominio `Property`; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
 | | |
 |---|---|
 | Responsable | _(completar)_ |
-| Stack | Spring Boot (Java), Maven con wrapper |
+| Stack | Spring Boot 4.1 · Java 21 · Spring Cloud 2025.1, Maven con wrapper |
 | Puerto | 8002 |
 | Base | `listing` (PostgreSQL 17) → [`docs/base-de-datos/listing-service.md`](../../docs/base-de-datos/listing-service.md) |
-| API | `contracts/openapi/listing-service.yaml` (por crear) · Swagger UI en `/docs` |
+| API | `contracts/openapi/listing-service.yaml` · Swagger UI en `/docs` (pendiente) |
 | Rutas del gateway | `/api/v1/properties/**`, `/api/v1/favorites/**`, `/api/v1/catalog/**` (público) |
 | Publica | `listing.property.events` |
 | Consume | `visit.lead.events` (`LeadClosed`) |
@@ -83,11 +83,11 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 
 ```
 domain/
-  model/          Property (raíz), PropertyId, Money, Location, Area, Feature, PropertyStatus, PropertyImage
+  model/          Property (raíz), PropertyId, Money, Location, Area, Feature, PropertyStatus, PropertyImage, Actor
                   Favorite (raíz aparte), FavoriteId
-  event/          eventos de dominio
+  event/          PropertyEvent (sealed interface con un record por evento de dominio)
   repository/     PropertyRepository, FavoriteRepository (interfaces)
-  exception/      DomainException, InvalidStateTransitionException
+  exception/      DomainException (→ 409), InvalidStateTransitionException (→ 409), InvalidValueException (→ 400)
 application/
   command/        PublishPropertyCommand + PublishPropertyHandler, ...
   query/          SearchCatalogQuery, ListAgentPropertiesQuery, ...
@@ -97,9 +97,10 @@ infrastructure/
   persistence/    *JpaEntity, Spring Data repositories, adaptadores, mappers, proyección del catálogo
   messaging/      OutboxEntity, OutboxRelay (@Scheduled), KafkaEventPublisher, LeadEventsConsumer, mappers
   storage/        LocalImageStorage (Adapter)
-  config/         beans, seguridad (resource server JWT con JWKS)
+  config/         SecurityConfig (resource server JWT con JWKS), ProblemJsonSecurityHandler (401/403), ConsulReregistration
+  web/            CorrelationIdFilter (X-Correlation-Id → MDC)
 presentation/
-  rest/           controllers, DTOs (records), GlobalExceptionHandler (@RestControllerAdvice → ProblemDetail)
+  rest/           controllers, DTOs (records), GlobalExceptionHandler (@RestControllerAdvice → ProblemDetail), ReadinessController
 ```
 
 ## Decisiones técnicas
@@ -129,8 +130,10 @@ spring.cloud.consul.discovery.health-check-interval=10s
 spring.cloud.consul.discovery.health-check-critical-timeout=1m
 ```
 
-- Mapear Actuator para exponer `GET /health` y `GET /health/ready`: `management.endpoints.web.base-path=/`, `management.endpoints.web.path-mapping.health=health` y un grupo `ready` que incluya la base.
-- La baja la hace la librería (`deregister=true`). Verificar si vuelve a registrar cuando Consul se reinicia; si no, un `@Scheduled` que llame a `ConsulServiceRegistry.register(registration)` cada 60 s.
+- **Health:** `GET /health` es el grupo `live` de Actuator (solo `ping`, publicado con `additional-path=server:/health`). `GET /health/ready` lo sirve `presentation/rest/ReadinessController` con el grupo `ready` (la base), porque `additional-path` solo admite un segmento.
+- **Variables:** se usan `CONSUL_HOST` y `CONSUL_PORT` (no `CONSUL_HTTP_ADDR`), porque Spring Cloud Consul pide host y puerto por separado. `SERVICE_NAME` y `SERVICE_PORT` sí son las de la rule. En vez de `SERVICE_ADDRESS`, `SPRING_CLOUD_CONSUL_DISCOVERY_IP_ADDRESS`.
+- Si Consul no está, arranca igual (`fail-fast=false`).
+- La baja la hace la librería (`deregister=true`). El re-registro cada 60 s lo hace `infrastructure/config/ConsulReregistration` y se corta con el `ContextClosedEvent`, antes de la baja.
 - Es el servicio de la demo de balanceo: `--scale listing-service=3`.
 
 ## Comandos
