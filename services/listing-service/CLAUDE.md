@@ -76,7 +76,7 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 ## CQRS: catálogo público
 
 - El lado comando es el aggregate `Property`. El lado consulta es la tabla `property_catalog`, una proyección desnormalizada que se actualiza **en la misma transacción** que cada comando (upsert al publicar, editar o reservar; borrado al pausar, vender o alquilar).
-- Endpoints públicos (detalle en el OpenAPI): `GET /api/v1/catalog/properties` con filtros `zone` (sin distinguir mayúsculas), `type`, `operation`, `minPrice`, `maxPrice`, `minBedrooms`, `features` (todas las pedidas), paginación y orden por `price`, `publishedAt`, `areaM2` o `bedrooms`, y `GET /api/v1/catalog/properties/{propertyId}`.
+- Endpoints públicos (detalle en el OpenAPI): `GET /api/v1/catalog/properties` con filtros `zone` (sin distinguir mayúsculas), `type`, `operation`, `minPrice`, `maxPrice`, `bedrooms` (mínimo), `features` (todas las pedidas), paginación y orden por `price`, `publishedAt`, `areaM2` o `bedrooms`, y `GET /api/v1/catalog/properties/{propertyId}`.
 - Los filtros se arman con un **Builder** (`CatalogCriteria`) y se traducen a SQL con **Specification** (`CatalogSqlSpecifications`). La proyección la escribe `JdbcCatalogProjection` (puerto `CatalogProjection`) y la lee `JdbcCatalogReadModel`.
 
 ## Estructura (paquete base `com.inmobiliaria.listing`)

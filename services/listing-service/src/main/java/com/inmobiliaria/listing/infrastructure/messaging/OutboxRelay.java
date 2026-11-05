@@ -69,6 +69,10 @@ public class OutboxRelay {
                     kafka.send(message.topic(), message.aggregateId(), message.envelope());
             try {
                 send.get(SEND_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+                // El apagado interrumpe el hilo: se respeta y el evento queda pendiente para la próxima vez.
+                Thread.currentThread().interrupt();
+                break;
             } catch (Exception e) {
                 log.warn("Kafka no confirmó el evento {}: {}", message.id(), e.getMessage());
                 break;
