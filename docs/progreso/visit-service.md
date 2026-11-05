@@ -27,7 +27,8 @@
 - [x] Solicitar una visita (`Visit` en `REQUESTED`, solo si la propiedad está `PUBLISHED`)
 - [x] El cliente consulta el detalle y estado de una solicitud propia
 - [ ] El agente revisa las consultas y solicitudes recibidas
-- [ ] Programar, rechazar, cancelar y completar visitas (máquina de estados de `Visit`)
+- [x] Programar una visita pendiente con el agente asignado
+- [ ] Rechazar, cancelar y completar visitas
 - [x] Abrir la oportunidad (`Lead`) con la primera solicitud de visita (ADR 0005 sección 3.4)
 - [ ] Abrir la oportunidad con la primera consulta
 - [ ] Registrar el seguimiento del interesado y cerrar la oportunidad como `WON` o `LOST` (`Lead`)

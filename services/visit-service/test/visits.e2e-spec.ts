@@ -1,5 +1,8 @@
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { Ajv2020 } from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
+import { readFileSync } from 'node:fs';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { randomUUID } from 'node:crypto';
 import { once } from 'node:events';
@@ -32,6 +35,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
   let clientToken: string;
   let agentToken: string;
   let otherToken: string;
+  let otherAgentToken: string;
 
   beforeAll(async () => {
     database = await createDataSource(databaseUrl!).initialize();
@@ -69,10 +73,11 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
         .setAudience('inmobiliaria')
         .setExpirationTime('5m')
         .sign(privateKey);
-    [clientToken, agentToken, otherToken] = await Promise.all([
+    [clientToken, agentToken, otherToken, otherAgentToken] = await Promise.all([
       token(clientId, 'CLIENT'),
       token(agentId, 'AGENT'),
       token(randomUUID(), 'CLIENT'),
+      token(randomUUID(), 'AGENT'),
     ]);
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -91,8 +96,8 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
           [propertyId],
         );
         await manager.query(
-          'DELETE FROM idempotency_records WHERE client_id = $1',
-          [clientId],
+          'DELETE FROM idempotency_records WHERE client_id IN ($1,$2)',
+          [clientId, agentId],
         );
         await manager.query('DELETE FROM visits WHERE property_id = $1', [
           propertyId,
@@ -169,6 +174,100 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
       { type: 'LeadOpened', correlationId: 'visit-test' },
       { type: 'VisitRequested', correlationId: 'visit-test' },
     ]);
+  });
+
+  it('programa una sola solicitud en un horario disputado y permite una visita consecutiva', async () => {
+    const ids = [randomUUID(), randomUUID()];
+    for (const id of ids) {
+      await database.query(
+        `INSERT INTO visits (id, property_id, client_id, agent_id, status, proposed_at, requested_at, updated_at)
+          VALUES ($1,$2,$3,$4,'REQUESTED',$5,now(),now())`,
+        [id, propertyId, randomUUID(), agentId, body.proposedAt],
+      );
+    }
+
+    const http = request(app.getHttpServer());
+    const start = new Date(Date.now() + 48 * 3600_000);
+    const scheduledStart = start.toISOString();
+    const scheduledEnd = new Date(start.getTime() + 3600_000).toISOString();
+    const schedule = (
+      id: string,
+      key: string,
+      token = agentToken,
+      date = scheduledStart,
+    ) =>
+      http
+        .post(path + '/' + id + '/schedule')
+        .auth(token, { type: 'bearer' })
+        .set('Idempotency-Key', key)
+        .set('X-Correlation-Id', 'schedule-test')
+        .send({ scheduledStart: date });
+    await schedule(ids[0], randomUUID(), clientToken).expect(403);
+    await schedule(ids[0], randomUUID(), otherAgentToken).expect(404);
+    await schedule(ids[0], randomUUID(), agentToken, '2020-01-01T00:00:00Z')
+      .expect(409)
+      .expect(/VISIT_INVALID_SCHEDULE/);
+
+    const keys = [randomUUID(), randomUUID()];
+    const results = await Promise.all(
+      ids.map((id, index) => schedule(id, keys[index])),
+    );
+    expect(results.map((response) => response.status).sort()).toEqual([
+      200, 409,
+    ]);
+    const winner = results.findIndex((response) => response.status === 200);
+    const loser = 1 - winner;
+    expect(results[loser].body).toMatchObject({
+      code: 'VISIT_SCHEDULE_CONFLICT',
+    });
+    const id = ids[winner];
+    const expected = { id, status: 'SCHEDULED', scheduledStart, scheduledEnd };
+    expect(results[winner].body).toEqual(expected);
+    expect((await schedule(id, keys[winner]).expect(200)).body).toEqual(
+      expected,
+    );
+    await schedule(id, keys[winner], agentToken, scheduledEnd).expect(422);
+    await schedule(id, randomUUID())
+      .expect(409)
+      .expect(/VISIT_NOT_REQUESTED/);
+    await schedule(ids[loser], keys[loser], agentToken, scheduledEnd).expect(
+      200,
+    );
+    const detail = await http
+      .get(path + '/' + id)
+      .auth(agentToken, { type: 'bearer' })
+      .expect(200);
+    expect(detail.body).toMatchObject(expected);
+
+    const events = await database.query<
+      { topic: string; envelope: Record<string, unknown> }[]
+    >(
+      "SELECT topic, envelope FROM outbox WHERE aggregate_id = $1 AND envelope->>'eventType' = 'VisitScheduled'",
+      [id],
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      topic: 'visit.visit.events',
+      envelope: {
+        aggregateId: id,
+        aggregateType: 'Visit',
+        correlationId: 'schedule-test',
+        payload: {
+          visitId: id,
+          propertyId,
+          agentId,
+          scheduledStart,
+          scheduledEnd,
+        },
+      },
+    });
+    const schemaPath = new URL(
+      '../../../contracts/events/visit/visit-scheduled.v1.schema.json',
+      import.meta.url,
+    );
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as object;
+    const validator = addFormats.default(new Ajv2020());
+    expect(validator.validate(schema, events[0].envelope.payload)).toBe(true);
   });
 
   it('valida credenciales, rol, formato, fecha y estado de la propiedad', async () => {

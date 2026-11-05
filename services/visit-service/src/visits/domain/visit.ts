@@ -7,6 +7,17 @@ type VisitRequest = {
   requestedAt: Date;
 };
 
+export type VisitStatus =
+  'REQUESTED' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'REJECTED';
+export type VisitSlot = { start: Date; end: Date };
+
+const visitDurationMs = 60 * 60 * 1000;
+
+export class VisitNotRequestedError extends Error {}
+export class InvalidVisitScheduleError extends Error {}
+
+export type VisitState = VisitRequest & { status: VisitStatus };
+
 export class InvalidProposedVisitDateError extends Error {
   constructor() {
     super('La fecha propuesta para la visita debe estar en el futuro.');
@@ -14,8 +25,6 @@ export class InvalidProposedVisitDateError extends Error {
 }
 
 export class Visit {
-  readonly status = 'REQUESTED';
-
   private constructor(
     readonly id: string,
     readonly propertyId: string,
@@ -23,6 +32,7 @@ export class Visit {
     readonly agentId: string,
     private readonly proposedAtMs: number,
     private readonly requestedAtMs: number,
+    private state: VisitStatus,
   ) {}
 
   static request(input: VisitRequest): Visit {
@@ -40,7 +50,34 @@ export class Visit {
       input.agentId,
       proposedAt,
       requestedAt,
+      'REQUESTED',
     );
+  }
+
+  static restore(input: VisitRequest & { status: VisitStatus }): Visit {
+    return new Visit(
+      input.id,
+      input.propertyId,
+      input.clientId,
+      input.agentId,
+      input.proposedAt.getTime(),
+      input.requestedAt.getTime(),
+      input.status,
+    );
+  }
+
+  get status(): VisitStatus {
+    return this.state;
+  }
+
+  schedule(start: Date, now: Date): VisitSlot {
+    if (this.state !== 'REQUESTED') throw new VisitNotRequestedError();
+    const end = new Date(start.getTime() + visitDurationMs);
+    if (!(start.getTime() > now.getTime()) || end.getUTCFullYear() > 9999) {
+      throw new InvalidVisitScheduleError();
+    }
+    this.state = 'SCHEDULED';
+    return { start: new Date(start.getTime()), end };
   }
 
   get proposedAt(): Date {

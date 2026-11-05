@@ -7,6 +7,9 @@ export type VisitProblemCode =
   | 'VISIT_INVALID_PROPOSED_DATE'
   | 'VISIT_ALREADY_REQUESTED'
   | 'VISIT_NOT_FOUND'
+  | 'VISIT_NOT_REQUESTED'
+  | 'VISIT_INVALID_SCHEDULE'
+  | 'VISIT_SCHEDULE_CONFLICT'
   | 'IDEMPOTENCY_KEY_REUSED';
 
 export class VisitProblem extends Error {

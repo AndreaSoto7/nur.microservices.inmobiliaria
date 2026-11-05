@@ -21,6 +21,15 @@ const problems: Record<VisitProblemCode, [number, string]> = {
     'Ya tienes una solicitud pendiente para esta propiedad',
   ],
   VISIT_NOT_FOUND: [404, 'Visita no encontrada'],
+  VISIT_NOT_REQUESTED: [409, 'La visita debe estar pendiente'],
+  VISIT_INVALID_SCHEDULE: [
+    409,
+    'La fecha de programación debe ser futura y válida',
+  ],
+  VISIT_SCHEDULE_CONFLICT: [
+    409,
+    'El agente ya tiene una visita en ese horario',
+  ],
   IDEMPOTENCY_KEY_REUSED: [
     422,
     'Clave de idempotencia reutilizada con datos distintos',

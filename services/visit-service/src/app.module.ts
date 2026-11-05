@@ -10,6 +10,7 @@ import { OutboxRelay } from './shared/messaging/outbox-relay.js';
 import { ProblemFilter } from './shared/problem.filter.js';
 import { GetVisitByIdHandler } from './visits/application/get-visit-by-id.js';
 import { RequestVisitHandler } from './visits/application/request-visit.js';
+import { ScheduleVisitHandler } from './visits/application/schedule-visit.js';
 import { VISIT_REPOSITORY } from './visits/domain/visit.repository.js';
 import { PostgresVisits } from './visits/infrastructure/postgres-visits.js';
 import { VisitsController } from './visits/presentation/visits.controller.js';
@@ -23,6 +24,7 @@ import { VisitsController } from './visits/presentation/visits.controller.js';
     OutboxRelay,
     PropertyProjection,
     RequestVisitHandler,
+    ScheduleVisitHandler,
     GetVisitByIdHandler,
     { provide: VISIT_REPOSITORY, useClass: PostgresVisits },
     { provide: APP_FILTER, useClass: ProblemFilter },

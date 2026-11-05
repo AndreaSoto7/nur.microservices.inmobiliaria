@@ -25,7 +25,9 @@ Configura `DATABASE_URL` y `JWT_JWKS_URL` en el entorno o en el archivo `.env` d
 - `POST /api/v1/visits` requiere un access token de un cliente y un UUID en `Idempotency-Key`. El cuerpo lleva `propertyId`, `proposedAt` en UTC y, opcionalmente, `clientNote`. La respuesta `201` incluye un ID y la cabecera `Location`.
 - `GET /api/v1/visits/{visitId}` devuelve la solicitud al cliente que la creó o al agente asignado.
 
-Visit guarda `VisitRequested` y `LeadOpened` en `outbox`. Si `KAFKA_BROKERS` está configurado, un publicador dentro de Visit envía los pendientes y actualiza `published_at` al recibir la confirmación de Kafka. Si el proceso se interrumpe entre el envío y el guardado de la confirmación, el mismo `eventId` puede llegar de nuevo. Queda pendiente aplicar las políticas que modifican visitas existentes.
+El agente asignado puede usar `POST /api/v1/visits/{visitId}/schedule` con un UUID en `Idempotency-Key` y `scheduledStart` en UTC. La visita dura 60 minutos y se puede consultar su horario por ID.
+
+Visit guarda `VisitRequested`, `LeadOpened` y `VisitScheduled` en `outbox`. Si `KAFKA_BROKERS` está configurado, un publicador dentro de Visit envía los pendientes y actualiza `published_at` al recibir la confirmación de Kafka. Si el proceso se interrumpe entre el envío y el guardado de la confirmación, el mismo `eventId` puede llegar de nuevo. Queda pendiente aplicar las políticas que modifican visitas existentes.
 
 ## Recibir propiedades de Listing
 

@@ -12,9 +12,7 @@ import type {
   VisitRepository,
   VisitTransaction,
 } from '../domain/visit.repository.js';
-import type { Visit } from '../domain/visit.js';
-
-const operation = 'request-visit';
+import { Visit, type VisitSlot, type VisitState } from '../domain/visit.js';
 
 @Injectable()
 export class PostgresVisits implements VisitRepository {
@@ -40,6 +38,12 @@ export class PostgresVisits implements VisitRepository {
         ) {
           throw new VisitProblem('VISIT_ALREADY_REQUESTED');
         }
+        if (
+          cause.code === '23P01' &&
+          cause.constraint === 'visits_agent_no_overlap'
+        ) {
+          throw new VisitProblem('VISIT_SCHEDULE_CONFLICT');
+        }
       }
       throw error;
     }
@@ -50,9 +54,15 @@ export class PostgresVisits implements VisitRepository {
     principal: VisitPrincipal,
   ): Promise<VisitDetails | undefined> {
     const database = await this.database.connect();
-    const [visit] = await database.query<VisitDetails[]>(
+    const [visit] = await database.query<
+      (VisitDetails & {
+        scheduledStart: Date | null;
+        scheduledEnd: Date | null;
+      })[]
+    >(
       `SELECT id, property_id AS "propertyId", status,
-              proposed_at AS "proposedAt", requested_at AS "requestedAt"
+              proposed_at AS "proposedAt", requested_at AS "requestedAt",
+              scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd"
          FROM visits WHERE id = $1
            AND (($3 AND client_id = $2) OR ($4 AND agent_id = $2))`,
       [
@@ -62,7 +72,11 @@ export class PostgresVisits implements VisitRepository {
         principal.roles.includes('AGENT'),
       ],
     );
-    return visit;
+    if (!visit) return;
+    const { scheduledStart, scheduledEnd, ...details } = visit;
+    return scheduledStart && scheduledEnd
+      ? { ...details, scheduledStart, scheduledEnd }
+      : details;
   }
 }
 
@@ -73,18 +87,16 @@ class PostgresVisitTransaction implements VisitTransaction {
     // Serialize replays before checking the record, including when it does not exist yet.
     await this.manager.query(
       'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
-      [`${key.clientId}:${operation}:${key.key}`],
+      [`${key.actorId}:${key.operation}:${key.key}`],
     );
   }
 
-  async findRequest(key: RequestKey) {
-    const [record] = await this.manager.query<
-      { hash: string; response: VisitCreation }[]
-    >(
+  async findRequest<T extends VisitCreation>(key: RequestKey) {
+    const [record] = await this.manager.query<{ hash: string; response: T }[]>(
       `SELECT request_hash AS hash, response_body AS response FROM idempotency_records
         WHERE client_id = $1 AND operation = $2 AND idempotency_key = $3
           AND expires_at > clock_timestamp()`,
-      [key.clientId, operation, key.key],
+      [key.actorId, key.operation, key.key],
     );
     return record;
   }
@@ -137,7 +149,7 @@ class PostgresVisitTransaction implements VisitTransaction {
 
   async enqueue(event: VisitEvent): Promise<string> {
     const eventId = randomUUID();
-    const isVisit = event.type === 'VisitRequested';
+    const isVisit = event.type !== 'LeadOpened';
     const envelope = {
       eventId,
       eventType: event.type,
@@ -162,27 +174,57 @@ class PostgresVisitTransaction implements VisitTransaction {
     return eventId;
   }
 
+  async lockAgentSchedule(agentId: string): Promise<void> {
+    await this.manager.query(
+      'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
+      ['visit-agent-schedule:' + agentId],
+    );
+  }
+
+  async findAssignedVisit(
+    id: string,
+    agentId: string,
+  ): Promise<Visit | undefined> {
+    const [row] = await this.manager.query<VisitState[]>(
+      `SELECT id, property_id AS "propertyId", client_id AS "clientId", agent_id AS "agentId",
+              status, proposed_at AS "proposedAt", requested_at AS "requestedAt"
+         FROM visits WHERE id = $1 AND agent_id = $2 FOR UPDATE`,
+      [id, agentId],
+    );
+    return row ? Visit.restore(row) : undefined;
+  }
+
+  async saveSchedule(id: string, slot: VisitSlot, now: Date): Promise<void> {
+    await this.manager.query(
+      `UPDATE visits SET status = 'SCHEDULED', scheduled_start = $2, scheduled_end = $3,
+          updated_at = $4, version = version + 1 WHERE id = $1`,
+      [id, slot.start, slot.end, now],
+    );
+  }
+
   async saveRequest(
     key: RequestKey,
     hash: string,
     response: VisitCreation,
+    status: 200 | 201,
   ): Promise<void> {
     await this.manager.query(
       `INSERT INTO idempotency_records
          (client_id, operation, idempotency_key, request_hash, response_status, response_body,
           response_headers, expires_at)
-       VALUES ($1,$2,$3,$4,201,$5,$6,clock_timestamp() + interval '24 hours')
+       VALUES ($1,$2,$3,$4,$5,$6,$7,clock_timestamp() + interval '24 hours')
        ON CONFLICT (client_id, operation, idempotency_key) DO UPDATE
        SET request_hash = EXCLUDED.request_hash, response_status = EXCLUDED.response_status,
            response_body = EXCLUDED.response_body, response_headers = EXCLUDED.response_headers,
            expires_at = EXCLUDED.expires_at`,
       [
-        key.clientId,
-        operation,
+        key.actorId,
+        key.operation,
         key.key,
         hash,
+        status,
         response,
-        { Location: '/api/v1/visits/' + response.id },
+        status === 201 ? { Location: '/api/v1/visits/' + response.id } : {},
       ],
     );
   }

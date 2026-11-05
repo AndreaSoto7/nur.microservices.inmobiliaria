@@ -37,11 +37,15 @@ export class RequestVisitHandler implements ICommandHandler<RequestVisitCommand>
     const hash = createHash('sha256')
       .update(JSON.stringify({ propertyId, proposedAt, clientNote }))
       .digest('hex');
-    const key = { clientId: command.clientId, key: command.idempotencyKey };
+    const key = {
+      actorId: command.clientId,
+      key: command.idempotencyKey,
+      operation: 'request-visit',
+    } as const;
 
     return this.visits.transaction(async (transaction) => {
       await transaction.lockRequest(key);
-      const previous = await transaction.findRequest(key);
+      const previous = await transaction.findRequest<VisitCreation>(key);
       if (previous) {
         if (previous.hash !== hash)
           throw new VisitProblem('IDEMPOTENCY_KEY_REUSED');
@@ -96,7 +100,7 @@ export class RequestVisitHandler implements ICommandHandler<RequestVisitCommand>
         });
       }
       const response = { id };
-      await transaction.saveRequest(key, hash, response);
+      await transaction.saveRequest(key, hash, response, 201);
       return response;
     });
   }
