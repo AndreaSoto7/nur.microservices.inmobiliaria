@@ -16,7 +16,7 @@
 | feat | Discovery: consulta periódica de réplicas sanas en Consul, con snapshot en memoria que sobrevive a fallas de Consul | #54 |
 | feat | Balanceador: round robin (Strategy) y Circuit Breaker por réplica | #55 |
 | feat | Tabla de rutas por prefijo, públicas y protegidas, y validación de paths (400 y 404) | #57 |
-| feat | Paquete `auth`: validación del access token con el JWKS de identity (RS256, `iss`, `aud`, `exp` y `typ=at+jwt`), con caché y recarga limitada | este PR |
+| feat | Paquete `auth`: validación del access token con el JWKS de identity (RS256, `iss`, `aud`, `exp` y `typ=at+jwt`), con caché y recarga limitada | #58 |
 
 ## Pendientes
 
