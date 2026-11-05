@@ -42,7 +42,7 @@ func TestHealthRespondsUp(t *testing.T) {
 func TestUnknownPathRespondsNotFoundProblem(t *testing.T) {
 	rec := httptest.NewRecorder()
 
-	newTestHandler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil))
+	newTestHandler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/otra-cosa", nil))
 
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d", rec.Code)
@@ -80,6 +80,37 @@ func TestLoginIsRateLimitedThroughTheChain(t *testing.T) {
 	}
 	if id, _ := body["correlationId"].(string); id == "" {
 		t.Error("el 429 no lleva correlationId: el rate limit quedó antes del correlation-id")
+	}
+}
+
+// Si una variante del path llegara al servicio sin contar, el rate limit no serviría.
+func TestLoginPathVariantsCannotEvadeRateLimit(t *testing.T) {
+	tests := []struct {
+		name, target string
+		status       int
+	}{
+		{"barra final", "/api/v1/auth/login/", http.StatusBadRequest},
+		{"doble barra", "/api/v1/auth//login", http.StatusBadRequest},
+		{"punto", "/api/v1/auth/./login", http.StatusBadRequest},
+		{"barra final codificada", "/api/v1/auth/login%2F", http.StatusBadRequest},
+		{"punto y coma", "/api/v1/auth/login;x", http.StatusBadRequest},
+		{"letra codificada cuenta como login", "/api/v1/auth/%6cogin", http.StatusTooManyRequests},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := newTestHandler()
+			for range 2 {
+				handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", nil))
+			}
+			rec := httptest.NewRecorder()
+
+			handler.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, tt.target, nil))
+
+			if rec.Code != tt.status {
+				t.Errorf("status = %d, want %d", rec.Code, tt.status)
+			}
+		})
 	}
 }
 

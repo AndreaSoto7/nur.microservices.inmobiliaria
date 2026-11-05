@@ -75,11 +75,12 @@ Cada middleware es `func(http.Handler) http.Handler` y puede cortar la cadena. E
 3. **Logging:** método, ruta, status, duración, correlationId y réplica. Nunca `Authorization` ni el body.
 4. **CORS:** orígenes por variable de entorno, comparación exacta y `Vary: Origin`. Responde el preflight `OPTIONS` antes de la auth. Nunca `*`.
 5. **Borrado de `X-User-*`** que lleguen del cliente.
-6. **Rate limit:** token bucket por IP y ruta en login y registro (`golang.org/x/time/rate`).
+6. **Ruteo:** valida el path (400) y resuelve la ruta (404). Va antes del rate limit y de la auth, para que todos decidan con el mismo path. También rechaza `;`, `\`, `%` restante (doble codificación) y caracteres de control.
+7. **Rate limit:** token bucket por IP y ruta en login y registro (`golang.org/x/time/rate`).
    - IP desde `r.RemoteAddr` con `net.SplitHostPort` (sin puerto), nunca de un `X-Forwarded-For` del cliente.
    - Las entradas viejas expiran. Comprobar una vez qué IP ve el gateway en Docker. No loguear la IP de forma permanente.
-7. **Auth** en rutas protegidas: `jwt.WithValidMethods(["RS256"])`, `WithExpirationRequired()`, `WithIssuer`, `WithAudience`; exige `typ=at+jwt` (un refresh token con `typ=rt+jwt` nunca pasa). Si es válido, **reenvía `Authorization` intacto**.
-8. **Proxy.**
+8. **Auth** en rutas protegidas: `jwt.WithValidMethods(["RS256"])`, `WithExpirationRequired()`, `WithIssuer`, `WithAudience`; exige `typ=at+jwt` (un refresh token con `typ=rt+jwt` nunca pasa). Si es válido, **reenvía `Authorization` intacto**.
+9. **Proxy.**
 
 ## Proxy (patrón Proxy)
 
