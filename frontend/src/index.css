@@ -74,6 +74,10 @@ a {
   margin: 0 auto;
 }
 
+.page--wide {
+  max-width: 1120px;
+}
+
 .page--narrow {
   max-width: 420px;
 }
@@ -181,4 +185,266 @@ a {
 
 .profile-card dd {
   margin: 0;
+}
+
+.stack {
+  display: grid;
+  gap: 0.75rem;
+}
+
+select,
+.field input[type='search'],
+.field input[type='number'] {
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.filters {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.filters__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.filters__features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.filters__features legend {
+  width: 100%;
+  margin-bottom: 0.25rem;
+}
+
+.filters__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.chip {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.chip--static {
+  cursor: default;
+}
+
+.results-count {
+  color: var(--color-muted);
+}
+
+.property-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.25rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.property-card {
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
+.property-card__link {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.property-card__link:hover .property-card__title,
+.property-card__link:focus-visible .property-card__title {
+  text-decoration: underline;
+}
+
+.property-card__media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--color-bg);
+}
+
+.property-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.property-card__placeholder,
+.gallery__placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 160px;
+  color: var(--color-muted);
+}
+
+.property-card__body {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.9rem 1rem 1.1rem;
+}
+
+.property-card__body p,
+.property-card__title {
+  margin: 0;
+}
+
+.property-card__price,
+.detail__price {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.property-card__title {
+  font-size: 1.05rem;
+}
+
+.property-card__meta,
+.property-card__specs {
+  color: var(--color-muted);
+}
+
+.badge {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  background: #9a6700;
+  border-radius: 999px;
+}
+
+.badge--inline {
+  position: static;
+  display: inline-block;
+}
+
+.pagination {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  display: grid;
+  gap: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+.detail__header h1 {
+  margin-bottom: 0.25rem;
+}
+
+.detail__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .detail__layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.detail__description {
+  max-width: 70ch;
+  white-space: pre-line;
+}
+
+.gallery {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.gallery__main {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.gallery__thumbs {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gallery__thumb {
+  width: 72px;
+  height: 54px;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.gallery__thumb[aria-pressed='true'] {
+  border-color: var(--color-primary);
+}
+
+.gallery__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.specs {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0;
+}
+
+.specs dt {
+  color: var(--color-muted);
+}
+
+.specs dd {
+  margin: 0;
+}
+
+.feature-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
