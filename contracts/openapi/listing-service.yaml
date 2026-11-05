@@ -1,0 +1,109 @@
+openapi: 3.1.0
+info:
+  title: listing-service
+  version: 0.1.0
+  description: |
+    Propiedades, galería, favoritos y catálogo público de la Plataforma Inmobiliaria.
+
+    - Los clientes llaman siempre a través del gateway (`http://localhost:8080`).
+    - Rutas del gateway hacia este servicio: `/api/v1/properties/**`, `/api/v1/favorites/**` y `/api/v1/catalog/**` (público).
+    - **Autenticación:** `Authorization: Bearer <access token>` emitido por identity-service. Se valida con su JWKS:
+      `alg=RS256`, `iss=identity-service`, `aud=inmobiliaria`, `exp` y `typ=at+jwt`. Los roles salen del claim `roles`.
+      Son públicos el catálogo (`GET /api/v1/catalog/**`) y las imágenes (`GET /api/v1/properties/{propertyId}/images/{imageId}`).
+    - Los errores siguen RFC 9457 (`application/problem+json`) con `code` estable y `correlationId`.
+      Genéricos: 400 `BAD_REQUEST` / `VALIDATION_ERROR`, 401 `AUTH_UNAUTHORIZED`, 403 `PERMISSION_DENIED`, 404 `NOT_FOUND`,
+      405 `METHOD_NOT_ALLOWED`, 409 `PROPERTY_*` (reglas de negocio y transiciones inválidas) y 500 `INTERNAL_ERROR`.
+    - Esta versión solo documenta los health checks del esqueleto. Los endpoints de negocio se agregan aquí antes de implementarlos (contract-first).
+servers:
+  - url: http://localhost:8080
+    description: API Gateway (desarrollo)
+tags:
+  - name: health
+    description: Liveness y readiness (no se exponen por el gateway)
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Liveness
+      description: Lo usa Consul cada 10 s. No revisa la base ni Kafka.
+      security: []
+      servers:
+        - url: http://listing-service:8002
+          description: Red interna de Docker (no pasa por el gateway)
+      responses:
+        '200':
+          description: El proceso está vivo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: UP
+
+  /health/ready:
+    get:
+      tags: [health]
+      operationId: getReadiness
+      summary: Readiness
+      description: Revisa la conexión a la base de datos. Lo usa el HEALTHCHECK de Docker.
+      security: []
+      servers:
+        - url: http://listing-service:8002
+          description: Red interna de Docker (no pasa por el gateway)
+      responses:
+        '200':
+          description: Listo para atender.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: UP
+        '503':
+          description: La base no responde.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example:
+                status: DOWN
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN]
+    Problem:
+      type: object
+      description: RFC 9457. `errors` solo aparece en los errores de validación.
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, format: uri, example: 'https://inmobiliaria.local/problems/property-invalid-transition' }
+        title: { type: string, example: Regla de negocio incumplida }
+        status: { type: integer, example: 409 }
+        detail: { type: string, example: No se puede pausar una propiedad en estado DRAFT }
+        instance: { type: string, example: /api/v1/properties/3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01/pause }
+        code: { type: string, example: PROPERTY_INVALID_TRANSITION }
+        correlationId: { type: string, example: 0b8f1c7e-5d2a-4f3b-9c6d-7e8f9a0b1c2d }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: string, example: title }
+              message: { type: string, example: no debe estar vacío }
+
+security:
+  - bearerAuth: []
