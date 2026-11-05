@@ -69,6 +69,7 @@ func newHandler(logger *slog.Logger, cfg config.Config) http.Handler {
 		middleware.Recover(logger),
 		middleware.CorrelationID,
 		middleware.Logging(logger),
+		middleware.CORS(cfg.CORSOrigins),
 		middleware.StripIdentityHeaders,
 		middleware.NewRateLimiter(cfg.RateLimitAuthPerMinute, time.Now).Middleware,
 	)

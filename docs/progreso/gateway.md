@@ -12,6 +12,7 @@
 | chore | Scaffold: config validada, errores problem+json, `GET /health`, apagado limpio, Dockerfile y lint. Go 1.27 y Alpine 3.22, a registrar en el ADR de versiones | #35 |
 | feat | Cadena de middlewares: recover, correlation-id, logs JSON y borrado de `X-User-*` | #51 |
 | feat | Rate limit de login y registro: token bucket por IP y ruta, 429 con `Retry-After` y expiración de entradas | #52 |
+| feat | CORS: orígenes por variable de entorno con comparación exacta, preflight antes de la auth y `Vary: Origin` | #53 |
 
 ## Pendientes
 
@@ -25,7 +26,7 @@
 - [ ] Discovery: consulta periódica de las réplicas sanas en Consul
 - [ ] Balanceador round robin (Strategy) con marcado de réplicas caídas (Circuit Breaker)
 - [ ] Validar el JWT con el JWKS de identity (`typ=at+jwt`, `aud=inmobiliaria`) y borrar los `X-User-*`
-- [ ] CORS para el frontend (`http://localhost:5173`)
+- [x] CORS para el frontend (`http://localhost:5173`)
 - [x] Rate limit de login y registro (**requisito antes de exponer identity**)
 - [ ] Comprobar en Docker qué IP ve el gateway: si todos llegan con la misma, el límite pasa a ser global
 - [ ] Evaluar un tope de entradas en el rate limit (hoy expiran a los 60 s y cada una exige una IP o un /64 distinto)
