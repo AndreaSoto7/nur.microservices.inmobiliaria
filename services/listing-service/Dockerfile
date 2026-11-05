@@ -9,10 +9,12 @@ RUN ./mvnw -B -q package -DskipTests && cp target/listing-service-*.jar app.jar
 
 # Etapa 2: imagen final, solo con el JRE y el jar. Corre sin root.
 FROM eclipse-temurin:21-jre
-RUN useradd --create-home --uid 10001 app
+RUN useradd --create-home --uid 10001 app \
+    && mkdir -p /data/images && chown app:app /data/images
 WORKDIR /app
 COPY --from=builder /build/app.jar app.jar
 USER app
+ENV IMAGE_STORAGE_DIR=/data/images
 EXPOSE 8002
 
 # Sin curl en la imagen: bash abre el socket y revisa la línea de estado.

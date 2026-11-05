@@ -30,6 +30,8 @@ import java.util.UUID;
 public class Property {
 
     public static final int MAX_IMAGES = 5;
+    /** Tope de dormitorios y de baños (la columna es smallint). */
+    public static final int MAX_ROOMS = 100;
     private static final int MAX_TITLE = 150;
     private static final int MAX_DESCRIPTION = 5000;
 
@@ -50,7 +52,15 @@ public class Property {
     private PropertyStatus status;
     private Instant publishedAt;
     private Instant updatedAt;
+    /** Versión para el bloqueo optimista. La asigna la persistencia; null en una propiedad nueva. */
+    private Long version;
     private final List<PropertyEvent> pendingEvents = new ArrayList<>();
+
+    /** Estado guardado de una propiedad, para reconstruirla desde la base. */
+    public record State(PropertyId id, UUID agentId, PropertyType type, OperationType operation, String title,
+            String description, Money price, Location location, Integer bedrooms, Integer bathrooms, Area area,
+            Set<Feature> features, List<PropertyImage> images, PropertyStatus status, Instant publishedAt,
+            Instant createdAt, Instant updatedAt, Long version) {}
 
     private Property(PropertyId id, UUID agentId, PropertyType type, OperationType operation, Instant createdAt) {
         this.id = Objects.requireNonNull(id, "id");
@@ -74,6 +84,29 @@ public class Property {
         return property;
     }
 
+    /**
+     * Reconstruye una propiedad guardada. No valida transiciones ni registra eventos: ese estado ya
+     * pasó por las reglas cuando se guardó. Solo la usa el adaptador de persistencia.
+     */
+    public static Property reconstitute(State state) {
+        Property property = new Property(state.id(), state.agentId(), state.type(), state.operation(),
+                state.createdAt());
+        property.title = state.title();
+        property.description = state.description();
+        property.price = Objects.requireNonNull(state.price(), "price");
+        property.location = Objects.requireNonNull(state.location(), "location");
+        property.bedrooms = state.bedrooms();
+        property.bathrooms = state.bathrooms();
+        property.area = state.area();
+        property.features.addAll(state.features());
+        property.images.addAll(state.images());
+        property.status = Objects.requireNonNull(state.status(), "status");
+        property.publishedAt = state.publishedAt();
+        property.updatedAt = Objects.requireNonNull(state.updatedAt(), "updatedAt");
+        property.version = state.version();
+        return property;
+    }
+
     // ─── Edición ─────────────────────────────────────────────────────────────
 
     public void edit(String title, String description, Money price, Location location, Instant now) {
@@ -87,8 +120,9 @@ public class Property {
 
     public void updateFeatures(int bedrooms, int bathrooms, Area area, Set<Feature> features, Instant now) {
         requireNotClosed("cambiar las características de");
-        if (bedrooms < 0 || bathrooms < 0) {
-            throw new InvalidValueException("PROPERTY_INVALID_FEATURES", "Dormitorios y baños no pueden ser negativos");
+        if (bedrooms < 0 || bathrooms < 0 || bedrooms > MAX_ROOMS || bathrooms > MAX_ROOMS) {
+            throw new InvalidValueException("PROPERTY_INVALID_FEATURES",
+                    "Dormitorios y baños van de 0 a " + MAX_ROOMS);
         }
         this.bedrooms = bedrooms;
         this.bathrooms = bathrooms;
@@ -104,8 +138,9 @@ public class Property {
             throw new DomainException("PROPERTY_IMAGE_LIMIT", "Una propiedad tiene como máximo " + MAX_IMAGES + " imágenes");
         }
         images.add(Objects.requireNonNull(image, "image"));
-        updatedAt = now;
         pendingEvents.add(new PropertyEvent.PropertyImagesAdded(id, now));
+        // La galería viaja en los eventos: si la propiedad está visible, visit y el catálogo se enteran.
+        touched(now);
     }
 
     // ─── Máquina de estados ──────────────────────────────────────────────────
@@ -135,6 +170,9 @@ public class Property {
 
     /** La invoca el agente o la política LeadClosed (actor SYSTEM): las reglas de estado son las mismas. */
     public void reserve(Actor actor, Instant now) {
+        if (Objects.requireNonNull(actor, "actor") == Actor.CLIENT) {
+            throw new DomainException("PROPERTY_INVALID_ACTOR", "Solo el agente o el sistema pueden reservar una propiedad");
+        }
         requireStatus("reservar", PUBLISHED);
         moveTo(RESERVED, now);
         pendingEvents.add(new PropertyEvent.PropertyReserved(id, Objects.requireNonNull(actor, "actor"), now));
@@ -190,6 +228,7 @@ public class Property {
     public Optional<Instant> publishedAt() { return Optional.ofNullable(publishedAt); }
     public Instant createdAt() { return createdAt; }
     public Instant updatedAt() { return updatedAt; }
+    public Long version() { return version; }
 
     // ─── Reglas internas ─────────────────────────────────────────────────────
 
