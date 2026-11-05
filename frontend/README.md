@@ -15,6 +15,14 @@ npm run dev                  # http://localhost:5173
 
 El frontend habla **solo con el gateway** (`http://localhost:8080`), nunca con un microservicio directo.
 
+### En Docker (como en la demo)
+
+```bash
+docker compose -f infra/docker-compose.yml up -d --build frontend   # http://localhost:5173
+```
+
+nginx sirve el build con CSP y cabeceras de seguridad. La URL del gateway se fija al compilar (`VITE_API_BASE_URL`) y la CSP la toma de `API_ORIGIN`: si cambias una, cambia la otra.
+
 ## Comandos
 
 | Comando          | Qué hace                                                       |

@@ -1,0 +1,9 @@
+# Cabeceras de seguridad (rule seguridad; pendiente de la revisión de #42).
+# CSP: solo scripts y estilos propios (el build de Vite no tiene nada inline); la API y las imágenes
+# de las propiedades vienen del gateway (API_ORIGIN). Mitiga un XSS que intente robar el refresh token.
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: ${API_ORIGIN}; connect-src 'self' ${API_ORIGIN}; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-Frame-Options "DENY" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+add_header Cross-Origin-Opener-Policy "same-origin" always;

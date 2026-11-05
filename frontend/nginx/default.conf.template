@@ -1,0 +1,33 @@
+# SPA servida por nginx. Las cabeceras de seguridad viven en security-headers.inc y se incluyen en
+# cada location: en nginx, un add_header dentro de un location anula los heredados del server.
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok";
+    }
+
+    # Archivos con hash en el nombre (los genera Vite): no cambian nunca, se cachean un año.
+    location /assets/ {
+        include /etc/nginx/conf.d/security-headers.inc;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # Rutas del router (/login, /cuenta, ...): todas sirven index.html, que nunca se cachea para que
+    # un deploy nuevo se vea al recargar.
+    location / {
+        include /etc/nginx/conf.d/security-headers.inc;
+        add_header Cache-Control "no-cache" always;
+        try_files $uri /index.html;
+    }
+}

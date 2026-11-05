@@ -71,12 +71,20 @@ frontend/src/
 
 ## Sesión y tokens
 
-- **Access token** (15 min), solo en memoria. **Refresh token**, en `localStorage` (`core/auth/tokenStore.ts`). Tiene que ser compartido entre pestañas: identity no da período de gracia, y con copias por pestaña la segunda reutilizaría un token ya canjeado y se revocaría la sesión. identity lo entrega en el body, sin cookie httpOnly, así que un XSS podría leerlo: por eso la CSP del servidor que sirva el build está pendiente.
+- **Access token** (15 min), solo en memoria. **Refresh token**, en `localStorage` (`core/auth/tokenStore.ts`). Tiene que ser compartido entre pestañas: identity no da período de gracia, y con copias por pestaña la segunda reutilizaría un token ya canjeado y se revocaría la sesión. identity lo entrega en el body, sin cookie httpOnly, así que un XSS podría leerlo: lo mitiga la CSP de `nginx/security-headers.inc.template` (sin scripts inline ni de terceros, y `connect-src` solo hacia el gateway).
 - Una llamada con `auth: true` que responde 401 renueva la sesión **una vez** y se repite (`core/auth/session.ts`). El canje se serializa como pide el contrato: *single-flight* en la pestaña y un Web Lock entre pestañas, que relee el token adentro.
 - **Solo un 401 del refresh cierra la sesión.** Con 5xx, 429 o sin red se conserva para reintentar. Si se cierra la sesión mientras hay un canje en curso, el par nuevo se revoca y no revive la sesión.
 - Cerrar sesión en una pestaña la cierra en las demás (evento `storage`) y borra la caché de React Query.
 - Al cargar la página, `AuthProvider` intenta recuperar la sesión con el refresh token. Si identity lo rechaza, el usuario queda anónimo.
 - `RequireAuth` es comodidad de UI: la autorización real la hace cada servicio con el JWT.
+
+## Docker (nginx)
+
+- `Dockerfile` multi-stage: Node compila con `VITE_API_BASE_URL` (build arg) y `nginxinc/nginx-unprivileged` sirve `dist/` sin root, en el puerto 8080 del contenedor (5173 en el host).
+- `nginx/default.conf.template`: las rutas del router devuelven `index.html` (`no-cache`); `/assets/` con hash se cachea un año; `/healthz` para el `HEALTHCHECK`.
+- `nginx/security-headers.inc.template`: CSP, `nosniff`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`. Se incluye en cada `location` porque un `add_header` local anula los heredados.
+- `API_ORIGIN` (variable del contenedor, la reemplaza envsubst al arrancar) tiene que ser el mismo origen que `VITE_API_BASE_URL`: si no, la CSP bloquea las llamadas al gateway.
+- Si se agrega un estilo inline, una fuente externa o un script de terceros, hay que ajustar la CSP en el mismo PR.
 
 ## Reglas
 
