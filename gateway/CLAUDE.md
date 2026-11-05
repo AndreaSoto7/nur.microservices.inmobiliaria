@@ -7,7 +7,7 @@ Instrucciones para trabajar en el gateway. Complementa al `CLAUDE.md` raíz, que
 | | |
 |---|---|
 | Responsable | @Tiesol |
-| Stack | Go 1.27, librería estándar, `google/uuid` (correlation-id) y `golang.org/x/time/rate` (rate limit). El plan suma `golang-jwt` (auth) |
+| Stack | Go 1.27, librería estándar, `google/uuid` (correlation-id), `golang.org/x/time/rate` (rate limit), `golang-jwt/jwt/v5` y `golang.org/x/sync/singleflight` (auth) |
 | Puerto | 8080 (el único publicado en el host junto con el frontend) |
 | Base / Kafka | Ninguno |
 | Decisión | [ADR 0002](../docs/adr/0002-gateway-go-balanceador-consul.md) |
@@ -100,7 +100,7 @@ Cada middleware es `func(http.Handler) http.Handler` y puede cortar la cadena. E
 - **Strategy:** una interfaz "elegir la próxima réplica" con la implementación `RoundRobin` (contador por servicio con `sync/atomic`).
 - **Circuit Breaker por réplica:** una réplica que falla queda fuera `REPLICA_DOWN_DURATION` y luego se vuelve a probar. Es un respaldo de los health checks de Consul. Sin réplicas → 503.
 - **Discovery:** cada `DISCOVERY_REFRESH_INTERVAL`, `GET {CONSUL_HTTP_ADDR}/v1/health/service/<nombre>?passing=true` por cada servicio de la tabla (sin SDK). Snapshot en memoria con `sync.RWMutex` o `atomic.Pointer`. Si Consul no responde, se conserva el último y se loguea un warning.
-- **JWKS** de identity también por discovery, cacheado. Ante un `kid` desconocido se recarga **como máximo una vez cada 30 s y con una sola recarga en curso** (`singleflight`); si sigue sin aparecer, 401.
+- **JWKS** de identity también por discovery, cacheado. Ante un `kid` desconocido se recarga **como máximo una vez cada 30 s y con una sola recarga en curso** (`singleflight`); si sigue sin aparecer, 401. Si no se pudo descargar el JWKS no se sabe si el token es válido, así que responde 503; mientras no haya ninguna clave, el freno baja a 5 s, porque el gateway suele arrancar antes que identity.
 
 ## Errores propios
 
@@ -114,7 +114,7 @@ Todos en `application/problem+json`, con `code` estable y `correlationId` (`inte
 | 413 | `GATEWAY_PAYLOAD_TOO_LARGE` | El body supera el límite |
 | 429 | `GATEWAY_RATE_LIMITED` | Rate limit |
 | 502 | `GATEWAY_UPSTREAM_ERROR` | Error de conexión con la réplica |
-| 503 | `GATEWAY_NO_HEALTHY_INSTANCE` | No hay réplicas disponibles |
+| 503 | `GATEWAY_NO_HEALTHY_INSTANCE` | No hay réplicas disponibles, o no se pudo descargar el JWKS |
 | 504 | `GATEWAY_UPSTREAM_TIMEOUT` | La réplica no respondió a tiempo |
 
 ## Configuración

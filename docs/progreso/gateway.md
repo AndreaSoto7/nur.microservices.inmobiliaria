@@ -16,6 +16,7 @@
 | feat | Discovery: consulta periódica de réplicas sanas en Consul, con snapshot en memoria que sobrevive a fallas de Consul | #54 |
 | feat | Balanceador: round robin (Strategy) y Circuit Breaker por réplica | #55 |
 | feat | Tabla de rutas por prefijo, públicas y protegidas, y validación de paths (400 y 404) | #57 |
+| feat | Paquete `auth`: validación del access token con el JWKS de identity (RS256, `iss`, `aud`, `exp` y `typ=at+jwt`), con caché y recarga limitada | #58 |
 
 ## Pendientes
 
@@ -34,4 +35,5 @@
 - [ ] Comprobar en Docker qué IP ve el gateway: si todos llegan con la misma, el límite pasa a ser global
 - [ ] Evaluar un tope de entradas en el rate limit (hoy expiran a los 60 s y cada una exige una IP o un /64 distinto)
 - [ ] Correlation-id, logs JSON, timeouts y errores problem+json propios
+- [ ] Refrescar el JWKS cada cierto tiempo: hoy una clave retirada sigue valiendo en el gateway hasta que llegue un `kid` desconocido (los servicios sí la rechazan)
 - [ ] Demo: `listing-service` escalado a 3 réplicas
