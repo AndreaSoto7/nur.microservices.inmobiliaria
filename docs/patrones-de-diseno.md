@@ -26,6 +26,7 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Event-driven policy | Integración | listing | `application/policy/ReserveOnLeadWonPolicy.java`, `infrastructure/messaging/LeadEventsConsumer.java` | Cuando visit cierra una oportunidad como ganada, la propiedad debe reservarse sin que visit llame a listing por HTTP (ADR 0005) | Una llamada HTTP acoplaría la disponibilidad de los dos servicios; si la regla no se cumple se registra un `WARN` y no va a la DLQ, porque no es un error técnico |
 | Anti-corruption layer | DDD | listing | `infrastructure/messaging/LeadEventTranslator.java`, `application/policy/LeadClosedNotification.java` | El modelo de visit (`Lead`, su envelope) no debe filtrarse al dominio de listing | Leer el JSON de visit dentro de la política acoplaría listing al formato de otro servicio y a sus cambios de versión |
 | Mapper (traductor de eventos) | Integración | listing | `infrastructure/messaging/PropertyIntegrationEventMapper.java` | Los eventos de dominio son internos; los de integración son contratos públicos (`contracts/events/listing/`) | Serializar los eventos de dominio tal cual rompería a visit con cualquier refactor del aggregate |
+| Chain of Responsibility | Comportamiento | gateway | `gateway/internal/middleware/middleware.go` (`Chain`), `gateway/cmd/gateway/main.go` | Cada request debe pasar por varios controles (recover, correlation-id, logs, identidad…) y cualquiera puede cortarla, sin que el proxy los conozca | Una función gigante con todos los controles acopla todo y no se puede probar eslabón por eslabón. Es también un Decorator de `http.Handler`; lo que la hace cadena es que un eslabón puede cortar |
 
 ## Planificados (candidatos, mover a "Aplicados" al implementarlos)
 
@@ -35,7 +36,6 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Service Registry + Self-Registration | Microservicios | todos + gateway | Cada servicio se registra solo en Consul; el gateway descubre las réplicas sanas |
 | Circuit Breaker | Resiliencia | gateway | Marcar como caída una réplica que falla, como respaldo de los health checks de Consul |
 | Proxy | Estructural | gateway | Reverse proxy entre el cliente y las réplicas: controla el acceso y oculta su ubicación |
-| Chain of Responsibility | Comportamiento | gateway | Cadena de middlewares (correlation-id, CORS, rate limit, auth); cualquier eslabón puede cortar |
 | Strategy | Comportamiento | gateway | Algoritmo de balanceo intercambiable (round robin) |
 | Mediator | Comportamiento | visit, listing | `CommandBus` / `QueryBus` desacoplan los controladores de los handlers |
 | Database per Service | Microservicios | todos | Persistencia independiente |

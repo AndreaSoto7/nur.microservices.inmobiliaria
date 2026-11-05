@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -13,7 +14,7 @@ import (
 func TestHealthRespondsUp(t *testing.T) {
 	rec := httptest.NewRecorder()
 
-	newHandler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
+	newHandler(slog.New(slog.DiscardHandler)).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/health", nil))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d", rec.Code)
@@ -30,13 +31,20 @@ func TestHealthRespondsUp(t *testing.T) {
 func TestUnknownPathRespondsNotFoundProblem(t *testing.T) {
 	rec := httptest.NewRecorder()
 
-	newHandler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil))
+	newHandler(slog.New(slog.DiscardHandler)).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil))
 
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d", rec.Code)
 	}
 	if got := rec.Header().Get("Content-Type"); got != "application/problem+json" {
 		t.Errorf("Content-Type = %q", got)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if id, _ := body["correlationId"].(string); id == "" || id != rec.Header().Get("X-Correlation-Id") {
+		t.Errorf("correlationId = %q, header = %q", id, rec.Header().Get("X-Correlation-Id"))
 	}
 }
 
@@ -47,7 +55,7 @@ func TestServeStopsWhenContextIsCancelled(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- serve(ctx, listener, newHandler()) }()
+	go func() { done <- serve(ctx, listener, newHandler(slog.New(slog.DiscardHandler))) }()
 
 	url := "http://" + listener.Addr().String() + "/health"
 	resp, err := http.Get(url)
