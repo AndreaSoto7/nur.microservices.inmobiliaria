@@ -36,7 +36,7 @@ services/
   audit-service/     # opcional (ADR 0005)
 gateway/   frontend/
 infra/             # docker-compose, Kafka, bases de datos
-docs/              # enunciado, ADRs, patrones de diseño, progreso por servicio (docs/progreso/)
+docs/              # enunciado, ADRs, patrones de diseño, esquemas de base de datos (docs/base-de-datos/), progreso por servicio (docs/progreso/)
 .claude/           # rules, skills y agents compartidos del equipo
 ```
 
