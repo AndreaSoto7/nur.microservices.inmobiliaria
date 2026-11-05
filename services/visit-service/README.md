@@ -25,7 +25,19 @@ Configura `DATABASE_URL` y `JWT_JWKS_URL` en el entorno o en el archivo `.env` d
 - `POST /api/v1/visits` requiere un access token de un cliente y un UUID en `Idempotency-Key`. El cuerpo lleva `propertyId`, `proposedAt` en UTC y, opcionalmente, `clientNote`. La respuesta `201` incluye un ID y la cabecera `Location`.
 - `GET /api/v1/visits/{visitId}` devuelve la solicitud al cliente que la creó o al agente asignado.
 
-El servicio guarda los eventos `VisitRequested` y `LeadOpened` en la tabla `outbox`. Queda pendiente consumir los eventos de Listing y publicar los eventos de Visit en Kafka.
+El servicio guarda los eventos `VisitRequested` y `LeadOpened` en la tabla `outbox`. Queda pendiente publicar los eventos de Visit en Kafka y aplicar las políticas que modifican visitas existentes.
+
+## Recibir propiedades de Listing
+
+Desde la raíz del repositorio, puedes levantar Kafka y sus topics:
+
+```bash
+docker compose --env-file infra/.env.example -f infra/docker-compose.yml -f infra/docker-compose.debug.yml up -d kafka kafka-init
+```
+
+Para NestJS en Windows, configura `KAFKA_BROKERS=127.0.0.1:9092` en el `.env` de Visit y reinicia el proceso. Si Visit corre en Docker con este Compose, configura VISIT_DOCKER_KAFKA_BROKERS con una dirección anunciada por Kafka que sea accesible desde el contenedor. Con el valor vacío Visit puede arrancar para pruebas HTTP aisladas.
+
+El grupo `visit-service` consume `listing.property.events`. Un grupo nuevo empieza desde el primer evento disponible. La proyección guarda el estado en `property_snapshots` y descarta eventos duplicados o anteriores al último aplicado.
 
 ## Docker local
 
@@ -59,4 +71,4 @@ npm run lint
 npm test
 ```
 
-El modelo de dominio inicia cada visita en `REQUESTED` y exige que la fecha propuesta sea posterior a la fecha de solicitud. La propiedad y sus participantes se referencian por ID. Para incluir las pruebas de los endpoints, configura `VISIT_TEST_DATABASE_URL` con una base PostgreSQL desechable y vuelve a ejecutar `npm test`. El contrato se integró en el PR #39.
+El modelo de dominio inicia cada visita en `REQUESTED` y exige que la fecha propuesta sea posterior a la fecha de solicitud. La propiedad y sus participantes se referencian por ID. Para incluir las pruebas de los endpoints, configura `VISIT_TEST_DATABASE_URL` con una base PostgreSQL desechable y vuelve a ejecutar `npm test`. Para probar también Kafka, agrega VISIT_TEST_KAFKA_BROKER con la dirección de un broker desechable. El contrato se integró en el PR #39.

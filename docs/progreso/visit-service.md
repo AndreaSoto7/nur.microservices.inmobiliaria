@@ -22,7 +22,7 @@
 
 **Consultas y visitas (enunciado)**
 
-- [ ] Snapshot local de propiedades: consumir `listing.property.events` (sin llamar a listing por HTTP)
+- [x] Snapshot local de propiedades: consumir `listing.property.events` (sin llamar a listing por HTTP)
 - [ ] Enviar una consulta sobre una propiedad (`Inquiry`)
 - [x] Solicitar una visita (`Visit` en `REQUESTED`, solo si la propiedad está `PUBLISHED`)
 - [x] El cliente consulta el detalle y estado de una solicitud propia
@@ -35,7 +35,7 @@
 **Eventos**
 
 - [ ] Outbox: `InquiryReceived`, `VisitRequested`, `VisitScheduled`, `VisitRejected`, `VisitCancelled`, `VisitCompleted`, `LeadOpened`, `LeadFollowUpRegistered`, `LeadClosed`
-- [ ] Consumidores idempotentes (`processed_events`)
+- [x] Proyección de propiedades idempotente (`processed_events`)
 
 **Políticas (ADR 0005, secciones 3.2 y 3.3)**
 

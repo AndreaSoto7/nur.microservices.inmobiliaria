@@ -26,6 +26,7 @@ services:
       DATABASE_URL: postgresql://visit:visit@visit-db:5432/visit
       SERVICE_PORT: "8003"
       JWT_JWKS_URL: ${JWT_JWKS_URL:-}
+      KAFKA_BROKERS: ${VISIT_DOCKER_KAFKA_BROKERS:-}
     ports:
       - "127.0.0.1:8003:8003"
 
