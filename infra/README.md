@@ -20,6 +20,12 @@ Para trabajar en un servicio, levanta solo lo que necesitas:
 docker compose -f infra/docker-compose.yml up -d identity-service
 ```
 
+## Reglas de puertos (ADR 0002)
+
+- **Uso normal y demo** (`docker-compose.yml`): solo se publican el gateway (8080) y el frontend (5173), más la UI de Consul (8500) y la de Kafka (8090) **solo en `127.0.0.1`**. Los servicios usan su puerto dentro de la red de Docker y se descubren por Consul; así se pueden escalar con `--scale`.
+- **Depuración** (`docker-compose.debug.yml`): se publican además, solo en `127.0.0.1`, los servicios (identity 8001, listing 8002, visit 8003, audit 8004), sus PostgreSQL (desde 5433, uno por servicio, para no chocar con un Postgres local en 5432) y Kafka (9092).
+- **Ningún servicio usa `container_name`**: impide escalar.
+
 ## Depurar desde el host
 
 ```bash

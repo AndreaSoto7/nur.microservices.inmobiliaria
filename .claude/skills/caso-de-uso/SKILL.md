@@ -8,7 +8,7 @@ argument-hint: "[descripción del caso de uso]"
 
 Caso de uso: $ARGUMENTS
 
-Sigue `.claude/rules/ddd-clean-architecture.md` y la rule del stack del servicio.
+Sigue `.claude/rules/ddd-clean-architecture.md` y el `CLAUDE.md` del servicio (dominio, tabla de casos de uso, estructura y decisiones técnicas). Si el caso de uso está en esa tabla, usa exactamente sus nombres y reglas; si no está, agrégalo a la tabla en el mismo PR.
 
 ## 1. Clasificar
 
@@ -16,6 +16,7 @@ Sigue `.claude/rules/ddd-clean-architecture.md` y la rule del stack del servicio
   - Un comando cambia estado: `PublishPropertyCommand`.
   - Una consulta solo lee: `ListAgentPropertiesQuery`. Una consulta nunca modifica nada.
 - **¿Qué aggregate toca?** Debe ser uno solo. Si necesitas modificar dos, probablemente falta un evento de dominio: el segundo cambio ocurre al reaccionar al evento.
+- **¿Lo dispara un evento de otro servicio?** Entonces es una **política**: sigue la sección "Políticas" de la rule `ddd-clean-architecture` (`actor: SYSTEM`, sin DLQ por reglas de negocio, una transacción por aggregate).
 - **¿Qué invariantes protege?** Escríbelas en una lista antes de programar.
 - **¿Emite eventos de integración?** Verifica que existen en `contracts/events/README.md`. Si no, usa antes `/nuevo-evento`.
 
@@ -36,7 +37,7 @@ Sigue `.claude/rules/ddd-clean-architecture.md` y la rule del stack del servicio
 ## 4. Infraestructura
 
 - Implementación del repositorio y mapper entre persistencia y dominio.
-- Migración nueva, con el nombre según la convención del stack.
+- Migración nueva, con el nombre según la convención del stack, alineada con `docs/base-de-datos/<servicio>.md` (si te apartas, actualiza ese documento).
 - Mapper del evento de dominio al evento de integración (según el schema de `contracts/events/`) y escritura en el outbox, en la misma transacción.
 
 ## 5. Exponerlo

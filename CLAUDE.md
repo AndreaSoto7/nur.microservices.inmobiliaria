@@ -1,164 +1,178 @@
 # Plataforma Inmobiliaria — Microservicios (Ingeniería Web 3 · Proyecto 06)
 
-Plataforma donde agentes publican casas y departamentos (venta o alquiler) y los interesados buscan con filtros, guardan favoritos, envían consultas y solicitan visitas. Resumen del enunciado y criterios de evaluación: `docs/enunciado.md`. Decisiones de arquitectura: `docs/adr/`.
+Agentes publican casas y departamentos (venta o alquiler). Los interesados buscan con filtros, guardan favoritos, envían consultas y solicitan visitas. El docente evalúa sobre todo **DDD, eventos y uso del broker** (`docs/enunciado.md`).
 
-## Servicios y responsables
+## Cómo está organizado el contexto (léelo primero)
 
-| Servicio | Stack | Responsable | Puerto | Base de datos | Responsabilidad |
-|---|---|---|---|---|---|
-| `identity-service` | Django + DRF | @Tiesol | 8001 | PostgreSQL | Registro, login, usuarios, roles, emisión de JWT |
-| `listing-service` | Spring Boot | _(completar)_ | 8002 | PostgreSQL | Propiedades, galería, características, estados y favoritos. Catálogo público con filtros (lado query). Reserva la propiedad cuando una oportunidad se gana (`LeadClosed`) |
-| `visit-service` | NestJS | _(completar)_ | 8003 | PostgreSQL | Consultas, oportunidades (`Lead`), solicitudes y programación de visitas, seguimiento. Rechaza o cancela visitas cuando la propiedad se reserva, vende o alquila |
-| `audit-service` | por decidir | _(completar)_ | 8004 | por decidir | **Opcional** (ADR 0005): registro de solo inserción de todos los eventos, consultable por `ADMIN` |
-| `gateway` | Go (propio) | @Tiesol | 8080 | — | Único punto de entrada: ruteo, JWT, CORS, rate limit, balanceo de carga y cliente de service discovery |
-| `frontend` | React + Vite + TypeScript | _(completar)_ | 5173 | — | UI para interesados y agentes |
-| Kafka (KRaft) | — | — | 9092 · UI 8090 | — | Bus de eventos entre servicios |
-| Consul (modo dev) | — | — | UI 8500 | — | Service discovery: registro de servicios y health checks |
+| Nivel | Archivo | Cuándo se carga | Qué contiene |
+|---|---|---|---|
+| 1. Raíz | este `CLAUDE.md` | Siempre | Lo que vale para todo el repo: mapa, reglas de oro, convenciones, Git, DoD |
+| 2. Componente | `<carpeta>/CLAUDE.md` (tabla de abajo) | Al leer o editar archivos de esa carpeta | **Todo** lo de un servicio: dominio, casos de uso, eventos, base, API, stack, estructura, comandos y qué rules, skills y agentes usar |
+| 3. Rules transversales | `.claude/rules/*.md` | Solas, según la ruta que tocas | DDD, REST, Kafka, seguridad, discovery, testing, patrones, SOLID |
+| 4. Fuentes de verdad | `contracts/`, `docs/` | A pedido | Contratos, decisiones, esquemas de base, progreso |
 
-**Puertos en el host** (ADR 0002):
-- **Uso normal y demo** (`infra/docker-compose.yml`): solo se publican el gateway (8080) y el frontend (5173), más la UI de Consul (8500) y la UI de Kafka (8090) **solo en `127.0.0.1`**. Los servicios usan su puerto **dentro de la red de Docker** y se descubren por Consul. Así se pueden escalar con `--scale`.
-- **Depuración** (`infra/docker-compose.debug.yml`): se publican además, **solo en `127.0.0.1`**, los servicios (8001–8005), los PostgreSQL (5433–5437, uno por servicio, para no chocar con un Postgres local en 5432) y Kafka (9092). Este override no se combina con `--scale`.
-- **Ningún servicio usa `container_name`**, porque impide escalar.
+**Reglas para trabajar con este contexto:**
 
-**Service discovery** (ADR 0002): cada servicio se registra solo en Consul al arrancar:
-- Lo hace con la IP de su contenedor y un ID único por réplica (`<servicio>-<hostname>`).
-- Expone `GET /health`, que Consul revisa cada 10 s.
-- El gateway reparte las requests entre las réplicas sanas (round robin).
+- **Antes de crear o editar algo en un componente, lee su `CLAUDE.md`.** Si la carpeta todavía no tiene código, léelo igual: ahí está el diseño que hay que seguir.
+- **Un tema, un solo lugar.** Lo de un servicio va en su `CLAUDE.md`; lo transversal, en una rule; las decisiones, en un ADR. No copies contenido entre archivos: enlaza.
+- **Si el código y un `CLAUDE.md` no coinciden, gana el código** (o el contrato), y el `CLAUDE.md` se corrige en el mismo PR.
 
-## Estructura del monorepo
+## Mapa de componentes
+
+| Componente | Instrucciones | Stack | Responsable | Puerto | Base | Responsabilidad |
+|---|---|---|---|---|---|---|
+| identity-service | [`services/identity-service/CLAUDE.md`](services/identity-service/CLAUDE.md) | Django + DRF | @Tiesol | 8001 | `identity` | Registro, login, roles y emisión de JWT RS256 |
+| listing-service | [`services/listing-service/CLAUDE.md`](services/listing-service/CLAUDE.md) | Spring Boot | _(completar)_ | 8002 | `listing` | Propiedades, galería, estados, favoritos y catálogo público (lado query). Reserva al ganarse una oportunidad |
+| visit-service | [`services/visit-service/CLAUDE.md`](services/visit-service/CLAUDE.md) | NestJS | _(completar)_ | 8003 | `visit` | Consultas, visitas y oportunidades (`Lead`). Rechaza o cancela visitas cuando la propiedad se reserva, vende o alquila |
+| audit-service (opcional) | [`services/audit-service/CLAUDE.md`](services/audit-service/CLAUDE.md) | por decidir | _(completar)_ | 8004 | `audit` | Registro de solo inserción de todos los eventos, para `ADMIN` |
+| gateway | [`gateway/CLAUDE.md`](gateway/CLAUDE.md) | Go (propio) | @Tiesol | 8080 | — | Único punto de entrada: ruteo, JWT, CORS, rate limit, balanceo y discovery |
+| frontend | [`frontend/CLAUDE.md`](frontend/CLAUDE.md) | React + Vite + TS | _(completar)_ | 5173 | — | UI para interesados y agentes |
+| infra | [`infra/README.md`](infra/README.md) | Docker Compose | Zona compartida | Kafka 9092 · UI 8090 · Consul UI 8500 | — | Kafka (KRaft), Consul, bases y puertos de depuración |
+
+## Cómo se hablan los servicios ([ADR 0005](docs/adr/0005-realinear-servicios-y-cadenas-de-eventos.md))
 
 ```
-contracts/
-  events/          # JSON Schema de cada evento Kafka (fuente de verdad)
-  openapi/         # OpenAPI 3.1 de cada servicio (fuente de verdad)
-services/
-  identity-service/  listing-service/  visit-service/
-  audit-service/     # opcional (ADR 0005)
-gateway/   frontend/
-infra/             # docker-compose, Kafka, bases de datos
-docs/              # enunciado, ADRs, patrones de diseño, esquemas de base de datos (docs/base-de-datos/), progreso por servicio (docs/progreso/)
-.claude/           # rules, skills y agents compartidos del equipo
+cliente ──HTTP──► gateway ──► identity | listing | visit | audit   (réplicas descubiertas en Consul)
+
+listing ──listing.property.events──► visit   copia local de propiedades + políticas:
+                                             PropertyReserved → rechaza solicitudes pendientes
+                                             PropertySold/Rented → rechaza y cancela visitas
+visit   ──visit.lead.events──────────► listing   LeadClosed (WON) → reserva la propiedad
+todos   ──todos los topics───────────► audit     (opcional)
 ```
+
+Ningún servicio llama a otro por HTTP. El detalle de cada flecha está en el `CLAUDE.md` del servicio que reacciona.
+
+## Dónde está cada cosa (fuentes de verdad)
+
+| Tema | Archivo |
+|---|---|
+| Enunciado y criterios evaluados | `docs/enunciado.md` |
+| Decisiones de arquitectura | `docs/adr/` (la más reciente sobre alcance: ADR 0005) |
+| Catálogo de eventos, topics y consumidores | `contracts/events/README.md` |
+| APIs HTTP | `contracts/openapi/<servicio>-service.yaml` |
+| Esquemas de base de datos | `docs/base-de-datos/` |
+| Patrones aplicados (para la defensa) | `docs/patrones-de-diseno.md` |
+| Progreso por componente | `docs/progreso/` |
+| Cómo revisar y mergear | `docs/flujo-de-revision.md` |
 
 ## Reglas de oro (no negociables)
 
-1. **Cada servicio es dueño de sus datos.** Nunca leer ni escribir la base de datos de otro servicio. No se comparten tablas ni modelos de dominio entre servicios.
-2. **Los servicios se comunican por eventos en Kafka.** El cliente entra solo por el API Gateway. Una llamada HTTP síncrona entre servicios solo se permite si un ADR la justifica.
-3. **Contract-first.** Todo cambio de API o de evento va primero en `contracts/`, en su propio PR, y se implementa después. Nunca se rompe un contrato publicado: se versiona.
-4. **Arquitectura limpia en cada servicio.** Dependencias hacia adentro: `presentation`/`infrastructure` → `application` → `domain`. El dominio no importa frameworks (ni ORM, ni HTTP, ni Kafka).
-5. **CQRS.** Los comandos cambian estado y no devuelven datos de lectura. Las consultas no cambian estado. El catálogo público es el lado query de listing, con su propia proyección de lectura, y la copia de propiedades en visit es un modelo de lectura alimentado por eventos (ADR 0005).
-6. **Patrones justificados.** Cada patrón de diseño aplicado se registra en `docs/patrones-de-diseno.md`, con el problema que resuelve y el archivo donde está.
-7. **Solo tocas tu servicio.** Para cambiar el de otra persona, coordina con su responsable (issue o PR revisado por esa persona). Las zonas compartidas (`contracts/`, `infra/`, `docs/adr/`, `.claude/`, `CLAUDE.md`) requieren PR revisado por al menos otra persona y aviso al grupo.
-8. **Cero secretos en git.** `.env` nunca se sube. `.env.example` sí, y se actualiza con cada variable nueva.
-9. **KISS y YAGNI.** Primero el alcance obligatorio del enunciado. Los extras (comparar, recomendaciones, métricas) van después.
+1. **Cada servicio es dueño de sus datos.** Nunca leer ni escribir la base de otro. No se comparten tablas ni modelos de dominio.
+2. **Los servicios se comunican por eventos en Kafka.** El cliente entra solo por el gateway. Una llamada HTTP entre servicios solo con un ADR que la justifique.
+3. **Contract-first.** Todo cambio de API o de evento va primero en `contracts/`, en su propio PR. Nunca se rompe un contrato publicado: se versiona.
+4. **Arquitectura limpia.** Dependencias hacia adentro: `presentation`/`infrastructure` → `application` → `domain`. El dominio no importa frameworks.
+5. **CQRS.** Los comandos cambian estado y no devuelven datos de lectura; las consultas no cambian estado.
+6. **Patrones justificados.** Cada patrón aplicado se registra en `docs/patrones-de-diseno.md`.
+7. **Solo tocas tu componente.** Para cambiar el de otra persona, coordina con su responsable. Las zonas compartidas (`contracts/`, `infra/`, `docs/adr/`, `.claude/`, los `CLAUDE.md`) requieren PR revisado por al menos otra persona.
+8. **Cero secretos en git.** `.env` nunca se sube; `.env.example` sí, y se actualiza con cada variable nueva.
+9. **KISS y YAGNI.** Primero el alcance obligatorio. audit-service y los extras, después.
 
 ## Convenciones globales
 
-- **Idioma:** código, endpoints, eventos, tablas y columnas en inglés. Documentación, PRs, issues y la descripción de los commits en español.
-- **IDs:** UUID como string, generados por el dominio. Nunca se exponen IDs autoincrementales.
+- **Idioma:** código, endpoints, eventos, tablas y columnas en inglés. Documentación, PRs, issues y descripción de commits en español.
+- **IDs:** UUID como string, generados por el dominio. Nunca IDs autoincrementales expuestos.
 - **Fechas:** ISO-8601 en UTC (`2026-10-16T14:30:00Z`).
-- **Dinero:** `{ "amount": 125000.00, "currency": "BOB" }`. La plataforma maneja una sola moneda, **BOB**. En el dominio nunca se usa float (BigDecimal, Decimal o enteros en centavos).
-- **JSON:** camelCase en todas las APIs y eventos (en Django se configura un renderer camelCase). Los enums van en `UPPER_SNAKE_CASE`.
-- **Errores HTTP:** RFC 9457 `application/problem+json` (ver la rule `api-rest`).
-- **Auth:**
-  - identity emite un JWT RS256 de 15 min, con refresh token.
-  - Claims: `sub` (UUID del usuario), `email`, `roles`, `iss=identity-service` y `aud=inmobiliaria`.
-  - Roles: `CLIENT`, `AGENT`, `ADMIN`.
-  - Cada servicio valida firma, `exp`, `iss`, `aud` y el header `typ=at+jwt` con el JWKS de identity.
-  - El gateway valida antes, como defensa temprana: reenvía `Authorization` intacto y borra cualquier `X-User-*` que llegue del cliente.
-- **Trazabilidad:** el header `X-Correlation-Id` se propaga en HTTP y en los eventos. Los logs son JSON estructurado y no llevan datos personales ni tokens.
+- **Dinero:** `{ "amount": 125000.00, "currency": "BOB" }`. Una sola moneda, **BOB**. Nunca float en el dominio.
+- **JSON:** camelCase en APIs y eventos. Enums en `UPPER_SNAKE_CASE`.
+- **Errores HTTP:** RFC 9457 `application/problem+json` (rule `api-rest`).
+- **Auth:** identity emite un JWT RS256 de 15 min (`sub`, `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`, header `typ=at+jwt`) con refresh token. Roles: `CLIENT`, `AGENT`, `ADMIN`. Cada servicio valida el token con el JWKS (rule `seguridad`).
+- **Trazabilidad:** `X-Correlation-Id` en HTTP y en los eventos. Logs en JSON, sin datos personales ni tokens.
 
-## Lenguaje ubicuo
+## Lenguaje ubicuo (compartido entre servicios)
 
 | Español | En código | Valores / notas |
 |---|---|---|
-| Propiedad | `Property` | Aggregate root en listing. En el event storming le dijimos "Listing": es lo mismo; en código siempre `Property`. |
-| Tipo de inmueble | `PropertyType` | `HOUSE`, `APARTMENT` |
-| Operación | `OperationType` | `SALE`, `RENT` |
+| Propiedad | `Property` | Aggregate de listing. En el event storming le dijimos "Listing": en código siempre `Property` |
 | Estado de publicación | `PropertyStatus` | `DRAFT`, `PUBLISHED`, `PAUSED`, `RESERVED`, `SOLD`, `RENTED` |
-| Característica | `Feature` | `GARAGE`, `GARDEN`, `POOL`, `COMMON_AREAS`, … |
-| Ubicación / zona | `Location` | `zone`, `address`, coordenadas simuladas |
-| Agente | `Agent` | Usuario con rol `AGENT` |
+| Tipo / operación | `PropertyType` / `OperationType` | `HOUSE`, `APARTMENT` / `SALE`, `RENT` |
+| Agente / interesado | rol `AGENT` / rol `CLIENT` | `agentId` y `clientId` son el `sub` del JWT |
 | Consulta | `Inquiry` | Mensaje de un interesado sobre una propiedad |
-| Interesado / oportunidad | `Lead` | Seguimiento comercial de un cliente con una propiedad. Se abre con la primera consulta o solicitud de visita. En el event storming: "oportunidad". |
-| Resultado de la oportunidad | `LeadOutcome` | `WON`, `LOST`. Una oportunidad `WON` reserva la propiedad (ADR 0005). |
-| Visita | `Visit` | `REQUESTED`, `SCHEDULED`, `COMPLETED`, `CANCELLED`, `REJECTED`. En el event storming, "programada" = `SCHEDULED`, "rechazada" = `REJECTED`, "concluida" = `COMPLETED`. |
-| Quién actúa | `Actor` | `CLIENT`, `AGENT`, `SYSTEM`. `SYSTEM` es una política que reacciona a un evento. |
-| Favorito | `Favorite` | Propiedad guardada por un usuario. Aggregate propio en listing, separado de `Property` (ADR 0003). |
+| Visita | `Visit` | `REQUESTED`, `SCHEDULED`, `COMPLETED`, `CANCELLED`, `REJECTED` |
+| Oportunidad | `Lead` | Seguimiento comercial de un cliente con una propiedad. `OPEN` / `CLOSED` con `LeadOutcome` `WON` o `LOST` |
+| Favorito | `Favorite` | Propiedad guardada por un usuario (aggregate de listing, ADR 0003) |
+| Quién actúa | `Actor` | `CLIENT`, `AGENT`, `SYSTEM` (`SYSTEM` = una política que reacciona a un evento) |
+| Política | handler de evento | "Cuando pasa X, entonces se ejecuta Y" en otro aggregate (ADR 0005) |
 
-Tabla completa de comandos y eventos del event storming con su nombre en código: [ADR 0005](docs/adr/0005-realinear-servicios-y-cadenas-de-eventos.md), sección 2.
+Los términos propios de un solo servicio están en su `CLAUDE.md`.
 
 ## Flujo de trabajo Git
 
-- `main` está protegida: solo entra código por PR, con 1 aprobación y **squash merge**.
-- **Otra persona aprueba y el autor mergea su propio PR.** Nadie mergea PRs ajenos. Todo PR tiene base `main`, sin encadenar. Guía paso a paso: [`docs/flujo-de-revision.md`](docs/flujo-de-revision.md).
-- **Ramas:** `<tipo>/<scope>-<descripcion-corta>`, por ejemplo `feat/listing-publicar-propiedad` o `fix/visit-validar-fecha`.
+- `main` está protegida: solo entra código por PR, con 1 aprobación y **squash merge**. **Otra persona aprueba y el autor mergea su propio PR.** Guía: `docs/flujo-de-revision.md`.
+- **Todo PR tiene base `main`**, sin encadenar. Si un trabajo depende de otro, se abre cuando el primero ya está en `main`.
+- **Ramas:** `<tipo>/<scope>-<descripcion-corta>` (`feat/listing-publicar-propiedad`).
 - **Commits:** Conventional Commits, `tipo(scope): descripción en español`.
   - Tipos: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`.
   - Scopes: `identity`, `listing`, `visit`, `audit`, `gateway`, `frontend`, `contracts`, `infra`, `docs`, `claude`.
-- **Antes de subir:** `git fetch origin` y `git rebase origin/main`. En tu propia rama usa `git push --force-with-lease`. Nunca hagas force push a `main` ni a ramas ajenas.
-- **PRs chicos** (idealmente menos de 400 líneas), de un solo servicio, usando la plantilla de `.github/`.
-- **Lockfiles:** se commitean (`package-lock.json`, `go.sum`, `requirements*.txt`, wrapper de Maven). No reformatees archivos que no tocaste.
+- **Antes de subir:** `git fetch origin` y `git rebase origin/main`. En tu rama, `git push --force-with-lease`. Nunca force push a `main` ni a ramas ajenas.
+- **PRs chicos** (idealmente menos de 400 líneas) y de un solo componente, con la plantilla de `.github/`.
+- **Lockfiles** se commitean. No reformatees archivos que no tocaste.
 
 ## Definition of Done
 
-- [ ] Compila y pasa lint y formato en el servicio tocado.
-- [ ] Hay tests de dominio y de aplicación para la lógica nueva, y pasan.
+- [ ] Compila y pasa lint y formato en el componente tocado.
+- [ ] Tests de dominio y de aplicación para la lógica nueva, y pasan.
 - [ ] El contrato (OpenAPI o evento) está actualizado y coincide con la implementación.
-- [ ] No hay secretos, y `.env.example` está al día.
-- [ ] Si se usó un patrón de diseño, está registrado en `docs/patrones-de-diseno.md`.
-- [ ] `docs/progreso/<servicio>.md` está actualizado: una fila en el historial (feat o fix y su PR) y los pendientes tachados o agregados.
-- [ ] El PR tiene la plantilla completa y una revisión aprobada.
+- [ ] Sin secretos; `.env.example` al día.
+- [ ] Patrón de diseño usado → registrado en `docs/patrones-de-diseno.md`.
+- [ ] `docs/progreso/<componente>.md` actualizado (historial y pendientes).
+- [ ] Si cambió algo que describe el `CLAUDE.md` del componente (eventos, tablas, rutas, comandos), está actualizado.
+- [ ] PR con la plantilla completa y una revisión aprobada.
 
-## Cómo trabajar con Claude en este repo
+## Trabajar con Claude en este repo
 
-**Rules:** las de `.claude/rules/` se cargan solas cuando Claude toca archivos de su área (DDD, REST, eventos, SOLID, patrones, seguridad, testing, un stack o el frontend).
+**Rules transversales** (se cargan solas por ruta):
+
+| Rule | Se carga en | Trata |
+|---|---|---|
+| `ddd-clean-architecture` | `services/**` | Capas, aggregates, CQRS, eventos de dominio vs. integración |
+| `api-rest` | `services/**`, `gateway/**`, `contracts/openapi/**` | Rutas, status, problem+json, paginación, mapa de rutas del gateway |
+| `eventos-kafka` | `contracts/events/**`, código de mensajería, `infra/**` | Envelope, outbox, consumidores idempotentes, versionado |
+| `seguridad` | código, `infra/**`, compose y `.env.example` | JWT, autorización, entrada, secretos, puertos |
+| `service-discovery` | `services/**`, `gateway/**`, `infra/**` | Contrato común de registro en Consul y health checks |
+| `testing` | `services/**`, `gateway/**`, `frontend/**` | Pirámide de tests y reglas |
+| `patrones-diseno` · `principios-solid` | código y `docs/patrones-de-diseno.md` | Catálogo de patrones del proyecto y principios |
 
 **Skills** (escribe `/nombre`):
 
 | Skill | Para qué sirve |
 |---|---|
-| `/iniciar-tarea` | Crear la rama correcta, sincronizar con `main` y planificar |
-| `/scaffold-servicio` | Esqueleto inicial de un microservicio según su stack |
-| `/caso-de-uso` | Implementar un comando o una consulta con DDD + CQRS |
+| `/iniciar-tarea` | Rama correcta, sincronizar con `main` y plan por capas |
+| `/scaffold-servicio` | Esqueleto inicial de un componente según su `CLAUDE.md` |
+| `/caso-de-uso` | Un comando o una consulta con DDD + CQRS |
 | `/nuevo-endpoint` | Endpoint REST contract-first (OpenAPI → código → tests) |
-| `/nuevo-evento` | Definir o cambiar un evento Kafka (schema, productor, consumidores) |
-| `/aplicar-patron` | Elegir, implementar y justificar un patrón de diseño |
+| `/nuevo-evento` | Evento Kafka: schema, catálogo, productor y consumidores |
+| `/aplicar-patron` | Elegir, implementar y registrar un patrón |
 | `/componente-front` | Componentes Smart/Dumb en el frontend |
-| `/revisar` | Autorrevisión antes del PR (lanza los agentes revisores) |
+| `/revisar` | Autorrevisión antes del PR (lanza un agente revisor si hace falta) |
 | `/crear-pr` | Commit, rebase y PR con la plantilla |
-| `/resolver-conflicto` | Resolver conflictos de merge o rebase sin perder trabajo |
+| `/resolver-conflicto` | Conflictos de merge o rebase sin perder trabajo |
 | `/adr` | Registrar una decisión de arquitectura |
 
-**Agentes:** `revisor-seguridad`, `guardian-contratos` y `arquitecto-ddd`. Las revisiones de API REST y frontend son checklists dentro de `/revisar`.
-
-- **Un solo agente por PR, el del riesgo principal.** Cada agente parte de cero y consume muchos tokens: una auditoría con pruebas puede gastar más de 100.000.
-- **`arquitecto-ddd` y `guardian-contratos` corren con Sonnet** (`model: sonnet` en su archivo). `revisor-seguridad` usa el modelo de la sesión.
-- **Alcance:** que revisen el diff; ejecutar pruebas solo si hace falta.
+**Agentes revisores:** `arquitecto-ddd` (dominio y capas), `guardian-contratos` (contratos y eventos) y `revisor-seguridad`. **Uno solo por PR**, el del riesgo principal: cada agente parte de cero y consume muchos tokens. `arquitecto-ddd` y `guardian-contratos` corren con Sonnet.
 
 **Lecciones (ya nos pasaron):**
 
-- **Todo PR tiene base `main`.** Un PR con base en otra rama queda "Merged" sin llegar a `main`: GitHub no avisa, y así se perdieron de `main` el registro y el login (#9 a #11, recuperados en #13 a #15). Si un trabajo depende de otro, el segundo se abre recién cuando el primero está en `main`.
-- **Después de mergear, verifica que el cambio esté en `main`.** Un merge justo después de un push puede fallar porque GitHub todavía calcula si es mergeable.
-- **`git add` por ruta, nunca `git add -A` sobre una carpeta:** así se coló un archivo local en un PR. Además, un archivo local que entra a una rama desaparece de tu carpeta al cambiar de rama.
+- **Un PR con base en otra rama** queda "Merged" sin llegar a `main` (#9 a #11, recuperados en #13 a #15). Después de mergear, verifica que el cambio esté en `main`.
+- **`git add` por ruta**, nunca `git add -A` sobre una carpeta: así se coló un archivo local en un PR.
 - **No reformatees JSON con un script:** infla el diff. Edita solo la línea que cambia.
+- **Windows:** el repo tiene rutas largas. Clona con `git clone -c core.longpaths=true …`.
 
-**Preferencias personales:** van en `CLAUDE.local.md` y `.claude/settings.local.json`. Los dos están en `.gitignore`.
+**Preferencias personales:** en `CLAUDE.local.md` y `.claude/settings.local.json` (los dos en `.gitignore`).
 
 ## Decisiones pendientes (registrar en `docs/adr/` cuando se tomen)
 
-- Stack, base de datos y responsable de audit-service, si se construye (ADR 0005).
-- Versiones exactas de cada stack.
-- Linter y formateador de Java en listing-service (Spotless o Checkstyle).
-- Librerías de router y de datos del frontend (se completan en el ADR 0004).
+- Stack y responsable de audit-service, si se construye.
+- Versiones exactas de cada stack (gateway ya usa Go 1.27; identity, Python 3.13 y Django 5.2).
+- Linter y formateador de Java en listing (Spotless o Checkstyle).
+- Librerías de router y de datos del frontend (ADR 0004).
 
-Ya decididas: gateway en Go con Consul ([0002](docs/adr/0002-gateway-go-balanceador-consul.md)), Favoritos en listing ([0003](docs/adr/0003-favoritos-en-listing.md)), frontend en React ([0004](docs/adr/0004-frontend-react.md)) y servicios realineados al event storming, sin search ni notification y con cadenas de eventos entre listing y visit ([0005](docs/adr/0005-realinear-servicios-y-cadenas-de-eventos.md)).
+## Comandos de infraestructura
 
-## Comandos
+Detalle en `infra/README.md`. Los de cada servicio, en su `CLAUDE.md`.
 
-Cuando exista `infra/`:
-
-- **Infraestructura:** `docker compose -f infra/docker-compose.yml up -d`.
-- **Demo de balanceo:** `docker compose -f infra/docker-compose.yml up -d --scale listing-service=3`.
-- **Depuración con puertos publicados:** `docker compose -f infra/docker-compose.yml -f infra/docker-compose.debug.yml up -d`.
-- **Por servicio:** ver la rule del stack correspondiente en `.claude/rules/stack-*.md`.
+```bash
+docker compose -f infra/docker-compose.yml up -d                                   # todo
+docker compose -f infra/docker-compose.yml up -d --scale listing-service=3         # demo de balanceo
+docker compose -f infra/docker-compose.yml -f infra/docker-compose.debug.yml up -d # puertos de depuración en 127.0.0.1
+```

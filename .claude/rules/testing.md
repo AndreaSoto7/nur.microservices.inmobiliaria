@@ -1,6 +1,7 @@
 ---
 paths:
   - "services/**"
+  - "gateway/**"
   - "frontend/**"
 ---
 
@@ -23,6 +24,7 @@ paths:
 
 ## Reglas
 
+- **Políticas (ADR 0005):** cada una tiene tests de aplicación del caso feliz, del rechazo por regla de estado (no falla, deja `WARN`) y del evento duplicado (procesarlo dos veces deja el mismo estado).
 - Formato **Arrange / Act / Assert**, un comportamiento por test.
 - El nombre del test describe la regla: `should_reject_publish_when_property_is_sold` o `"rechaza publicar si la propiedad está vendida"`.
 - Los tests no dependen de que otro microservicio esté corriendo.
@@ -37,7 +39,7 @@ paths:
 | identity (Django) | `pytest` + `pytest-django` | `ruff check .` · `ruff format .` |
 | listing (Spring) | JUnit 5, AssertJ, Mockito, `@WebMvcTest`, `@DataJpaTest` → `./mvnw test` | Spotless (si se adopta) |
 | visit (NestJS) | Jest → `npm run test` | ESLint + Prettier → `npm run lint` |
-| search, notification (Go) | `go test ./...` (table-driven) | `gofmt`, `go vet`, `golangci-lint run` |
+| audit (opcional) | Según el stack elegido (`services/audit-service/CLAUDE.md`) | Según el stack elegido |
 | gateway (Go) | `go test ./...` con `net/http/httptest`: servicios falsos y discovery falso, sin Consul real | `gofmt`, `go vet`, `golangci-lint run` |
 | frontend (React) | Vitest + React Testing Library → `npm run test` | ESLint + Prettier → `npm run lint` |
 

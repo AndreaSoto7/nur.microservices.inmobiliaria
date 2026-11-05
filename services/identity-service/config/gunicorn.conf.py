@@ -1,7 +1,7 @@
 """Configuración de gunicorn para el contenedor.
 
 Los hooks `when_ready` y `on_exit` corren en el proceso maestro, una sola vez por contenedor.
-Por eso el registro en Consul va aquí y no en cada worker (rule stack-django).
+Por eso el registro en Consul va aquí y no en cada worker (services/identity-service/CLAUDE.md).
 """
 
 import os

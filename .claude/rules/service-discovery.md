@@ -74,4 +74,4 @@ El apagado completo debe tardar menos que los 10 s de `docker stop`. Si no, Dock
 - **Arranque:** los servicios declaran `depends_on` de Consul con `condition: service_healthy`, además de los reintentos de registro.
 - **Demo de balanceo:** `docker compose -f infra/docker-compose.yml up -d --scale listing-service=3`.
 
-La forma concreta de registrarse en cada stack está en su rule (`stack-*.md`).
+La forma concreta de registrarse en cada stack está en la sección "Registro en Consul" del `CLAUDE.md` de cada servicio.

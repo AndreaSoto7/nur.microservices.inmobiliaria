@@ -67,7 +67,7 @@ APPEND_SLASH = False
 DATABASES = {"default": env.db("DATABASE_URL")}
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Usuario propio con PK UUID desde el día 1 (rule stack-django).
+# Usuario propio con PK UUID desde el día 1 (services/identity-service/CLAUDE.md).
 AUTH_USER_MODEL = "identity.UserModel"
 
 KAFKA_BOOTSTRAP_SERVERS = env.str("KAFKA_BOOTSTRAP_SERVERS", default="kafka:29092")

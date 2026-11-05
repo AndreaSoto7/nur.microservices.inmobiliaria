@@ -45,6 +45,7 @@ allowed-tools:
   - una fila en **Historial** (tipo, qué se hizo en una línea y el PR; usa `este PR` si todavía no hay número);
   - tacha o agrega los **Pendientes** que correspondan, incluidos los que la revisión dejó para después.
 - Después de crear el PR, reemplaza `este PR` por el número real con un commit chico.
+- Si el cambio agregó o cambió algo que describe el `CLAUDE.md` del componente (eventos, tablas, rutas, comandos, estructura), actualízalo en el mismo PR.
 
 ## 5. Abrir el PR
 
@@ -57,7 +58,7 @@ allowed-tools:
   - Cómo probar.
   - Checklist del DoD marcado con honestidad.
 - **Comando:** `gh pr create --base main --title "..." --body-file <archivo temporal>`.
-  - Si el PR toca una zona compartida (`contracts/`, `infra/`, `docs/adr/`, `.claude/`, `CLAUDE.md`) o el servicio de otra persona, sugiere agregar a esa persona como revisora (`--reviewer`).
+  - Si el PR toca una zona compartida (`contracts/`, `infra/`, `docs/adr/`, `.claude/`, los `CLAUDE.md`) o el componente de otra persona, sugiere agregar a esa persona como revisora (`--reviewer`).
 - Si `gh` no está instalado o autenticado, muestra el link `https://github.com/AndreaSoto7/nur.microservices.inmobiliaria/compare/main...<rama>` y el cuerpo listo para pegar.
 
 Termina mostrando la URL del PR.

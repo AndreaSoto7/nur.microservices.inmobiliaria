@@ -28,7 +28,9 @@ paths:
 - Cada endpoint declara qué roles acceden.
 - La **propiedad del recurso** se verifica en la capa de aplicación:
   - Un agente solo gestiona sus propiedades y las visitas de esas propiedades.
-  - Un cliente solo ve sus consultas, visitas, favoritos y notificaciones.
+  - Un cliente solo ve sus consultas, visitas y favoritos.
+  - Solo un `ADMIN` asigna roles y consulta la auditoría.
+  - Un comando que dispara una política (`actor: SYSTEM`) no tiene usuario: nunca se expone por HTTP.
 - Cada servicio usa su propio usuario de base de datos, con permisos solo sobre su base.
 
 ## Entrada y salida
@@ -36,7 +38,7 @@ paths:
 - Valida toda entrada: tipos, rangos, longitudes y enums.
 - Las consultas a la base van con ORM o parámetros. **Nunca concatenes SQL.**
 - **Subida de imágenes:**
-  - Valida el tipo MIME real (jpeg, png, webp) y el tamaño (máximo 5 MB por imagen).
+  - Valida el tipo MIME real (JPG y PNG, según el event storming) y el tamaño (máximo 5 MB por imagen).
   - Renombra con un UUID.
   - Nunca uses el nombre original como ruta.
 - Los errores no exponen stack traces, SQL ni rutas internas (formato problem+json).
@@ -49,7 +51,7 @@ paths:
 
 ## Gateway
 
-Detalle en la rule `stack-gateway`.
+Detalle en `gateway/CLAUDE.md`.
 
 - **CORS** restringido a los orígenes del frontend (`http://localhost:5173` en desarrollo).
 - **Rate limit** en login y registro, por IP de conexión (`RemoteAddr`), sin confiar en un `X-Forwarded-For` que manda el cliente.

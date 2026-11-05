@@ -21,16 +21,16 @@ Una API profesional se entiende rápido, falla de forma clara y se puede operar 
 
 ### Mapa de rutas del gateway
 
-El destino es el nombre del servicio en Consul. El gateway elige una réplica sana con round robin (ver la rule `stack-gateway`).
+El destino es el nombre del servicio en Consul. El gateway elige una réplica sana con round robin (`gateway/CLAUDE.md`).
 
 | Prefijo | Servicio en Consul |
 |---|---|
 | `/api/v1/auth/**`, `/api/v1/users/**` | `identity-service` |
-| `/api/v1/properties/**` | `listing-service` (comandos y detalle para el agente) |
+| `/api/v1/properties/**` | `listing-service` (comandos y vistas del agente) |
 | `/api/v1/favorites/**` | `listing-service` (ADR 0003) |
-| `/api/v1/search/**` | `search-service` (catálogo público y filtros) |
+| `/api/v1/catalog/**` | `listing-service` (catálogo público y filtros, lado query; ADR 0005) |
 | `/api/v1/inquiries/**`, `/api/v1/visits/**`, `/api/v1/leads/**` | `visit-service` |
-| `/api/v1/notifications/**` | `notification-service` |
+| `/api/v1/audit/**` | `audit-service` (opcional, solo `ADMIN`) |
 
 ## Métodos HTTP con su semántica real
 
@@ -78,7 +78,7 @@ El destino es el nombre del servicio en Consul. El gateway elige una réplica sa
 ## Filtros, paginación y ordenamiento
 
 ```
-GET /api/v1/search/properties?zone=equipetrol&type=HOUSE&operation=SALE
+GET /api/v1/catalog/properties?zone=equipetrol&type=HOUSE&operation=SALE
     &minPrice=50000&maxPrice=150000&bedrooms=3&features=GARAGE,POOL
     &page=1&size=20&sort=price,asc
 ```
@@ -93,7 +93,7 @@ GET /api/v1/search/properties?zone=equipetrol&type=HOUSE&operation=SALE
 ## Seguridad
 
 - `Authorization: Bearer <jwt>` en todo lo que no es público.
-  - Públicos: catálogo y detalle (`/api/v1/search/properties[/{id}]`), imágenes de una propiedad, registro, login, refresh, logout y JWKS.
+  - Públicos: catálogo y detalle (`/api/v1/catalog/properties[/{id}]`), imágenes de una propiedad, registro, login, refresh, logout y JWKS.
   - El refresh y el logout son públicos para el gateway porque se usan cuando el access token puede haber vencido. Su credencial es el propio refresh token, en el body.
 - La **autorización de dominio** (¿es el agente dueño de la propiedad?) va en la capa de aplicación, no solo en el gateway.
 - CORS y rate limit se configuran **en el gateway**, no en cada servicio.

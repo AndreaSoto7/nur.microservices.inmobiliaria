@@ -43,25 +43,19 @@ property.publish()        ✅  valida el estado y registra PropertyPublished
 property.setStatus(...)   ❌  cualquiera cambia el estado sin reglas
 ```
 
-## Máquinas de estado del dominio
+## Máquinas de estado
 
-**Property** (listing-service):
+Cada aggregate con estados (`Property`, `Visit`, `Lead`) define sus transiciones en el `CLAUDE.md` de su servicio. Una transición que no está en esa tabla lanza un error de dominio, que la API traduce a **409 Conflict**. Encapsula las transiciones en el aggregate (patrón State si crecen), sin `switch` repartidos por el código.
 
-| Desde | Acción | Hacia | Evento |
-|---|---|---|---|
-| `DRAFT` | `publish()` | `PUBLISHED` | `PropertyPublished` |
-| `PUBLISHED` | `pause()` | `PAUSED` | `PropertyPaused` |
-| `PAUSED` | `publish()` | `PUBLISHED` | `PropertyPublished` |
-| `PUBLISHED` | `reserve()` | `RESERVED` | `PropertyReserved` |
-| `RESERVED` | `releaseReservation()` | `PUBLISHED` | `PropertyPublished` |
-| `PUBLISHED` / `RESERVED` | `markSold()` (solo `SALE`) | `SOLD` | `PropertySold` |
-| `PUBLISHED` / `RESERVED` | `markRented()` (solo `RENT`) | `RENTED` | `PropertyRented` |
+## Políticas (eventos que desencadenan comandos)
 
-**Visit** (visit-service): `REQUESTED → SCHEDULED → COMPLETED`. Desde `REQUESTED` también se puede pasar a `REJECTED`, y desde `REQUESTED` o `SCHEDULED` a `CANCELLED`.
+Una política reacciona a un evento ejecutando un comando sobre **otro** aggregate (ADR 0005):
 
-- Solo se puede solicitar una visita a una propiedad `PUBLISHED`. visit-service lo sabe por los eventos de listing que guarda localmente.
-
-Cualquier otra transición lanza un error de dominio, que la API traduce a **409 Conflict**.
+- Vive en `application` (por ejemplo `application/policy/`). El consumidor Kafka de `infrastructure` traduce el evento y la invoca; la política despacha el mismo comando que usaría la API.
+- El comando lleva `actor: SYSTEM` y un motivo. Se salta los permisos de usuario ("solo el agente…"), **nunca** las reglas de estado del aggregate.
+- Si una regla de estado rechaza el comando: log `WARN` y sigue. La DLQ es solo para errores técnicos.
+- Un aggregate por transacción: si la política toca varios, una transacción por cada uno.
+- Antes de agregar una, verifica que no forme un ciclo de eventos entre servicios.
 
 ## CQRS
 
@@ -74,7 +68,7 @@ Cualquier otra transición lanza un error de dominio, que la API traduce a **409
   - Comandos en imperativo: `ScheduleVisitCommand`.
   - Consultas: `Get…Query` o `List…Query`.
   - Eventos en pasado: `VisitScheduled`.
-- **Modelo de lectura del catálogo:** search-service se alimenta de los eventos de listing. Es un caso de CQRS entre servicios.
+- **Modelos de lectura del proyecto:** el catálogo público (`property_catalog` en listing, proyección del lado query) y la copia local de propiedades en visit (alimentada por eventos de listing, CQRS entre servicios).
 
 ## Eventos de dominio vs. eventos de integración
 
@@ -85,9 +79,4 @@ Cualquier otra transición lanza un error de dominio, que la API traduce a **409
 
 ## Ubicación por stack
 
-| Concepto | Django (identity) | Spring (listing) | NestJS (visit) | Go (search, notification) |
-|---|---|---|---|---|
-| Dominio | `identity/domain/` | `…listing.domain` | `src/<modulo>/domain/` | `internal/domain/` |
-| Aplicación | `identity/application/` | `…listing.application` | `src/<modulo>/application/` | `internal/application/` |
-| Infraestructura | `identity/infrastructure/` | `…listing.infrastructure` | `src/<modulo>/infrastructure/` | `internal/infrastructure/` |
-| Presentación | `identity/presentation/` | `…listing.presentation` | `src/<modulo>/presentation/` | `internal/interfaces/http/` |
+La estructura de carpetas de cada servicio está en su `CLAUDE.md` (sección "Estructura"). Síguela exactamente.

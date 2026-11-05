@@ -1,6 +1,6 @@
 ---
 name: adr
-description: Registra una decisión de arquitectura (ADR) en docs/adr, por ejemplo la tecnología del gateway, dónde vive Favoritos, el framework del frontend, la base de datos de search o una llamada síncrona entre servicios.
+description: Registra una decisión de arquitectura (ADR) en docs/adr, por ejemplo el stack de audit-service, las versiones de cada stack, una política nueva entre servicios o una llamada síncrona entre servicios.
 argument-hint: "[título de la decisión]"
 disable-model-invocation: true
 ---
@@ -16,5 +16,8 @@ Decisión: $ARGUMENTS
    - **Decisión** y **justificación**.
    - **Consecuencias:** qué se gana, qué se pierde y qué hay que hacer ahora.
    - **Estado:** `Propuesto`. Pasa a `Aceptado` cuando el equipo lo apruebe en el PR.
-3. Si la decisión resuelve un punto de "Decisiones pendientes" de `CLAUDE.md`, actualiza también esa sección y la tabla de servicios en el mismo PR.
+3. En el mismo PR, lleva la decisión a donde los agentes la van a leer:
+   - Si resuelve un punto de "Decisiones pendientes" del `CLAUDE.md` raíz, quítalo de ahí y actualiza el mapa de componentes si cambia.
+   - Si afecta a un componente, actualiza su `CLAUDE.md` (ficha, decisiones técnicas, eventos).
+   - Si una decisión anterior queda reemplazada, marca el ADR viejo como `Reemplazado por NNNN`.
 4. Sugiere la rama `docs/adr-<tema>` y pedir revisión a todo el equipo: un ADR afecta a todos.

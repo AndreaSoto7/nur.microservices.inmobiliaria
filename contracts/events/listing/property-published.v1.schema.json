@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://inmobiliaria.local/contracts/events/listing/property-published.v1.schema.json",
   "title": "PropertyPublished v1 (payload)",
-  "description": "Una propiedad quedó visible en el catálogo. Lleva el estado necesario para que search y visit no necesiten llamar a listing por HTTP.",
+  "description": "Una propiedad quedó visible en el catálogo. Lleva el estado necesario para que visit no necesite llamar a listing por HTTP.",
   "type": "object",
   "required": [
     "propertyId",

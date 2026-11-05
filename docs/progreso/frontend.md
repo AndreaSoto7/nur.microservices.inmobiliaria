@@ -2,7 +2,7 @@
 
 - **Responsable:** _(completar)_
 - **Stack:** React + Vite + TypeScript (ADR 0004)
-- **Rules:** `frontend-smart-dumb`
+- **Instrucciones:** [`frontend/CLAUDE.md`](../../frontend/CLAUDE.md)
 
 ## Historial
 
@@ -14,7 +14,7 @@
 
 **Base**
 
-- [ ] Proyecto Vite + TypeScript, estructura `core/`, `shared/ui/` y `features/` (rule `frontend-smart-dumb`)
+- [ ] Proyecto Vite + TypeScript, estructura `core/`, `shared/ui/` y `features/` (`frontend/CLAUDE.md`)
 - [ ] Elegir el router y la librería de datos (completar el ADR 0004)
 - [ ] Cliente HTTP vía gateway, manejo de tokens y rutas protegidas
 

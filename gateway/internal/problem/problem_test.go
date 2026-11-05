@@ -41,7 +41,7 @@ func TestWriteProducesProblemJSONWithCorrelationID(t *testing.T) {
 	}
 }
 
-// Los códigos son parte del contrato con el frontend: la rule stack-gateway los fija.
+// Los códigos son parte del contrato con el frontend: los fija gateway/CLAUDE.md.
 func TestKindsMatchTheRuleTable(t *testing.T) {
 	tests := []struct {
 		kind   Kind

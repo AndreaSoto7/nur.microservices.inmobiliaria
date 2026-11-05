@@ -1,6 +1,6 @@
 # Base de datos — listing-service
 
-- **Base:** `listing` (PostgreSQL 17). Migraciones con **Flyway** (rule `stack-spring`).
+- **Base:** `listing` (PostgreSQL 17). Migraciones con **Flyway** (`services/listing-service/CLAUDE.md`).
 - **Aggregates:**
   - `Property`: tablas `properties`, `property_features` y `property_images`. Las imágenes y las características son parte del aggregate: se guardan y cargan con él.
   - `Favorite` (ADR 0003): tabla `favorites`.
@@ -203,7 +203,7 @@ Si la regla de estado rechaza la reserva, se guarda igual el paso 1 (para no rep
 
 ## Notas
 
-- **Formatos de imagen:** el diagrama permite solo JPG y PNG; la rule `seguridad` permite también WebP. Aquí manda el diagrama. Si el equipo quiere WebP, se agrega al `CHECK`.
-- **Por qué una tabla de catálogo aparte** y no consultar `properties`: es el lado query de CQRS. Las consultas públicas no tocan el aggregate, la tabla está desnormalizada para los filtros (características en un arreglo con índice GIN) y solo contiene lo visible. Si más adelante se retoma search-service, esta tabla es lo que se mueve.
+- **Formatos de imagen:** solo JPG y PNG, como dice el event storming (y la rule `seguridad`). Si el equipo quiere WebP, se agrega al `CHECK` y a la rule.
+- **Por qué una tabla de catálogo aparte** y no consultar `properties`: es el lado query de CQRS. Las consultas públicas no tocan el aggregate, la tabla está desnormalizada para los filtros (características en un arreglo con índice GIN) y solo contiene lo visible.
 - **Reconstruir el catálogo:** `TRUNCATE property_catalog` y volver a llenarla desde `properties` y `property_features` con las propiedades `PUBLISHED` o `RESERVED`.
 - **"Mis propiedades" del agente** lee `properties` directamente (todos los estados): una consulta puede saltarse el dominio, pero nunca escribe.

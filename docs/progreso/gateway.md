@@ -2,7 +2,7 @@
 
 - **Responsable:** @Tiesol
 - **Stack:** Go (propio)
-- **Rules:** `stack-gateway`, `service-discovery`, `seguridad`, `api-rest`
+- **Instrucciones:** [`gateway/CLAUDE.md`](../../gateway/CLAUDE.md)
 
 ## Historial
 
@@ -19,7 +19,7 @@
 
 **Funcionalidad (ADR 0002)**
 
-- [ ] Reverse proxy y ruteo por prefijo hacia los nombres de servicio en Consul
+- [ ] Reverse proxy y ruteo por prefijo hacia los nombres de servicio en Consul (tabla de rutas de `gateway/CLAUDE.md`, con `/api/v1/catalog/**` público y `/api/v1/audit/**`; ADR 0005)
 - [ ] Discovery: consulta periódica de las réplicas sanas en Consul
 - [ ] Balanceador round robin (Strategy) con marcado de réplicas caídas (Circuit Breaker)
 - [ ] Validar el JWT con el JWKS de identity (`typ=at+jwt`, `aud=inmobiliaria`) y borrar los `X-User-*`

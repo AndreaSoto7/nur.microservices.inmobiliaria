@@ -22,7 +22,8 @@ El catálogo oficial de eventos, sus topics, productores y consumidores está en
 - **Un topic por aggregate:** `<servicio>.<aggregate>.events`, por ejemplo `listing.property.events`, `visit.visit.events` o `identity.user.events`.
 - **La clave del mensaje es el `aggregateId`.** Así Kafka garantiza el orden de los eventos de una misma propiedad o visita.
 - **Dead-letter:** `<topic>.dlq`.
-- **Consumer group:** el nombre del servicio consumidor (`search-service`, `notification-service`, …).
+- **Consumer group:** el nombre del servicio consumidor (`visit-service`, `listing-service`, `audit-service`).
+- **Quién consume qué** y las políticas que disparan los eventos: `contracts/events/README.md` y el `CLAUDE.md` de cada servicio.
 
 ## Envoltorio (envelope) obligatorio
 
@@ -49,19 +50,20 @@ Cada `payload` tiene su schema en `contracts/events/<servicio>/<evento-kebab>.v<
 - **Patrón Outbox.** En la misma transacción en que se guarda el aggregate, se inserta el evento en la tabla `outbox`. Un relay publica en Kafka y marca la fila como enviada.
   - Nunca publiques en Kafka dentro de la transacción de base de datos ni antes del commit.
 - Configura el productor con `acks=all` y en modo idempotente cuando la librería lo permita.
-- El payload lleva lo que los consumidores necesitan para no tener que llamarte por HTTP (*event-carried state transfer*), sin datos sensibles (contraseñas, tokens). Un email solo va si el consumidor lo necesita para notificar. Ejemplo: `PropertyPublished` lleva precio, zona, tipo, dormitorios, características e imagen de portada.
+- El payload lleva lo que los consumidores necesitan para no tener que llamarte por HTTP (*event-carried state transfer*), sin datos sensibles (contraseñas, tokens) ni datos personales que ningún consumidor necesita. Ejemplo: `PropertyPublished` lleva precio, zona, tipo, dormitorios, características e imagen de portada.
 
 ## Consumidor
 
 - **Entrega al menos una vez → el consumidor es idempotente.** Guarda los `eventId` procesados (tabla `processed_events`) e ignora los duplicados.
-- Para proyecciones (search-service), haz upsert por `aggregateId` e ignora los eventos con `occurredAt` anterior al último aplicado.
+- Para proyecciones (la copia de propiedades en visit), haz upsert por `aggregateId` e ignora los eventos con `occurredAt` anterior al último aplicado.
+- **Políticas** (un evento que dispara un comando en tu servicio): ver la sección "Políticas" de la rule `ddd-clean-architecture`. Un rechazo por regla de negocio no va a la DLQ.
 - **Errores:**
   - Reintenta con backoff (3 intentos).
   - Si sigue fallando, manda el mensaje a `<topic>.dlq` con el error y continúa.
   - Nunca te quedes en un loop infinito ni tumbes el consumidor.
 - **Ignora** los `eventType` que no conoces, sin fallar. Así se pueden agregar eventos nuevos al topic sin romperte.
 - **Filtra por `(eventType, eventVersion)`** e ignora las versiones que no conoces. Mientras conviven v1 y v2, procesa una sola versión de cada hecho.
-- **search y visit arrancan desde el principio del topic** (`fromBeginning`, `auto.offset.reset=earliest`), para conocer las propiedades ya publicadas. **notification arranca desde el final** (`latest`): si no, con una base vacía reenviaría todos los avisos históricos.
+- **Todos los consumidores del proyecto arrancan desde el principio del topic** (`fromBeginning`, `auto.offset.reset=earliest`): visit para conocer las propiedades ya publicadas, listing y audit para no perder eventos. Repetir un evento viejo es inofensivo porque el consumidor es idempotente y las reglas de estado lo descartan.
 - Traduce el evento a tu propio modelo (anti-corruption layer). No reutilices clases del productor.
 
 ## Versionado de eventos

@@ -1,6 +1,6 @@
 # Progreso por servicio
 
-Hay un archivo por servicio. Cada uno tiene dos secciones:
+Hay un archivo por componente. Lo que el componente **es** (dominio, eventos, estructura) está en su `CLAUDE.md`; aquí solo va **qué está hecho y qué falta**. Cada archivo tiene dos secciones:
 
 - **Historial:** cada `feat` o `fix` que se entregó, con su PR. Lo más reciente va arriba.
 - **Pendientes:** lo que falta, como checklist. Se tacha (`[x]`) cuando el PR que lo resuelve se abre.
@@ -11,8 +11,6 @@ Hay un archivo por servicio. Cada uno tiene dos secciones:
 | [listing-service.md](listing-service.md) | _(completar)_ |
 | [visit-service.md](visit-service.md) | _(completar)_ |
 | [audit-service.md](audit-service.md) | _(completar)_ · opcional (ADR 0005) |
-| [search-service.md](search-service.md) | Fuera de alcance (ADR 0005) |
-| [notification-service.md](notification-service.md) | Fuera de alcance (ADR 0005) |
 | [gateway.md](gateway.md) | @Tiesol |
 | [frontend.md](frontend.md) | _(completar)_ |
 | [infra.md](infra.md) | Zona compartida |

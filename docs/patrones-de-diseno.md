@@ -25,18 +25,17 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Strategy | Comportamiento | gateway | Algoritmo de balanceo intercambiable (round robin) |
 | Mediator | Comportamiento | visit, listing | `CommandBus` / `QueryBus` desacoplan los controladores de los handlers |
 | Database per Service | Microservicios | todos | Persistencia independiente |
-| CQRS | Arquitectura | listing + search | Comandos en listing, lectura optimizada en search |
+| CQRS | Arquitectura | listing, visit | Proyección `property_catalog` como lado query en listing; copia local de propiedades en visit alimentada por eventos |
+| Event-driven policy (coreografía) | Integración | listing, visit | `LeadClosed` (WON) → reservar; `PropertyReserved` / `PropertySold` → rechazar o cancelar visitas (ADR 0005) |
 | Outbox | Integración | listing, visit | Publicación confiable de eventos (ya aplicado en identity) |
 | Repository | DDD | todos | Un repositorio por aggregate; el dominio no conoce el ORM |
 | Factory Method | Creacional | listing | `Property.create()` valida distinto según `HOUSE` o `APARTMENT` |
-| Builder | Creacional | search | Criterios de búsqueda con muchos filtros opcionales |
+| Builder | Creacional | listing | Criterios del catálogo público con muchos filtros opcionales |
 | Singleton | Creacional | todos | Productor de Kafka y pool de BD con scope singleton del contenedor de DI |
 | Adapter | Estructural | listing | `ImageStorage` → almacenamiento local o MinIO |
-| Decorator | Estructural | search | Repositorio con caché que envuelve al real |
 | Facade | Estructural | frontend | Custom hook por feature (`useCatalog`) que oculta la API y el estado a los componentes smart |
 | Observer / Pub-Sub | Comportamiento | todos | Eventos de dominio y Kafka |
-| Strategy | Comportamiento | notification | Canales de notificación intercambiables |
 | Command | Comportamiento | visit, listing | Comandos CQRS ejecutados por `CommandBus` |
-| State | Comportamiento | listing, visit | Transiciones de `PropertyStatus` y `VisitStatus` |
-| Specification | DDD | visit, search | "Se puede solicitar visita si está PUBLISHED"; filtros combinables |
+| State | Comportamiento | listing, visit | Transiciones de `PropertyStatus`, `VisitStatus` y del `Lead` |
+| Specification | DDD | visit, listing | "Se puede solicitar visita si está PUBLISHED"; filtros combinables del catálogo |
 | Smart/Dumb Components | Frontend | frontend | Separar lógica de presentación |

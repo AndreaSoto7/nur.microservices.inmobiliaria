@@ -2,7 +2,7 @@
 
 - **Responsable:** @Tiesol
 - **Stack:** Django 5.2 LTS + DRF, Python 3.13
-- **Rules:** `stack-django`, `ddd-clean-architecture`, `service-discovery`, `seguridad`
+- **Instrucciones:** [`services/identity-service/CLAUDE.md`](../../services/identity-service/CLAUDE.md)
 
 ## Historial
 

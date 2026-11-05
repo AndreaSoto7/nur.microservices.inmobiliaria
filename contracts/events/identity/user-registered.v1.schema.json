@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://inmobiliaria.local/contracts/events/identity/user-registered.v1.schema.json",
   "title": "UserRegistered v1 (payload)",
-  "description": "Se registró un usuario. notification lo consume para saber a quién y cómo avisarle. Lleva email y nombre porque son necesarios para notificar: por eso identity.user.events usa la retención por defecto y no guarda datos personales para siempre. Nunca lleva la contraseña ni su hash.",
+  "description": "Se registró un usuario. Lleva email y nombre: por eso identity.user.events usa la retención por defecto y no guarda datos personales para siempre, y audit-service (opcional) no guarda este payload. Nunca lleva la contraseña ni su hash.",
   "type": "object",
   "required": ["userId", "email", "fullName", "roles", "registeredAt"],
   "properties": {
