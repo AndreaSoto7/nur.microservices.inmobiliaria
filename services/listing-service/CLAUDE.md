@@ -1,6 +1,6 @@
 # listing-service — Spring Boot (Java)
 
-Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están el dominio `Property`, su persistencia, los casos de uso del agente (crear, editar, características, transiciones, galería, listado y detalle) y el outbox; el relay a Kafka, el catálogo, los favoritos y la política `LeadClosed` siguen siendo diseño. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya está el esqueleto y el dominio `Property`; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
@@ -53,7 +53,7 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 | `cancelListingCommand` | `ReleaseReservationCommand` | Solo si está `RESERVED`; vuelve a `PUBLISHED` | `PropertyPublished` |
 | `buyListingCommand` | `MarkPropertySoldCommand` | Solo `SALE`, desde `PUBLISHED` o `RESERVED`; irreversible | `PropertySold` |
 | `rentListingCommand` | `MarkPropertyRentedCommand` | Solo `RENT`, desde `PUBLISHED` o `RESERVED` | `PropertyRented` |
-| `updateGalleryCommand` | `AddPropertyImageCommand` (una imagen por request) | Solo el dueño; JPG/PNG por contenido; máx. 5; no si está vendida o alquilada | `PropertyImagesAdded` (interno); `PropertyUpdated` si está publicada o reservada |
+| `updateGalleryCommand` | `AddPropertyImagesCommand` | Solo el dueño; JPG/PNG; máx. 5; no si está vendida o alquilada | `PropertyImagesAdded` (interno) |
 | — | `AddFavoriteCommand` / `RemoveFavoriteCommand` | Solo propiedades `PUBLISHED`; sin repetir | — |
 | — | `ListAgentPropertiesQuery`, `GetPropertyByIdQuery` | El agente ve las suyas en todos los estados | — |
 | — | `SearchCatalogQuery`, `GetCatalogPropertyQuery` | Público; solo `PUBLISHED` y `RESERVED` | — |
@@ -87,28 +87,20 @@ domain/
                   Favorite (raíz aparte), FavoriteId
   event/          PropertyEvent (sealed interface con un record por evento de dominio)
   repository/     PropertyRepository, FavoriteRepository (interfaces)
-  exception/      DomainException (→ 409), InvalidStateTransitionException (→ 409), InvalidValueException (→ 400),
-                  ConcurrentPropertyModificationException (→ 409, bloqueo optimista)
+  exception/      DomainException (→ 409), InvalidStateTransitionException (→ 409), InvalidValueException (→ 400)
 application/
-  command/        PropertyCommands (Create, Edit, UpdateFeatures, AddImage) + PropertyCommandHandler,
-                  ChangePropertyStatusCommand (sealed, las 6 transiciones) + ChangePropertyStatusHandler,
-                  AddPropertyImageHandler, OwnedProperties (dueño o 404), ImageFormat (tipo real por contenido)
-  query/          PropertyQueries, PropertyViews (forma de las respuestas), PropertyReadRepository (puerto de lectura),
-                  PropertyQueryHandler; después SearchCatalogQuery
-  exception/      PropertyNotFoundException (→ 404; también para una propiedad ajena)
+  command/        PublishPropertyCommand + PublishPropertyHandler, ...
+  query/          SearchCatalogQuery, ListAgentPropertiesQuery, ...
   policy/         ReserveOnLeadWonPolicy (reacciona a LeadClosed)
-  port/           EventPublisher, ImageStorage (java.time.Clock se inyecta como bean)
+  port/           EventPublisher, ImageStorage, Clock
 infrastructure/
-  persistence/    PropertyJpaEntity, PropertyImageJpaEntity, PropertyMapper, JpaPropertyRepository (escritura),
-                  JpaPropertyReadRepository (vistas); después la proyección del catálogo
-  messaging/      OutboxEventPublisher + PropertyIntegrationEvents (dominio → contracts/events);
-                  después OutboxRelay (@Scheduled) y LeadEventsConsumer
-  storage/        LocalImageStorage (Adapter, volumen IMAGE_STORAGE_DIR compartido por las réplicas)
-  config/         SecurityConfig (resource server JWT con JWKS), ProblemJsonSecurityHandler (401/403), ConsulReregistration, ClockConfig
+  persistence/    *JpaEntity, Spring Data repositories, adaptadores, mappers, proyección del catálogo
+  messaging/      OutboxEntity, OutboxRelay (@Scheduled), KafkaEventPublisher, LeadEventsConsumer, mappers
+  storage/        LocalImageStorage (Adapter)
+  config/         SecurityConfig (resource server JWT con JWKS), ProblemJsonSecurityHandler (401/403), ConsulReregistration
   web/            CorrelationIdFilter (X-Correlation-Id → MDC)
 presentation/
-  rest/           PropertyController, PropertyImageController, PropertyRequests (DTOs con Bean Validation),
-                  GlobalExceptionHandler (@RestControllerAdvice → ProblemDetail), ReadinessController
+  rest/           controllers, DTOs (records), GlobalExceptionHandler (@RestControllerAdvice → ProblemDetail), ReadinessController
 ```
 
 ## Decisiones técnicas
@@ -120,7 +112,7 @@ presentation/
 - **Errores:** `ProblemDetail` de Spring 6+ con `code` y `correlationId`.
 - **Seguridad:** `spring-boot-starter-oauth2-resource-server` con `jwk-set-uri` hacia identity; roles del claim `roles`. Configurar el decoder para aceptar `typ=at+jwt` y rechazar `rt+jwt`.
 - **Kafka:** `spring-kafka`. El `OutboxRelay` publica con `KafkaTemplate` y clave `aggregateId`.
-- **Imágenes:** `POST /api/v1/properties/{id}/images` (multipart) → puerto `ImageStorage` (Adapter). `GET /api/v1/properties/{id}/images/{imageId}` es público (caché pública de 5 min); en `DRAFT` o `PAUSED` solo lo ve el dueño con su token (`no-store`) y para el resto es 404. El tipo se detecta por los primeros bytes (`ImageFormat`), nunca por la extensión ni el `Content-Type` del cliente; 5 MB por imagen (rule `seguridad`). Los archivos van al volumen `IMAGE_STORAGE_DIR`, compartido por las réplicas.
+- **Imágenes:** `POST /api/v1/properties/{id}/images` (multipart) → puerto `ImageStorage` (Adapter). `GET /api/v1/properties/{id}/images/{imageId}` es público y responde 404 si la propiedad está en `DRAFT` o `PAUSED`. Validar el MIME real y 5 MB por imagen (rule `seguridad`).
 - **OpenAPI:** `springdoc-openapi` en `/docs`, igual a `contracts/openapi/listing-service.yaml`.
 
 ## Registro en Consul

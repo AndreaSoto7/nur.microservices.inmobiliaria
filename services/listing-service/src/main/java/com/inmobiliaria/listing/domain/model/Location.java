@@ -11,7 +11,6 @@ public record Location(String zone, String address, BigDecimal latitude, BigDeci
 
     private static final int MAX_ZONE = 100;
     private static final int MAX_ADDRESS = 255;
-    private static final int COORDINATE_SCALE = 6;
     private static final BigDecimal MAX_LATITUDE = BigDecimal.valueOf(90);
     private static final BigDecimal MAX_LONGITUDE = BigDecimal.valueOf(180);
 
@@ -30,11 +29,6 @@ public record Location(String zone, String address, BigDecimal latitude, BigDeci
         if (latitude != null && (latitude.abs().compareTo(MAX_LATITUDE) > 0
                 || longitude.abs().compareTo(MAX_LONGITUDE) > 0)) {
             throw invalid("Coordenadas fuera de rango");
-        }
-        // numeric(9,6): con más decimales la base redondearía y el evento diría otra cosa que la base.
-        if (latitude != null && (latitude.stripTrailingZeros().scale() > COORDINATE_SCALE
-                || longitude.stripTrailingZeros().scale() > COORDINATE_SCALE)) {
-            throw invalid("Las coordenadas admiten como máximo " + COORDINATE_SCALE + " decimales");
         }
     }
 

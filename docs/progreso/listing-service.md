@@ -8,7 +8,6 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Propiedades del agente: persistencia JPA (migración, mapper, bloqueo optimista), casos de uso de crear, editar, características, las 6 transiciones y galería, listado y detalle, imágenes en disco, y eventos en el outbox validados contra `contracts/events` | #46 |
 | feat | Aggregate `Property` con su máquina de estados, value objects (`Money`, `Location`, `Area`, `PropertyImage`) y eventos de dominio, con 30 tests | #41 |
 | chore | Esqueleto Spring Boot 4.1: capas, `/health` y `/health/ready`, Consul con re-registro, JWT con JWKS, problem+json, `X-Correlation-Id`, logs JSON, outbox y `processed_events`, Dockerfile y compose | #41 |
 
@@ -18,25 +17,22 @@
 
 - [x] Scaffold con `/scaffold-servicio listing` (capas, health, Consul, problem+json, Dockerfile)
 - [x] Contrato `contracts/openapi/listing-service.yaml` (stub con health; faltan los endpoints de negocio)
-- [x] Probar el arranque con Postgres real (`docker compose up listing-service`)
+- [ ] Probar el arranque con Postgres real (`docker compose up listing-service`): el esqueleto se probó sin base
 - [ ] `springdoc-openapi` en `/docs`
 - [ ] Elegir linter de Java (Spotless o Checkstyle)
-- [x] `Property.reconstitute(...)` para que el mapper cargue una propiedad guardada
-- [x] Puertos `PropertyRepository` y `Clock`; `PropertyNotFoundException` (404). Una propiedad ajena también es 404 (contrato), así que no hizo falta `NotPropertyOwnerException`
-- [x] Persistencia: migración de `properties`, `property_features`, `property_images`, `*JpaEntity`, mapper y adaptador del repositorio
-- [x] Agregar una imagen a una propiedad visible emite `PropertyUpdated` (la galería viaja en el evento)
-- [ ] Extraer `GetPropertyImageHandler` y leer la imagen por el puerto de lectura, sin cargar el aggregate (revisión de este PR)
-- [ ] Borrar el archivo si la transacción hace rollback desde el adaptador (hoy lo hace el handler con `TransactionSynchronizationManager`) y probarlo
+- [ ] `Property.reconstitute(...)` para que el mapper cargue una propiedad guardada (sin eventos ni validar transiciones), con test de ida y vuelta
+- [ ] Puertos `PropertyRepository` (en `domain/repository`) y `Clock`; errores de aplicación `PropertyNotFoundException` (404) y `NotPropertyOwnerException` (403)
+- [ ] Persistencia: migración de `properties`, `property_features`, `property_images`, `*JpaEntity`, mapper y adaptador del repositorio
+- [ ] Decidir si agregar una imagen a una propiedad visible emite también `PropertyUpdated` (cambia la portada del catálogo)
 
 **Propiedades (enunciado: agentes)**
 
 - [x] Dominio: `Property` con `Money`, `Location`, `Area`, características, galería y máquina de estados completa, con test de la tabla entera (falta exponerlo)
-- [x] Casos de uso y endpoints: crear y editar una propiedad
-- [x] Casos de uso y endpoints: publicar y pausar
-- [x] Casos de uso y endpoints: reservar, liberar la reserva y marcar como vendida o alquilada
-- [x] Galería de imágenes (`POST /properties/{id}/images`, puerto `ImageStorage` con `LocalImageStorage`)
-- [x] Listar las propiedades del agente
-- [ ] Quitar y reordenar imágenes (no lo pide el enunciado: después)
+- [ ] Casos de uso y endpoints: crear y editar una propiedad
+- [ ] Casos de uso y endpoints: publicar y pausar
+- [ ] Casos de uso y endpoints: reservar, liberar la reserva y marcar como vendida o alquilada
+- [ ] Galería de imágenes (`POST /properties/{id}/images`, puerto `ImageStorage`)
+- [ ] Listar las propiedades del agente
 
 **Catálogo público, lado query (ADR 0005)**
 
@@ -50,11 +46,10 @@
 
 **Eventos**
 
-- [x] `GET /properties/{propertyId}/images/{imageId}` público (las rutas de `PropertyPublished` apuntan ahí)
+- [ ] `GET /properties/{propertyId}/images/{imageId}` público (las rutas de `PropertyPublished` apuntan ahí)
 - [x] Antes de escribir los schemas: agregar `previousStatus` a `PropertyPublished` para distinguir una propiedad nueva de una reanudada
 - [x] Schemas de `PropertyUpdated`, `PropertyPaused`, `PropertyReserved`, `PropertySold` y `PropertyRented` en `contracts/events/listing/`
-- [x] Outbox: cada comando guarda sus eventos de integración en la misma transacción, validados contra `contracts/events` en los tests
-- [ ] Relay del outbox a Kafka (`@Scheduled`, `acks=all`, clave `aggregateId`) y su test con Kafka real
+- [ ] Outbox y relay a Kafka: `PropertyPublished`, `PropertyUpdated`, `PropertyPaused`, `PropertyReserved`, `PropertySold`, `PropertyRented`
 
 **Política (ADR 0005, sección 3.1)**
 

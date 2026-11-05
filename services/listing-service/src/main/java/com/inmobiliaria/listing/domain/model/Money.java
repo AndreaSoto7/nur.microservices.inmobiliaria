@@ -10,8 +10,6 @@ public record Money(BigDecimal amount, String currency) {
 
     public static final String BOB = "BOB";
     private static final int SCALE = 2;
-    /** Lo que entra en numeric(14,2). */
-    private static final BigDecimal MAX = new BigDecimal("999999999999.99");
 
     public Money {
         Objects.requireNonNull(amount, "amount");
@@ -21,9 +19,6 @@ public record Money(BigDecimal amount, String currency) {
         }
         if (amount.signum() <= 0) {
             throw new InvalidValueException("PROPERTY_INVALID_PRICE", "El precio debe ser mayor a 0");
-        }
-        if (amount.compareTo(MAX) > 0) {
-            throw new InvalidValueException("PROPERTY_INVALID_PRICE", "El precio es demasiado alto");
         }
         if (amount.stripTrailingZeros().scale() > SCALE) {
             throw new InvalidValueException("PROPERTY_INVALID_PRICE", "El precio admite como máximo 2 decimales");
