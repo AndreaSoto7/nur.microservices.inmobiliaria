@@ -239,3 +239,41 @@ func TestRateLimitWithUnparsableRemoteAddrStillLimits(t *testing.T) {
 		t.Errorf("status = %d", rec.Code)
 	}
 }
+
+// net/http acepta "post" como método, y Django lo atiende igual: no puede quedar fuera del límite.
+func TestRateLimitAppliesToLowercaseMethod(t *testing.T) {
+	handler := newLimited(1, newFakeClock())
+
+	doRequest(handler, http.MethodPost, loginPath, "10.0.0.1:1000")
+	rec := doRequest(handler, "post", loginPath, "10.0.0.1:1000")
+
+	if rec.Code != http.StatusTooManyRequests {
+		t.Errorf("status = %d: el método en minúscula se saltó el límite", rec.Code)
+	}
+}
+
+func TestRateLimitClientKey(t *testing.T) {
+	tests := []struct {
+		name          string
+		first, second string
+		sameBucket    bool
+	}{
+		{"IPv6 en el mismo /64", "[2001:db8:1:2::1]:1000", "[2001:db8:1:2:ffff::9]:1000", true},
+		{"IPv6 en otro /64", "[2001:db8:1:2::1]:1000", "[2001:db8:1:3::1]:1000", false},
+		{"IPv4 mapeada a IPv6 es la misma IP", "10.0.0.1:1000", "[::ffff:10.0.0.1]:1000", true},
+		{"IPv4 no se agrupa por red", "10.0.0.1:1000", "10.0.0.2:1000", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := newLimited(1, newFakeClock())
+
+			doRequest(handler, http.MethodPost, loginPath, tt.first)
+			rec := doRequest(handler, http.MethodPost, loginPath, tt.second)
+
+			if got := rec.Code == http.StatusTooManyRequests; got != tt.sameBucket {
+				t.Errorf("status = %d, sameBucket = %v", rec.Code, tt.sameBucket)
+			}
+		})
+	}
+}

@@ -4,7 +4,9 @@ import (
 	"math"
 	"net"
 	"net/http"
+	"net/netip"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +17,8 @@ import (
 
 // bucketRefillWindow es lo que tarda en llenarse un bucket vacío: burst = límite por minuto.
 const bucketRefillWindow = time.Minute
+
+const ipv6ClientPrefixBits = 64
 
 // limitedPaths son las rutas caras o sensibles: hashear contraseñas consume CPU, y el 401 y el 409
 // permitirían probar contraseñas o descubrir qué emails existen.
@@ -57,7 +61,8 @@ func NewRateLimiter(perMinute int, now func() time.Time) *RateLimiter {
 // Middleware responde 429 cuando el cliente agotó su bucket.
 func (l *RateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost && limitedPaths[r.URL.Path] && !l.allow(clientKey(r)) {
+		// EqualFold: net/http acepta "post" como método, y Django lo atiende igual que POST.
+		if strings.EqualFold(r.Method, http.MethodPost) && limitedPaths[r.URL.Path] && !l.allow(clientKey(r)) {
 			w.Header().Set("Retry-After", l.retryAfter)
 			problem.Write(w, r, problem.RateLimited)
 			return
@@ -109,5 +114,23 @@ func clientKey(r *http.Request) string {
 	if err != nil {
 		host = r.RemoteAddr
 	}
-	return r.URL.Path + "|" + host
+	return r.URL.Path + "|" + clientNetwork(host)
+}
+
+// clientNetwork agrupa IPv6 por /64: un cliente suele controlar esa red entera, y con la dirección
+// completa tendría un bucket nuevo por request.
+func clientNetwork(host string) string {
+	addr, err := netip.ParseAddr(host)
+	if err != nil {
+		return host
+	}
+	addr = addr.Unmap()
+	if addr.Is4() {
+		return addr.String()
+	}
+	prefix, err := addr.Prefix(ipv6ClientPrefixBits)
+	if err != nil {
+		return host
+	}
+	return prefix.String()
 }
