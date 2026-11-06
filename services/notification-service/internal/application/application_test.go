@@ -72,7 +72,13 @@ func (s *inMemoryStore) ListByRecipient(_ context.Context, query ListNotificatio
 		}
 		views = append(views, NotificationView{ID: notification.ID(), Type: string(notification.Type()), CreatedAt: notification.CreatedAt()})
 	}
-	sort.Slice(views, func(i, j int) bool { return views[i].CreatedAt.After(views[j].CreatedAt) })
+	// Desempata por ID, como el repositorio real: con la misma fecha, sin esto el orden depende del mapa.
+	sort.Slice(views, func(i, j int) bool {
+		if !views[i].CreatedAt.Equal(views[j].CreatedAt) {
+			return views[i].CreatedAt.After(views[j].CreatedAt)
+		}
+		return views[i].ID > views[j].ID
+	})
 	total := len(views)
 	start := min((query.Page-1)*query.Size, total)
 	end := min(start+query.Size, total)
