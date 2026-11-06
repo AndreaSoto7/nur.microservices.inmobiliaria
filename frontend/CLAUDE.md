@@ -69,6 +69,7 @@ frontend/src/
       usePropertyDetail.ts (facade; un 404 es "ya no está disponible", no un error)
       usePropertyContact.ts (facade de solicitar visita y enviar consulta)
     agent/
+      AgentLayout.tsx   menú común del panel de agente (smart)
       properties-admin/
         containers/  AgentPropertiesPage.tsx (smart)
         components/  PropertyAdminList  PropertyActions  PropertyStatusBadge   (dumb)
@@ -79,7 +80,10 @@ frontend/src/
         components/  PropertyDataForm  PropertyFeaturesForm  PropertyImagesForm  PublishChecklist   (dumb)
         usePropertyForm.ts (facade) · propertyFormValues.ts (formulario ↔ request del contrato)
         propertyRequirements.ts   qué falta para publicar y validación de fotos (funciones puras, con tests)
-      visit-requests/  lead-follow-up/
+      visit-requests/
+        containers/  AgentVisitsPage   (smart) · components/ AgentVisitRow  ScheduleVisitForm   (dumb)
+        useAgentVisits.ts (facade) · visitActions.ts (cuándo se puede marcar realizada, con tests)
+      lead-follow-up/
     favorites/
       containers/  FavoritesPage  FavoriteControl   (smart) · components/ FavoriteList  FavoriteToggle   (dumb)
       useFavorites.ts   (facade de la página y del botón)
@@ -101,7 +105,7 @@ frontend/src/
 | `FavoritesPage`, `FavoriteControl` | `FavoriteList` (`onRemove`), `FavoriteToggle` (`onToggle`), `Pagination` |
 | `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `FilterSelect` (`onChange`) |
 | `PropertyCreatePage`, `PropertyEditPage` | `PropertyDataForm` (`onSubmit`), `PropertyFeaturesForm` (`onSubmit`), `PropertyImagesForm` (`onUpload`), `PublishChecklist`, `PropertyActions` |
-| `VisitRequestsPage` | `VisitRequestList`, `ScheduleVisitDialog` |
+| `AgentVisitsPage` | `AgentVisitRow` (`onSchedule`, `onReject`, `onCancel`, `onComplete`), `ScheduleVisitForm`, `ReasonPanel`, `VisitDetails` |
 | `LeadFollowUpPage` | `LeadTimeline`, `FollowUpForm`, `CloseLeadDialog` (`onClose(outcome)`) |
 
 ## Catálogo
@@ -120,6 +124,13 @@ frontend/src/
 - Publicar exige dormitorios, baños, superficie y al menos una foto: `PublishChecklist` lo explica y el botón queda desactivado hasta completarlo.
 - **Fotos:** `GET .../images/{id}` es público y responde 404 si la propiedad está en `DRAFT` o `PAUSED`, así que ahí solo se muestra la cantidad, sin miniaturas. La vista previa local tampoco se usa: la CSP bloquea `blob:`. El front revisa formato, tamaño y cantidad antes de subir, pero la firma real la valida listing.
 - `POST /properties` no es idempotente: ante un 504 se avisa que el borrador pudo crearse, para que no se duplique al reintentar.
+
+## Solicitudes de visita (agente)
+
+- Ruta `/agente/solicitudes`, dentro del panel de agente (`AgentLayout`). `/agente` lleva a sus propiedades. Todas las rutas del panel exigen rol `AGENT`.
+- El horario propuesto viene cargado con la fecha que pidió el interesado. El título sale de `GET /properties/{id}`, porque el agente también ve sus propiedades sin publicar.
+- "Marcar realizada" solo aparece cuando terminó el horario: antes, visit responde `VISIT_COMPLETION_TOO_EARLY`.
+- El error de una acción se muestra en su fila y el formulario sigue abierto, para corregir sin volver a escribir.
 
 ## Favoritos
 

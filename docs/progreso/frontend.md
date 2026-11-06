@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Panel de agente con menú propio y solicitudes de visita: programar, rechazar, cancelar y marcar realizada. Probado contra visit real, salvo marcar realizada, que exige que haya terminado el horario | este PR |
 | feat | Mis visitas: lista con estados y filtro, y cancelar una visita programada. Probado contra visit real | #98 |
 | feat | Enviar una consulta y solicitar una visita desde el detalle, con `Idempotency-Key`. Probado contra visit real, hasta el aviso que recibe el agente | #97 |
 | feat | Avisos: página con filtro de no leídos, marcar como leído y contador en la cabecera | #95 |
