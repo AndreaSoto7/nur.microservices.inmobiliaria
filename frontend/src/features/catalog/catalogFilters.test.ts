@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { catalogQuery, DEFAULT_FILTERS, filtersFromSearch, filtersToSearch } from './catalogFilters'
+import {
+  DEFAULT_FILTERS,
+  advancedFilterCount,
+  catalogQuery,
+  filtersFromSearch,
+  filtersToSearch,
+  hasActiveFilters,
+} from './catalogFilters'
 
 describe('filtros del catálogo en la URL', () => {
   it('lee los filtros válidos de la URL', () => {
@@ -60,5 +67,34 @@ describe('filtros del catálogo en la URL', () => {
 
     // URLSearchParams escribe la coma como %2C: es la misma URL.
     expect(decodeURIComponent(roundTrip)).toBe(search)
+  })
+})
+
+describe('filtros aplicados', () => {
+  it('sin filtros no hay nada activo, aunque cambien el orden o la página', () => {
+    const filters = { ...DEFAULT_FILTERS, sort: 'price,asc' as const, page: 3 }
+
+    expect(hasActiveFilters(filters)).toBe(false)
+    expect(advancedFilterCount(filters)).toBe(0)
+  })
+
+  it('cuenta precio, dormitorios y cada característica como filtros avanzados', () => {
+    const filters = {
+      ...DEFAULT_FILTERS,
+      minPrice: 0,
+      maxPrice: 5000,
+      bedrooms: 2,
+      features: ['POOL' as const, 'GARAGE' as const],
+    }
+
+    expect(hasActiveFilters(filters)).toBe(true)
+    expect(advancedFilterCount(filters)).toBe(5)
+  })
+
+  it('zona, tipo y operación son filtros activos, pero no avanzados', () => {
+    const filters = { ...DEFAULT_FILTERS, zone: 'Urubó', type: 'HOUSE' as const }
+
+    expect(hasActiveFilters(filters)).toBe(true)
+    expect(advancedFilterCount(filters)).toBe(0)
   })
 })

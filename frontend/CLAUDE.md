@@ -23,7 +23,11 @@ Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, qu
 | Mis propiedades, galería (agente) | listing: `/api/v1/properties/**` |
 | Consultas, visitas, oportunidades | visit: `/api/v1/inquiries`, `/api/v1/visits`, `/api/v1/leads` |
 
-No hay notificaciones: el cliente ve el estado de sus solicitudes en "Mis visitas" (ADR 0005). Nunca se llama a un microservicio directo.
+Las notificaciones tienen API (`/api/v1/notifications`, ADR 0007), pero todavía no tienen pantalla. Nunca se llama a un microservicio directo.
+
+## Aspecto visual
+
+Paleta, tokens, tipografía, estados de pantalla y accesibilidad: [`docs/convenciones-frontend.md`](../docs/convenciones-frontend.md). Síguelas en toda pantalla nueva.
 
 ## Smart y Dumb components
 
@@ -49,14 +53,14 @@ frontend/src/
     auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
     models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts)
   shared/format/   formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones y extras
-  shared/ui/       dumbs genéricos: Button, TextField, ErrorMessage, LoadingState, Pagination, EmptyState
+  shared/ui/       dumbs genéricos: Button, TextField, ErrorMessage, LoadingState, Pagination, EmptyState, icons
   test/            setup de Vitest, mocks de fetch y renderApp
   features/
     auth/          LoginPage, RegisterPage (smart) · LoginForm, RegisterForm (dumb) · useAuthActions (facade)
     account/       AccountPage (smart) · ProfileCard (dumb)
     catalog/
       containers/  CatalogPage.tsx                                          (smart)
-      components/  PropertyFilters.tsx  PropertyCard.tsx  PropertyCardList.tsx   (dumb)
+      components/  PropertyFilters  SortSelect  PropertyCard  PropertyCardList  PropertyGridSkeleton   (dumb)
       useCatalog.ts                                                         (facade)
       catalogFilters.ts   filtros ↔ URL ↔ query del contrato (funciones puras, con tests)
     property-detail/
@@ -68,7 +72,7 @@ frontend/src/
 
 | Smart (container) | Dumbs que usa |
 |---|---|
-| `CatalogPage`: filtros en la URL, catálogo de listing vía `useCatalog` | `PropertyFilters` (`onFiltersChange`), `PropertyCardList`, `Pagination` |
+| `CatalogPage`: filtros en la URL, catálogo de listing vía `useCatalog` | `PropertyFilters` (`onFiltersChange`), `SortSelect` (`onSortChange`), `PropertyCardList`, `PropertyGridSkeleton`, `Pagination` |
 | `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `VisitRequestForm` (`onSubmitRequest`), `FavoriteToggle` |
 | `AgentPropertiesPage` | `PropertyTable` (`onPublish`, `onPause`, `onEdit`), `StatusBadge` |
 | `VisitRequestsPage` | `VisitRequestList`, `ScheduleVisitDialog` |
@@ -77,7 +81,7 @@ frontend/src/
 ## Catálogo
 
 - Ruta `/` (pública). Los filtros viven en la URL (`?zone=…&operation=RENT&features=POOL,GARAGE&page=2`): se comparten, se recargan y funcionan con atrás/adelante. Lo inválido se descarta (`catalogFilters.ts`).
-- `PropertyFilters` edita un borrador y avisa al buscar; el container le pasa `key={filtersKey}` para reiniciarlo cuando cambia la URL. Buscar vuelve a la página 1.
+- `PropertyFilters` edita un borrador y avisa al buscar; el container le pasa `key={filtersKey}` para reiniciarlo cuando cambia la URL. Buscar vuelve a la página 1. El orden está junto a los resultados y aplica al momento, sin pasar por el borrador.
 - `keepPreviousData`: al cambiar de página se sigue viendo la anterior hasta que llega la nueva.
 - Las rutas de imágenes vienen relativas al gateway: `gatewayUrl()` de `core/config.ts` las vuelve absolutas. Si una foto no carga, la tarjeta muestra "Sin foto".
 - Detalle en `/propiedades/:propertyId` (`GET /api/v1/catalog/properties/{id}`): solo `PUBLISHED` o `RESERVED`; un 404 se muestra como "no disponible" y no se reintenta.
