@@ -1,6 +1,6 @@
 # frontend — React + Vite + TypeScript
 
-Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están registro, login, "Mi cuenta", catálogo, detalle, favoritos, avisos, consultas y visitas del interesado, y el panel de agente salvo oportunidades; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están todas las pantallas del enunciado: registro, login, "Mi cuenta", catálogo, detalle, favoritos, avisos, consultas y visitas del interesado, y el panel de agente. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
@@ -50,7 +50,7 @@ Paleta, tokens, tipografía, estados de pantalla y accesibilidad: [`docs/convenc
 frontend/src/
   app/             raíz de composición: App.tsx (rutas), AppLayout (smart), components/AppHeader (dumb)
   core/            cliente HTTP (vía gateway), auth (token, refresh), rutas protegidas, modelos de la API
-    api/           httpClient.ts (apiRequest; admite headers propios y FormData), problem.ts (ApiError a partir del problem+json), catalogApi.ts, propertiesApi.ts, favoritesApi.ts, notificationsApi.ts, visitsApi.ts, inquiriesApi.ts, idempotency.ts
+    api/           httpClient.ts (apiRequest; admite headers propios y FormData), problem.ts (ApiError a partir del problem+json), catalogApi.ts, propertiesApi.ts, favoritesApi.ts, notificationsApi.ts, visitsApi.ts, inquiriesApi.ts, leadsApi.ts, idempotency.ts
     auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
     models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts, notification.ts, visit.ts)
   shared/format/   fechas en hora local, formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones, estados y extras
@@ -87,6 +87,8 @@ frontend/src/
         containers/  AgentInquiriesPage  InquiryDetailSection   (smart) · components/ InquiryRow  InquiryContent   (dumb)
         useAgentInquiries.ts (facade)
       lead-follow-up/
+        containers/  AgentLeadsPage   (smart) · components/ LeadRow  CloseLeadForm   (dumb)
+        useAgentLeads.ts (facade)
     favorites/
       containers/  FavoritesPage  FavoriteControl   (smart) · components/ FavoriteList  FavoriteToggle   (dumb)
       useFavorites.ts   (facade de la página y del botón)
@@ -110,7 +112,7 @@ frontend/src/
 | `PropertyCreatePage`, `PropertyEditPage` | `PropertyDataForm` (`onSubmit`), `PropertyFeaturesForm` (`onSubmit`), `PropertyImagesForm` (`onUpload`), `PublishChecklist`, `PropertyActions` |
 | `AgentVisitsPage` | `AgentVisitRow` (`onSchedule`, `onReject`, `onCancel`, `onComplete`), `ScheduleVisitForm`, `ReasonPanel`, `VisitDetails` |
 | `AgentInquiriesPage` | `InquiryRow` (`onToggle`), `InquiryDetailSection`, `InquiryContent` |
-| `LeadFollowUpPage` | `LeadTimeline`, `FollowUpForm`, `CloseLeadDialog` (`onClose(outcome)`) |
+| `AgentLeadsPage` | `LeadRow` (`onAddNote`, `onClose`), `CloseLeadForm` (`onClose(outcome, note)`), `ReasonPanel` |
 
 ## Catálogo
 
@@ -136,9 +138,11 @@ frontend/src/
 - "Marcar realizada" solo aparece cuando terminó el horario: antes, visit responde `VISIT_COMPLETION_TOO_EARLY`.
 - El error de una acción se muestra en su fila y el formulario sigue abierto, para corregir sin volver a escribir.
 
-## Consultas (agente)
+## Consultas y oportunidades (agente)
 
-- Ruta `/agente/consultas`. El mensaje de una consulta se pide recién al abrirla.
+- Rutas `/agente/consultas` y `/agente/oportunidades`. El mensaje de una consulta se pide recién al abrirla.
+- Cerrar una oportunidad como ganada dispara `LeadClosed`, y listing reserva la propiedad al recibirlo. La pantalla dice que queda reservada "en unos instantes" y no asume el cambio.
+- **Límites del contrato:** no hay endpoint para listar las notas de seguimiento, así que se guardan pero no se muestran. Una oportunidad solo trae `clientId`, sin nombre, y por eso la fila no dice quién es el interesado.
 
 ## Favoritos
 

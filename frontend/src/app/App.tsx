@@ -2,6 +2,7 @@ import { Link, Navigate, Route, Routes } from 'react-router'
 import { RequireAuth } from '../core/auth/RequireAuth'
 import { AccountPage } from '../features/account/containers/AccountPage'
 import { AgentInquiriesPage } from '../features/agent/inquiries/containers/AgentInquiriesPage'
+import { AgentLeadsPage } from '../features/agent/lead-follow-up/containers/AgentLeadsPage'
 import { AgentLayout } from '../features/agent/AgentLayout'
 import { AgentPropertiesPage } from '../features/agent/properties-admin/containers/AgentPropertiesPage'
 import { PropertyCreatePage } from '../features/agent/property-form/containers/PropertyCreatePage'
@@ -71,6 +72,7 @@ export function App() {
           <Route path="propiedades/:propertyId" element={<PropertyEditPage />} />
           <Route path="solicitudes" element={<AgentVisitsPage />} />
           <Route path="consultas" element={<AgentInquiriesPage />} />
+          <Route path="oportunidades" element={<AgentLeadsPage />} />
         </Route>
         <Route
           path="*"

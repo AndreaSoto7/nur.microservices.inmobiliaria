@@ -8,6 +8,7 @@ export function AgentLayout() {
         <NavLink to="/agente/propiedades">Mis propiedades</NavLink>
         <NavLink to="/agente/solicitudes">Solicitudes</NavLink>
         <NavLink to="/agente/consultas">Consultas</NavLink>
+        <NavLink to="/agente/oportunidades">Oportunidades</NavLink>
       </nav>
       <Outlet />
     </>

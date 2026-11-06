@@ -8,6 +8,9 @@ interface ReasonPanelProps {
   reasonLabel: string
   reasonRequired: boolean
   confirmLabel: string
+  maxLength?: number
+  /** `neutral` si la acción no es delicada, como agregar una nota. */
+  tone?: 'warning' | 'neutral'
   busy: boolean
   onConfirm: (reason: string | undefined) => void
   onBack: () => void
@@ -19,6 +22,8 @@ export const ReasonPanel = memo(function ReasonPanel({
   reasonLabel,
   reasonRequired,
   confirmLabel,
+  maxLength = 500,
+  tone = 'warning',
   busy,
   onConfirm,
   onBack,
@@ -31,12 +36,15 @@ export const ReasonPanel = memo(function ReasonPanel({
   }
 
   return (
-    <form className="confirm-bar" onSubmit={handleSubmit}>
+    <form
+      className={tone === 'neutral' ? 'confirm-bar confirm-bar--neutral' : 'confirm-bar'}
+      onSubmit={handleSubmit}
+    >
       <p>{message}</p>
       <TextAreaField
         label={reasonLabel}
         required={reasonRequired}
-        maxLength={500}
+        maxLength={maxLength}
         value={reason}
         onChange={(event) => setReason(event.target.value)}
       />

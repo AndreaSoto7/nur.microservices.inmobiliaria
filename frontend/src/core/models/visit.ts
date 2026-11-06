@@ -52,3 +52,17 @@ export interface Inquiry extends InquirySummary {
   contactPhone?: string
   message: string
 }
+
+export const LEAD_STATUSES = ['OPEN', 'CLOSED'] as const
+export type LeadStatus = (typeof LEAD_STATUSES)[number]
+export type LeadOutcome = 'WON' | 'LOST'
+
+export interface Lead {
+  id: string
+  propertyId: string
+  clientId: string
+  status: LeadStatus
+  openedAt: string
+  closedAt?: string
+  outcome?: LeadOutcome
+}
