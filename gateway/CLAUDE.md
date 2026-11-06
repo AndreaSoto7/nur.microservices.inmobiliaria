@@ -88,11 +88,13 @@ Cada middleware es `func(http.Handler) http.Handler` y puede cortar la cadena. E
 - **La réplica se elige antes de `ServeHTTP`** y viaja en el contexto: así el 503 por falta de réplicas se resuelve antes.
 - **Timeouts:** del servidor (`ReadHeaderTimeout`, `ReadTimeout`, `WriteTimeout`, `IdleTimeout`) y hacia el destino (`ResponseHeaderTimeout` en el `http.Transport`).
 - **Límite de body** con `http.MaxBytesReader`: 64 KB en `/api/v1/auth/**`, 1 MB por defecto y `MAX_BODY_BYTES` solo en las subidas de imágenes. El body va en streaming.
-- **Lecturas lentas:** en `/api/v1/auth/**` con body, deadline de `AUTH_READ_TIMEOUT` con `http.ResponseController.SetReadDeadline`.
+- **Lecturas lentas:** en `/api/v1/auth/**` con body, deadline de `AUTH_READ_TIMEOUT` con `http.ResponseController.SetReadDeadline`. `net/http` lo quita solo al llegar al final del body. Sin body no se pone: nadie lo quitaría, y al vencer cancelaría la request aunque solo identity esté tardando.
 - `ErrorHandler`: **solo se marca la réplica si la culpa es del destino.**
   - Cliente canceló → no marca. `*http.MaxBytesError` → 413, no marca. Body del cliente ilegible → 400, no marca.
-  - Otro error de transporte (dial, reset, timeout) → marca la réplica y responde 502 o 504.
+  - Error de red (dial, reset, timeout) → marca la réplica y responde 502 o 504. Cualquier otro error responde 502 sin marcar: marcar de más deja a un cliente sacar réplicas sanas.
   - `detail` fijo; `err.Error()` solo al log. Los 5xx de negocio del servicio se devuelven tal cual.
+- **Al reenviar:** se borra `Upgrade` antes de `ReverseProxy` (un túnel `h2c` esquivaría al gateway, y un valor inválido daría un error que parece de transporte) y se quita `X-Forwarded-Host` (es el Host del cliente, y ningún servicio lo usa).
+- **En la respuesta:** se quitan `X-Correlation-Id` y `Access-Control-*` (son del gateway y quedarían duplicados), `Server` y `X-Powered-By`. Un `Location` absoluto hacia la réplica se vuelve relativo.
 - **Sin reintentos** de `POST`, `PUT`, `PATCH` ni `DELETE` en otra réplica. Si se agregan, solo para `GET` y `HEAD`.
 
 ## Balanceador y discovery
