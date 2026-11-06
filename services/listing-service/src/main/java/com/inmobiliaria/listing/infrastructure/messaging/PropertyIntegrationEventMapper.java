@@ -16,6 +16,7 @@ import com.inmobiliaria.listing.domain.model.Feature;
 import com.inmobiliaria.listing.domain.model.Property;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,8 +28,8 @@ import tools.jackson.databind.json.JsonMapper;
 /**
  * Traduce los eventos de dominio de Property a los eventos de integración de contracts/events/listing/,
  * con el estado actual del aggregate. Así el modelo interno puede cambiar sin romper a visit ni a audit.
- * Los eventos internos (creada, imágenes agregadas) y las ediciones de una propiedad que no está en el
- * catálogo no se publican.
+ * PropertyCreated es interno. Editar datos, características o galería de una propiedad del catálogo
+ * (PUBLISHED o RESERVED) publica PropertyUpdated, una sola vez por comando; fuera del catálogo no se publica.
  */
 @Component
 public class PropertyIntegrationEventMapper {
@@ -44,13 +45,31 @@ public class PropertyIntegrationEventMapper {
         this.json = json;
     }
 
+    /**
+     * Traduce los eventos de un comando. Varias ediciones o imágenes en el mismo comando dan un solo
+     * PropertyUpdated: el payload es el estado completo, así que repetirlo no le aporta nada a visit.
+     */
+    public List<OutboxMessage> toOutbox(Property property, List<? extends PropertyEvent> events,
+            CommandMetadata metadata) {
+        List<OutboxMessage> messages = new ArrayList<>();
+        boolean updatedSent = false;
+        for (PropertyEvent event : events) {
+            boolean isUpdate = event instanceof PropertyUpdated || event instanceof PropertyImagesAdded;
+            if (isUpdate && updatedSent) {
+                continue;
+            }
+            Optional<OutboxMessage> message = toOutbox(property, event, metadata);
+            message.ifPresent(messages::add);
+            updatedSent |= isUpdate && message.isPresent();
+        }
+        return messages;
+    }
+
     public Optional<OutboxMessage> toOutbox(Property property, PropertyEvent event, CommandMetadata metadata) {
         return switch (event) {
             case PropertyCreated ignored -> Optional.empty();
-            case PropertyImagesAdded ignored -> Optional.empty();
-            case PropertyUpdated updated -> property.status().isListed()
-                    ? Optional.of(envelope("PropertyUpdated", property, updated, fullPayload(property), metadata))
-                    : Optional.empty();
+            case PropertyImagesAdded added -> updated(property, added, metadata);
+            case PropertyUpdated updated -> updated(property, updated, metadata);
             case PropertyPublished published -> {
                 Map<String, Object> payload = fullPayload(property);
                 payload.put("status", "PUBLISHED");
@@ -75,6 +94,12 @@ public class PropertyIntegrationEventMapper {
                 yield Optional.of(envelope("PropertyRented", property, rented, payload, metadata));
             }
         };
+    }
+
+    private Optional<OutboxMessage> updated(Property property, PropertyEvent event, CommandMetadata metadata) {
+        return property.status().isListed()
+                ? Optional.of(envelope("PropertyUpdated", property, event, fullPayload(property), metadata))
+                : Optional.empty();
     }
 
     /** Estado completo (event-carried state transfer): PropertyPublished y PropertyUpdated. */

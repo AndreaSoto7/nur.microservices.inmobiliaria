@@ -53,7 +53,7 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 | `cancelListingCommand` | `ReleaseReservationCommand` | Solo si está `RESERVED`; vuelve a `PUBLISHED` | `PropertyPublished` |
 | `buyListingCommand` | `MarkPropertySoldCommand` | Solo `SALE`, desde `PUBLISHED` o `RESERVED`; irreversible | `PropertySold` |
 | `rentListingCommand` | `MarkPropertyRentedCommand` | Solo `RENT`, desde `PUBLISHED` o `RESERVED` | `PropertyRented` |
-| `updateGalleryCommand` | `AddPropertyImagesCommand` | Solo el dueño; JPG/PNG; máx. 5; no si está vendida o alquilada | `PropertyImagesAdded` (interno) |
+| `updateGalleryCommand` | `AddPropertyImagesCommand` | Solo el dueño; JPG/PNG; máx. 5; no si está vendida o alquilada | `PropertyImagesAdded` (interno); `PropertyUpdated` si está publicada o reservada |
 | — | `AddFavoriteCommand` / `RemoveFavoriteCommand` | Solo propiedades `PUBLISHED`; sin repetir | — |
 | — | `ListAgentPropertiesQuery`, `GetPropertyByIdQuery` | El agente ve las suyas en todos los estados | — |
 | — | `SearchCatalogQuery`, `GetCatalogPropertyQuery` | Público; solo `PUBLISHED` y `RESERVED` | — |

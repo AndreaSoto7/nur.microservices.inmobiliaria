@@ -181,7 +181,7 @@ Cada fila es **una transacción**: el cambio del aggregate, la fila del `outbox`
 |---|---|---|---|---|
 | `CreateProperty` | Tipo, operación, precio > 0 y zona obligatorios; estado `DRAFT` → dominio + `CHECK` y `NOT NULL` | `INSERT properties` | — | — |
 | `UpdatePropertyFeatures` | Dormitorios y baños ≥ 0, superficie > 0, características válidas → dominio + `CHECK` | `UPDATE properties`, `property_features` | `PropertyUpdated` si está `PUBLISHED` o `RESERVED` | upsert si está en el catálogo |
-| `AddPropertyImages` | JPG/PNG, máximo 5, no si está vendida o alquilada → dominio + `CHECK position 0..4` + `UNIQUE` | `INSERT property_images` | — | actualiza `cover_image_id` si está en el catálogo |
+| `AddPropertyImages` | JPG/PNG, máximo 5, no si está vendida o alquilada → dominio + `CHECK position 0..4` + `UNIQUE` | `INSERT property_images` | `PropertyUpdated` si está publicada o reservada | actualiza `cover_image_id` si está en el catálogo |
 | `PublishProperty` | Solo desde `DRAFT` (o `PAUSED`), al menos 1 foto, datos completos → dominio + `properties_published_has_details` | `UPDATE properties` | `PropertyPublished` | upsert |
 | `EditProperty` | Solo el agente dueño; no si está vendida o alquilada → dominio (dueño = `agent_id`) | `UPDATE properties` | `PropertyUpdated` si está `PUBLISHED` o `RESERVED` | upsert si está en el catálogo |
 | `PauseProperty` | Solo si está `PUBLISHED` → dominio | `UPDATE properties` | `PropertyPaused` | `DELETE` |

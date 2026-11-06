@@ -8,7 +8,8 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| chore | Checkstyle como linter de Java, corre en `validate` (ADR 0006) | este PR |
+| feat | Agregar fotos a una propiedad publicada o reservada publica `PropertyUpdated` (un solo evento por comando), así visit tiene la galería al día | este PR |
+| chore | Checkstyle como linter de Java, corre en `validate` (ADR 0006) | #64 |
 | fix | El relay del outbox respeta la interrupción del hilo al apagarse (nota de la revisión de #45) | #60 |
 | feat | Servicio completo: casos de uso de propiedades, galería, favoritos y catálogo público (CQRS), persistencia JPA y proyección, outbox con relay a Kafka, política `LeadClosed` → reserva, API REST, Swagger en `/docs` y contrato OpenAPI, con 127 tests (contrato de eventos e integración con Postgres) | #45 |
 | feat | Aggregate `Property` con su máquina de estados, value objects (`Money`, `Location`, `Area`, `PropertyImage`) y eventos de dominio, con 30 tests | #41 |
@@ -26,7 +27,7 @@
 - [x] `Property.reconstitute(...)` para que el mapper cargue una propiedad guardada (sin eventos ni validar transiciones), con test de ida y vuelta
 - [x] Puertos `PropertyRepository` (en `domain/repository`) y `Clock`; errores de aplicación `PropertyNotFoundException` (404) y `NotPropertyOwnerException` (403)
 - [x] Persistencia: migración de `properties`, `property_features`, `property_images`, `*JpaEntity`, mapper y adaptador del repositorio
-- [ ] Decidir si agregar una imagen a una propiedad visible emite también `PropertyUpdated` (hoy el catálogo propio sí actualiza la portada, pero visit no se entera)
+- [x] Agregar una imagen a una propiedad visible emite también `PropertyUpdated`
 - [ ] Reconstruir `property_catalog` desde `properties` (comando de mantenimiento), por si la proyección se desincroniza
 
 **Propiedades (enunciado: agentes)**

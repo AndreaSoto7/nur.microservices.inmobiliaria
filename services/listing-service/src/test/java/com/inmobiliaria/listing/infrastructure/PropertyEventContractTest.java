@@ -26,7 +26,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -133,16 +132,40 @@ class PropertyEventContractTest {
     }
 
     @Test
-    void internal_events_are_not_published() {
+    void adding_images_to_a_draft_is_not_published() {
         Property property = PropertyMother.draft();
         property.addImage(PropertyMother.jpeg(property), T1);
 
         assertThat(toOutbox(property, agent)).isEmpty();
     }
 
+    @Test
+    void adding_images_to_a_listed_property_publishes_one_property_updated() throws IOException {
+        Property property = PropertyMother.inStatus(PropertyStatus.PUBLISHED);
+        property.addImage(PropertyMother.jpeg(property), T1);
+        property.addImage(PropertyMother.jpeg(property), T1);
+
+        JsonNode envelope = only(property, agent);
+
+        assertValid(envelope, "envelope.schema.json");
+        assertValid(envelope.get("payload"), "listing/property-updated.v1.schema.json");
+        assertThat(envelope.get("eventType").asText()).isEqualTo("PropertyUpdated");
+        assertThat(envelope.at("/payload/imageUrls")).hasSize(property.images().size());
+    }
+
+    @Test
+    void editing_and_adding_images_in_one_batch_publishes_a_single_property_updated() {
+        Property property = PropertyMother.inStatus(PropertyStatus.RESERVED);
+        property.edit("Otra", "", Money.bob(BigDecimal.TEN), Location.ofZone("Centro"), T1);
+        property.addImage(PropertyMother.jpeg(property), T1);
+
+        assertThat(toOutbox(property, agent)).singleElement()
+                .satisfies(m -> assertThat(m.envelope()).contains("\"eventType\":\"PropertyUpdated\""));
+    }
+
     private List<OutboxMessage> toOutbox(Property property, CommandMetadata metadata) {
         List<PropertyEvent> events = property.pullEvents();
-        return events.stream().map(e -> mapper.toOutbox(property, e, metadata)).flatMap(Optional::stream).toList();
+        return mapper.toOutbox(property, events, metadata);
     }
 
     private JsonNode only(Property property, CommandMetadata metadata) throws IOException {
