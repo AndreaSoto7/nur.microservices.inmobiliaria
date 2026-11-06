@@ -32,7 +32,7 @@ Esta es la fuente de verdad de los eventos entre servicios. Si un evento no est�
 | `UserLoggedIn` | 1 | identity.user.events | identity | audit* | Un usuario inicia sesión. **Solo se publica si se construye audit-service** |
 | `UserRolesAssigned` | 1 | identity.user.events | identity | audit* | El administrador asigna roles. **Solo se publica si se construye audit-service** |
 | `PropertyPublished` | 1 | listing.property.events | listing | visit, audit* | Una propiedad pasa a `PUBLISHED` (también al reanudar o liberar una reserva) |
-| `PropertyUpdated` | 1 | listing.property.events | listing | visit, audit* | Se editan los datos o las características de una propiedad publicada o reservada |
+| `PropertyUpdated` | 1 | listing.property.events | listing | visit, audit* | Se editan los datos, las características o la galería de una propiedad publicada o reservada (un solo evento por comando) |
 | `PropertyPaused` | 1 | listing.property.events | listing | visit, audit* | Una propiedad pasa a `PAUSED` |
 | `PropertyReserved` | 1 | listing.property.events | listing | visit, audit* | Una propiedad pasa a `RESERVED` |
 | `PropertySold` | 1 | listing.property.events | listing | visit, audit* | Una propiedad pasa a `SOLD` |

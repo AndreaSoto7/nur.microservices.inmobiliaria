@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://inmobiliaria.local/contracts/events/listing/property-updated.v1.schema.json",
   "title": "PropertyUpdated v1 (payload)",
-  "description": "Se editaron los datos o las características de una propiedad visible (PUBLISHED o RESERVED). Lleva el estado completo, igual que PropertyPublished: el consumidor reemplaza su copia sin llamar a listing por HTTP. Los cambios de una propiedad en DRAFT o PAUSED no se publican.",
+  "description": "Se editaron los datos, las características o la galería de una propiedad visible (PUBLISHED o RESERVED). Lleva el estado completo, igual que PropertyPublished: el consumidor reemplaza su copia sin llamar a listing por HTTP. Los cambios de una propiedad en DRAFT o PAUSED no se publican.",
   "type": "object",
   "required": [
     "propertyId",
