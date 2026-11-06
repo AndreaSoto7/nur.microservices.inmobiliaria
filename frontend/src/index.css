@@ -940,15 +940,18 @@ a {
 
 /* En un teléfono, un email largo se lee mejor en su propia línea. */
 @media (max-width: 420px) {
-  .profile-card {
+  .profile-card,
+  .row-card .specs {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .profile-card dt {
+  .profile-card dt,
+  .row-card .specs dt {
     padding-bottom: 0;
   }
 
-  .profile-card dd {
+  .profile-card dd,
+  .row-card .specs dd {
     padding-top: 0;
     border-top: 0;
   }
@@ -1121,6 +1124,11 @@ a {
 }
 
 /* Contacto desde el detalle */
+
+/* Con un formulario abierto ya no entra en la pantalla: fija, su final quedaría fuera de alcance. */
+.detail__aside:has(details[open]) {
+  position: static;
+}
 
 .contact-panel {
   padding-top: var(--space-3);

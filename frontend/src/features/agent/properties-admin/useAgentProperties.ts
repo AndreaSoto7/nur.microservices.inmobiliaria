@@ -4,21 +4,17 @@ import { useSearchParams } from 'react-router'
 import { errorMessage } from '../../../core/api/problem'
 import { propertiesApi } from '../../../core/api/propertiesApi'
 import { PROPERTY_STATUSES, type PropertyStatus } from '../../../core/models/listing'
+import { parsePageParam } from '../../../shared/format/pageParam'
 
 function parseStatus(value: string | null): PropertyStatus | undefined {
   return PROPERTY_STATUSES.find((status) => status === value)
-}
-
-function parsePage(value: string | null): number {
-  const page = Number(value)
-  return Number.isInteger(page) && page >= 1 ? page : 1
 }
 
 /** Facade de "Mis propiedades": el estado y la página viven en la URL, como en el catálogo. */
 export function useAgentProperties() {
   const [search, setSearch] = useSearchParams()
   const status = parseStatus(search.get('status'))
-  const page = parsePage(search.get('page'))
+  const page = parsePageParam(search.get('page'))
 
   const result = useQuery({
     queryKey: ['agent-properties', status, page],

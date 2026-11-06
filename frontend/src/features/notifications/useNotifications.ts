@@ -3,6 +3,7 @@ import { useCallback } from 'react'
 import { useSearchParams } from 'react-router'
 import { notificationsApi } from '../../core/api/notificationsApi'
 import { errorMessage } from '../../core/api/problem'
+import { parsePageParam } from '../../shared/format/pageParam'
 
 const PAGE_SIZE = 20
 /** Los avisos nacen de eventos: nadie le avisa al navegador, así que el contador se vuelve a pedir. */
@@ -13,8 +14,7 @@ export function useNotificationsPage() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useSearchParams()
   const unread = search.get('unread') === 'true'
-  const requested = Number(search.get('page'))
-  const page = Number.isInteger(requested) && requested >= 1 ? requested : 1
+  const page = parsePageParam(search.get('page'))
 
   const result = useQuery({
     queryKey: ['notifications', 'page', unread, page],
