@@ -27,7 +27,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 | Aggregate | Estados | Invariantes del event storming |
 |---|---|---|
 | `Inquiry` | — | Propiedad `PUBLISHED`; mensaje y datos de contacto obligatorios |
-| `Visit` | `REQUESTED → SCHEDULED → COMPLETED`; `REQUESTED → REJECTED`; `SCHEDULED → CANCELLED` | Propiedad `PUBLISHED`; fecha propuesta futura; **máx. 1 solicitud pendiente por cliente y propiedad**; **el agente no tiene dos visitas que se crucen**; rechazo con motivo obligatorio; el cliente o agente asignado cancela solo antes de la hora de inicio; completar solo si la fecha ya pasó |
+| `Visit` | `REQUESTED → SCHEDULED → COMPLETED`; `REQUESTED → REJECTED`; `SCHEDULED → CANCELLED` | Propiedad `PUBLISHED`; fecha propuesta futura; **máx. 1 solicitud pendiente por cliente y propiedad**; **el agente no tiene dos visitas que se crucen**; rechazo con motivo obligatorio; el cliente o agente asignado cancela solo antes de la hora de inicio; el agente asignado completa al llegar o pasar la hora de fin |
 | `Lead` (oportunidad) | `OPEN → CLOSED` (`WON` o `LOST`) | Una sola abierta por cliente y propiedad; seguimiento solo del agente asignado, con nota, y si está abierta; resultado obligatorio al cerrar |
 
 Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es entidad hija de `Lead`.
@@ -54,7 +54,7 @@ Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es 
 
 ## Eventos y políticas
 
-- **Publica** con outbox, clave = id del aggregate. Catálogo en `contracts/events/README.md`. Visit ya genera `VisitRequested`, `LeadOpened`, `VisitScheduled`, `VisitRejected` y `VisitCancelled`. El rechazo y la cancelación automáticos quedan pendientes de las políticas de Listing.
+- **Publica** con outbox, clave = id del aggregate. Catálogo en `contracts/events/README.md`. Visit ya genera `VisitRequested`, `LeadOpened`, `VisitScheduled`, `VisitRejected`, `VisitCancelled` y `VisitCompleted`. El rechazo y la cancelación automáticos quedan pendientes de las políticas de Listing.
 - **Consume** `listing.property.events` (consumer group `visit-service`, desde el principio, idempotente con `processed_events`):
   1. **Copia local:** upsert de `PropertySnapshot` solo si `occurredAt` es más nuevo que el último aplicado.
   2. **Política 3.2 — `PropertyReserved`:** `RejectVisitCommand` por cada visita `REQUESTED` de la propiedad, con `reason: PROPERTY_RESERVED` y `actor: SYSTEM`. Las `SCHEDULED` se mantienen.

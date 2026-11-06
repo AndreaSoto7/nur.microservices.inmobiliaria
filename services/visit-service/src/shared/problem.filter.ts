@@ -23,6 +23,10 @@ const problems: Record<VisitProblemCode, [number, string]> = {
   VISIT_NOT_FOUND: [404, 'Visita no encontrada'],
   VISIT_NOT_REQUESTED: [409, 'La visita debe estar pendiente'],
   VISIT_NOT_SCHEDULED: [409, 'La visita debe estar programada'],
+  VISIT_COMPLETION_TOO_EARLY: [
+    409,
+    'La hora de fin de la visita todavía no llegó',
+  ],
   VISIT_CANCELLATION_TOO_LATE: [
     409,
     'La hora de inicio de la visita ya llegó o pasó',

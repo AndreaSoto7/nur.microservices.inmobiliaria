@@ -12,6 +12,7 @@
 | feat | Contrato inicial para solicitar y consultar visitas y esquemas de VisitRequested y LeadOpened | #39 |
 | feat | Rechazar visitas pendientes, registrar el motivo y emitir VisitRejected | Pendiente |
 | feat | Cancelar visitas programadas antes del inicio y liberar el horario | Pendiente |
+| feat | Marcar visitas realizadas al llegar la hora de fin y emitir VisitCompleted | Pendiente |
 
 ## Pendientes
 
@@ -32,7 +33,7 @@
 - [x] Programar una visita pendiente con el agente asignado
 - [x] Rechazar una visita pendiente con motivo obligatorio, por el agente asignado
 - [x] Cancelar una visita programada antes del inicio, por el cliente o agente asignado
-- [ ] Completar visitas
+- [x] Completar una visita programada al llegar o pasar la hora de fin, por el agente asignado
 - [x] Abrir la oportunidad (`Lead`) con la primera solicitud de visita (ADR 0005 sección 3.4)
 - [ ] Abrir la oportunidad con la primera consulta
 - [ ] Registrar el seguimiento del interesado y cerrar la oportunidad como `WON` o `LOST` (`Lead`)
@@ -41,8 +42,8 @@
 
 - [x] Publicador de `outbox` integrado en Visit
 
-- [x] Outbox: `VisitRequested`, `VisitScheduled`, `VisitRejected`, `VisitCancelled` y `LeadOpened`
-- [ ] Outbox: `InquiryReceived`, `VisitCompleted`, `LeadFollowUpRegistered`, `LeadClosed`
+- [x] Outbox: `VisitRequested`, `VisitScheduled`, `VisitRejected`, `VisitCancelled`, `VisitCompleted` y `LeadOpened`
+- [ ] Outbox: `InquiryReceived`, `LeadFollowUpRegistered`, `LeadClosed`
 - [x] Proyección de propiedades idempotente (`processed_events`)
 
 **Políticas (ADR 0005, secciones 3.2 y 3.3)**

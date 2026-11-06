@@ -515,6 +515,108 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     );
   });
 
+  it('completa solo una visita del agente cuyo horario terminó y registra la hora una vez', async () => {
+    const pastEnd = new Date(Date.now() - 2 * 3600_000);
+    const futureEnd = new Date(Date.now() + 7 * 86_400_000);
+    const ids = [randomUUID(), randomUUID()];
+    for (const [index, end] of [pastEnd, futureEnd].entries()) {
+      await database.query(
+        `INSERT INTO visits
+          (id, property_id, client_id, agent_id, status, proposed_at, requested_at,
+           updated_at, scheduled_start, scheduled_end)
+         VALUES ($1,$2,$3,$4,'SCHEDULED',$5,now(),now(),$6,$7)`,
+        [
+          ids[index],
+          propertyId,
+          clientId,
+          agentId,
+          body.proposedAt,
+          new Date(end.getTime() - 3600_000),
+          end,
+        ],
+      );
+    }
+
+    const http = request(app.getHttpServer());
+    const [eligible, future] = ids;
+    const complete = (
+      id: string,
+      token: string | null,
+      key: string = randomUUID(),
+    ) => {
+      const action = http
+        .post(path + '/' + id + '/complete')
+        .set('Idempotency-Key', key)
+        .set('X-Correlation-Id', 'complete-test');
+      return token ? action.auth(token, { type: 'bearer' }) : action;
+    };
+    await complete(eligible, null).expect(401);
+    await complete(eligible, clientToken).expect(403);
+    await complete(eligible, otherAgentToken).expect(404);
+    await complete(eligible, agentToken, 'not-a-uuid').expect(400);
+    await complete(eligible, agentToken)
+      .send({ completedAt: body.proposedAt })
+      .expect(400);
+    await complete(future, agentToken)
+      .expect(409)
+      .expect(/VISIT_COMPLETION_TOO_EARLY/);
+
+    const key = randomUUID();
+    const expected = { id: eligible, status: 'COMPLETED' };
+    await Promise.all([
+      complete(eligible, agentToken, key).expect(200, expected),
+      complete(eligible, agentToken, key).send({}).expect(200, expected),
+    ]);
+    await complete(future, agentToken, key).expect(422);
+    await complete(eligible, agentToken)
+      .expect(409)
+      .expect(/VISIT_NOT_SCHEDULED/);
+
+    const detail = await http
+      .get(path + '/' + eligible)
+      .auth(clientToken, { type: 'bearer' })
+      .expect(200);
+    const { completedAt } = detail.body as { completedAt: string };
+    expect(new Date(completedAt).getTime()).toBeGreaterThan(pastEnd.getTime());
+    expect(detail.body).toMatchObject({
+      status: 'COMPLETED',
+      scheduledEnd: pastEnd.toISOString(),
+    });
+    const events = await database.query<
+      { topic: string; envelope: { payload: unknown } }[]
+    >(
+      "SELECT topic, envelope FROM outbox WHERE aggregate_id IN ($1,$2) AND envelope->>'eventType' = 'VisitCompleted'",
+      ids,
+    );
+    expect(events).toEqual([
+      {
+        topic: 'visit.visit.events',
+        envelope: expect.objectContaining({
+          aggregateId: eligible,
+          occurredAt: completedAt,
+          correlationId: 'complete-test',
+          payload: {
+            visitId: eligible,
+            propertyId,
+            clientId,
+            agentId,
+            completedAt,
+          },
+        }),
+      },
+    ]);
+    const schemaPath = new URL(
+      '../../../contracts/events/visit/visit-completed.v1.schema.json',
+      import.meta.url,
+    );
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as object;
+    expect(
+      addFormats
+        .default(new Ajv2020())
+        .validate(schema, events[0].envelope.payload),
+    ).toBe(true);
+  });
+
   it('valida credenciales, rol, formato, fecha y estado de la propiedad', async () => {
     const http = request(app.getHttpServer());
     await http.get('/health/ready').expect(200, { status: 'UP' });

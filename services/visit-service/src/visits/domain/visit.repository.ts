@@ -13,6 +13,7 @@ export type VisitDetails = {
   scheduledStart?: Date;
   scheduledEnd?: Date;
   resolutionReason?: string;
+  completedAt?: Date;
 };
 
 export type VisitCreation = { id: string };
@@ -24,12 +25,17 @@ export type ScheduledVisit = {
 };
 export type RejectedVisit = { id: string; status: 'REJECTED' };
 export type CancelledVisit = { id: string; status: 'CANCELLED' };
+export type CompletedVisit = { id: string; status: 'COMPLETED' };
 export type VisitCancellationActor = 'CLIENT' | 'AGENT';
 export type RequestKey = {
   actorId: string;
   key: string;
   operation:
-    'request-visit' | 'schedule-visit' | 'reject-visit' | 'cancel-visit';
+    | 'request-visit'
+    | 'schedule-visit'
+    | 'reject-visit'
+    | 'cancel-visit'
+    | 'complete-visit';
 };
 
 export type VisitEvent = {
@@ -38,6 +44,7 @@ export type VisitEvent = {
     | 'VisitScheduled'
     | 'VisitRejected'
     | 'VisitCancelled'
+    | 'VisitCompleted'
     | 'LeadOpened';
   aggregateId: string;
   occurredAt: Date;
@@ -71,6 +78,7 @@ export interface VisitTransaction {
   ): Promise<void>;
   saveSchedule(id: string, slot: VisitSlot, now: Date): Promise<void>;
   saveRejection(id: string, reason: string, now: Date): Promise<void>;
+  saveCompletion(id: string, completedAt: Date): Promise<void>;
   saveRequest(
     key: RequestKey,
     hash: string,

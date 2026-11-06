@@ -31,7 +31,9 @@ El agente asignado puede usar `POST /api/v1/visits/{visitId}/reject` con un UUID
 
 El cliente que solicitó la visita o el agente asignado puede usar `POST /api/v1/visits/{visitId}/cancel` con un UUID en `Idempotency-Key` y un motivo opcional (`{"reason":"Surgió un imprevisto"}`). Solo se cancela una visita programada antes de que empiece. El horario queda disponible para otra visita.
 
-Visit guarda `VisitRequested`, `LeadOpened`, `VisitScheduled`, `VisitRejected` y `VisitCancelled` en `outbox`. Si `KAFKA_BROKERS` está configurado, un publicador dentro de Visit envía los pendientes y actualiza `published_at` al recibir la confirmación de Kafka. Si el proceso se interrumpe entre el envío y el guardado de la confirmación, el mismo `eventId` puede llegar de nuevo. Queda pendiente aplicar las políticas que modifican visitas existentes.
+El agente asignado puede usar `POST /api/v1/visits/{visitId}/complete` con un UUID en `Idempotency-Key`, sin enviar datos en el cuerpo. La visita debe estar programada y haber llegado a su hora de fin. Los participantes pueden consultar la fecha de registro (`completedAt`) por ID.
+
+Visit guarda `VisitRequested`, `LeadOpened`, `VisitScheduled`, `VisitRejected`, `VisitCancelled` y `VisitCompleted` en `outbox`. Si `KAFKA_BROKERS` está configurado, un publicador dentro de Visit envía los pendientes y actualiza `published_at` al recibir la confirmación de Kafka. Si el proceso se interrumpe entre el envío y el guardado de la confirmación, el mismo `eventId` puede llegar de nuevo. Queda pendiente aplicar las políticas que modifican visitas existentes.
 
 ## Recibir propiedades de Listing
 

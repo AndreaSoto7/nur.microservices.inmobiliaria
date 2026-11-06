@@ -32,6 +32,7 @@ import {
 } from '../../shared/identity.guard.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import { CancelVisitCommand } from '../application/cancel-visit.js';
+import { CompleteVisitCommand } from '../application/complete-visit.js';
 import { GetVisitByIdQuery } from '../application/get-visit-by-id.js';
 import { RejectVisitCommand } from '../application/reject-visit.js';
 import { RequestVisitCommand } from '../application/request-visit.js';
@@ -197,6 +198,38 @@ export class VisitsController {
         request.principal,
         key.toLowerCase(),
         body?.reason,
+        ensureCorrelationId(request, response),
+      ),
+    );
+  }
+
+  @Post(':visitId/complete')
+  @HttpCode(200)
+  @VisitRoles(['AGENT'])
+  async completeVisit(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+    @Param('visitId') visitId: string,
+    @Headers('idempotency-key') key: string | undefined,
+    @Body() body: unknown,
+  ) {
+    if (
+      !uuidPattern.test(visitId) ||
+      !key ||
+      !uuidPattern.test(key) ||
+      (body !== undefined &&
+        (body === null ||
+          typeof body !== 'object' ||
+          Array.isArray(body) ||
+          Object.keys(body).length !== 0))
+    ) {
+      throw new VisitProblem('VALIDATION_ERROR');
+    }
+    return this.commands.execute(
+      new CompleteVisitCommand(
+        visitId.toLowerCase(),
+        request.principal.id,
+        key.toLowerCase(),
         ensureCorrelationId(request, response),
       ),
     );

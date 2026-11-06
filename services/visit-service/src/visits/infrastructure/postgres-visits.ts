@@ -58,16 +58,18 @@ export class PostgresVisits implements VisitRepository {
     const [visit] = await database.query<
       (Omit<
         VisitDetails,
-        'scheduledStart' | 'scheduledEnd' | 'resolutionReason'
+        'scheduledStart' | 'scheduledEnd' | 'resolutionReason' | 'completedAt'
       > & {
         scheduledStart: Date | null;
         scheduledEnd: Date | null;
         resolutionReason: string | null;
+        completedAt: Date | null;
       })[]
     >(
       `SELECT id, property_id AS "propertyId", status,
               proposed_at AS "proposedAt", requested_at AS "requestedAt",
               scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd",
+              CASE WHEN status = 'COMPLETED' THEN resolved_at END AS "completedAt",
               CASE WHEN status IN ('REJECTED', 'CANCELLED') THEN resolution_reason END AS "resolutionReason"
          FROM visits WHERE id = $1
            AND (($3 AND client_id = $2) OR ($4 AND agent_id = $2))`,
@@ -79,14 +81,20 @@ export class PostgresVisits implements VisitRepository {
       ],
     );
     if (!visit) return;
-    const { scheduledStart, scheduledEnd, resolutionReason, ...details } =
-      visit;
+    const {
+      scheduledStart,
+      scheduledEnd,
+      resolutionReason,
+      completedAt,
+      ...details
+    } = visit;
     return {
       ...details,
       ...(scheduledStart && scheduledEnd
         ? { scheduledStart, scheduledEnd }
         : {}),
       ...(resolutionReason !== null ? { resolutionReason } : {}),
+      ...(completedAt ? { completedAt } : {}),
     };
   }
 }
@@ -203,7 +211,7 @@ class PostgresVisitTransaction implements VisitTransaction {
     const [row] = await this.manager.query<VisitState[]>(
       `SELECT id, property_id AS "propertyId", client_id AS "clientId", agent_id AS "agentId",
               status, proposed_at AS "proposedAt", requested_at AS "requestedAt",
-              scheduled_start AS "scheduledStart"
+              scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd"
          FROM visits WHERE id = $1
            AND (($3 AND client_id = $2) OR ($4 AND agent_id = $2)) FOR UPDATE`,
       [
@@ -242,6 +250,14 @@ class PostgresVisitTransaction implements VisitTransaction {
       `UPDATE visits SET status = 'CANCELLED', resolution_reason = $2, resolved_by = $3,
           resolved_at = $4, updated_at = $4, version = version + 1 WHERE id = $1`,
       [id, reason, actor, now],
+    );
+  }
+
+  async saveCompletion(id: string, completedAt: Date): Promise<void> {
+    await this.manager.query(
+      `UPDATE visits SET status = 'COMPLETED', resolved_by = 'AGENT',
+          resolved_at = $2, updated_at = $2, version = version + 1 WHERE id = $1`,
+      [id, completedAt],
     );
   }
 

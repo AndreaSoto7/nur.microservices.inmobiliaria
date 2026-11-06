@@ -216,7 +216,7 @@ La clave de idempotencia se guarda por cliente y operación. El hash SHA-256 ide
 | `ScheduleVisit` | Solo `REQUESTED`; fecha futura; sin cruce de horario del agente → dominio + `visits_agent_no_overlap` | `UPDATE visits` | `VisitScheduled` |
 | `RejectVisit` | Solo `REQUESTED`; motivo obligatorio → dominio + `visits_rejected_has_reason` | `UPDATE visits` | `VisitRejected` |
 | `CancelVisit` | Solo `SCHEDULED` y antes de la fecha → dominio | `UPDATE visits` | `VisitCancelled` |
-| `CompleteVisit` | Solo `SCHEDULED` con fecha pasada → dominio | `UPDATE visits` | `VisitCompleted` |
+| `CompleteVisit` | Solo `SCHEDULED` al llegar o pasar `scheduled_end` → dominio | `UPDATE visits` | `VisitCompleted` |
 | `RegisterLeadFollowUp` | Solo el agente asignado; nota obligatoria; oportunidad abierta → dominio + `CHECK` | `INSERT lead_follow_ups`, `UPDATE leads.version` | `LeadFollowUpRegistered` |
 | `CloseLead` | Resultado obligatorio; cerrada no admite más seguimientos → dominio + `leads_outcome_matches_status` | `UPDATE leads` | `LeadClosed` → **lo consume listing** |
 

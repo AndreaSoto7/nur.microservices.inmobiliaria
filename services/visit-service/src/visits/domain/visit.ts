@@ -18,6 +18,7 @@ export class InvalidVisitScheduleError extends Error {}
 export class InvalidVisitResolutionReasonError extends Error {}
 export class VisitNotScheduledError extends Error {}
 export class VisitCancellationTooLateError extends Error {}
+export class VisitCompletionTooEarlyError extends Error {}
 
 function normalizeResolutionReason(reason: string): string {
   const normalized = reason.trim();
@@ -30,6 +31,7 @@ function normalizeResolutionReason(reason: string): string {
 export type VisitState = VisitRequest & {
   status: VisitStatus;
   scheduledStart?: Date | null;
+  scheduledEnd?: Date | null;
 };
 
 export class InvalidProposedVisitDateError extends Error {
@@ -48,6 +50,7 @@ export class Visit {
     private readonly requestedAtMs: number,
     private state: VisitStatus,
     private scheduledStartMs?: number,
+    private scheduledEndMs?: number,
   ) {}
 
   static request(input: VisitRequest): Visit {
@@ -79,6 +82,7 @@ export class Visit {
       input.requestedAt.getTime(),
       input.status,
       input.scheduledStart?.getTime(),
+      input.scheduledEnd?.getTime(),
     );
   }
 
@@ -94,6 +98,7 @@ export class Visit {
     }
     this.state = 'SCHEDULED';
     this.scheduledStartMs = start.getTime();
+    this.scheduledEndMs = end.getTime();
     return { start: new Date(start.getTime()), end };
   }
 
@@ -116,6 +121,17 @@ export class Visit {
       reason === undefined ? null : normalizeResolutionReason(reason);
     this.state = 'CANCELLED';
     return normalizedReason;
+  }
+
+  complete(now: Date): void {
+    if (this.state !== 'SCHEDULED') throw new VisitNotScheduledError();
+    if (
+      this.scheduledEndMs === undefined ||
+      !(now.getTime() >= this.scheduledEndMs)
+    ) {
+      throw new VisitCompletionTooEarlyError();
+    }
+    this.state = 'COMPLETED';
   }
 
   get proposedAt(): Date {

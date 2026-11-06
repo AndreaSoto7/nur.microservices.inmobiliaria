@@ -4,6 +4,7 @@ import {
   Visit,
   VisitNotRequestedError,
   VisitCancellationTooLateError,
+  VisitCompletionTooEarlyError,
   VisitNotScheduledError,
 } from './visit.js';
 
@@ -107,6 +108,38 @@ describe('Visit', () => {
     expect(() => visit.cancel(new Date())).toThrow(VisitNotScheduledError);
     expect(visit.status).toBe('REQUESTED');
   });
+
+  it('completa al llegar la hora de fin, pero no mientras el horario sigue en curso', () => {
+    const input = buildRequest();
+    const visit = Visit.request(input);
+    const { end } = visit.schedule(input.proposedAt, input.requestedAt);
+
+    expect(() => visit.complete(new Date(end.getTime() - 1))).toThrow(
+      VisitCompletionTooEarlyError,
+    );
+    expect(visit.status).toBe('SCHEDULED');
+
+    visit.complete(end);
+    expect(visit.status).toBe('COMPLETED');
+    expect(() => visit.complete(end)).toThrow(VisitNotScheduledError);
+  });
+
+  it.each(['REQUESTED', 'CANCELLED', 'REJECTED'] as const)(
+    'no completa una visita en estado %s',
+    (status) => {
+      const input = buildRequest();
+      const visit = Visit.restore({
+        ...input,
+        status,
+        scheduledEnd: input.proposedAt,
+      });
+
+      expect(() => visit.complete(input.proposedAt)).toThrow(
+        VisitNotScheduledError,
+      );
+      expect(visit.status).toBe(status);
+    },
+  );
 
   it('preserva la fecha propuesta aunque se muten las fechas expuestas', () => {
     const input = buildRequest();
