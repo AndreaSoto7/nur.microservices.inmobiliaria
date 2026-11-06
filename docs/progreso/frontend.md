@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Consultas recibidas: quién preguntó, sobre qué propiedad, y el mensaje con sus datos de contacto al abrirla. Probado contra visit real | #100 |
 | feat | Panel de agente con menú propio y solicitudes de visita: programar, rechazar, cancelar y marcar realizada. Probado contra visit real, salvo marcar realizada, que exige que haya terminado el horario | #99 |
 | feat | Mis visitas: lista con estados y filtro, y cancelar una visita programada. Probado contra visit real | #98 |
 | feat | Enviar una consulta y solicitar una visita desde el detalle, con `Idempotency-Key`. Probado contra visit real, hasta el aviso que recibe el agente | #97 |
@@ -50,10 +51,12 @@
 - [x] Mis propiedades: lista, publicar, pausar, reservar, marcar vendida o alquilada
 - [x] Crear y editar propiedades
 - [x] Galería y características
-- [ ] Consultas y solicitudes recibidas; programar visitas y seguimiento
+- [x] Consultas y solicitudes recibidas; programar visitas
+- [ ] Seguimiento de oportunidades
 
 **Riesgos conocidos**
 
+- [ ] "Marcar realizada" solo se probó con datos simulados: visit exige que haya terminado el horario, de 60 minutos.
 - [ ] Un `POST /api/v1/properties` tardó más de 10 s y el gateway respondió 504, aunque el borrador se guardó. Pasó una vez, con el stack levantado hace más de una hora y sin uso. Causa sin identificar: no se repitió con el servicio ya en uso (0,3 a 0,7 s) ni después de reiniciar listing (0,6 s). La UI avisa para que no se duplique el borrador.
 
 **Más adelante**

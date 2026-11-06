@@ -7,6 +7,7 @@ export function AgentLayout() {
       <nav className="subnav" aria-label="Panel de agente">
         <NavLink to="/agente/propiedades">Mis propiedades</NavLink>
         <NavLink to="/agente/solicitudes">Solicitudes</NavLink>
+        <NavLink to="/agente/consultas">Consultas</NavLink>
       </nav>
       <Outlet />
     </>

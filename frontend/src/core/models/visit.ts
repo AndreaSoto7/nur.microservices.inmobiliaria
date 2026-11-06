@@ -39,3 +39,16 @@ export interface SendInquiryRequest {
 export interface CreatedResponse {
   id: string
 }
+
+export interface InquirySummary {
+  id: string
+  propertyId: string
+  contactName: string
+  createdAt: string
+}
+
+export interface Inquiry extends InquirySummary {
+  contactEmail: string
+  contactPhone?: string
+  message: string
+}
