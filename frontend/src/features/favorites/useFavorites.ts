@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router'
 import { favoritesApi } from '../../core/api/favoritesApi'
 import { ApiError, errorMessage } from '../../core/api/problem'
 import { useAuth } from '../../core/auth/AuthContext'
+import { parsePageParam } from '../../shared/format/pageParam'
 
 const PAGE_SIZE = 12
 /** El contrato no dice si una propiedad es favorita: se deriva del máximo que permite una página. */
@@ -40,8 +41,7 @@ function useRemoveFavorite() {
 /** Facade de la página de favoritos: la página vive en la URL. */
 export function useFavoritesPage() {
   const [search, setSearch] = useSearchParams()
-  const requested = Number(search.get('page'))
-  const page = Number.isInteger(requested) && requested >= 1 ? requested : 1
+  const page = parsePageParam(search.get('page'))
 
   const result = useQuery({
     queryKey: ['favorites', 'page', page],

@@ -54,7 +54,7 @@ frontend/src/
     auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
     models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts, notification.ts, visit.ts)
   shared/format/   fechas en hora local, formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones, estados y extras
-  shared/ui/       dumbs genéricos: Button, TextField, SelectField, TextAreaField, StatusBadge, RowListSkeleton, ErrorMessage, LoadingState, Pagination, EmptyState, icons
+  shared/ui/       dumbs genéricos: Button, TextField, SelectField, TextAreaField, FilterSelect, StatusBadge, RowListSkeleton, ErrorMessage, LoadingState, Pagination, EmptyState, icons
   test/            setup de Vitest, mocks de fetch y renderApp
   features/
     auth/          LoginPage, RegisterPage (smart) · LoginForm, RegisterForm (dumb) · useAuthActions (facade)
@@ -71,7 +71,7 @@ frontend/src/
     agent/
       properties-admin/
         containers/  AgentPropertiesPage.tsx (smart)
-        components/  PropertyAdminList  PropertyActions  PropertyStatusBadge  StatusFilter   (dumb)
+        components/  PropertyAdminList  PropertyActions  PropertyStatusBadge   (dumb)
         useAgentProperties.ts (facade; estado y página en la URL) · usePropertyTransition.ts (facade)
         propertyActions.ts    qué transiciones ofrecer según el estado (función pura, con tests)
       property-form/
@@ -87,6 +87,8 @@ frontend/src/
       containers/  NotificationsPage  NotificationsNavLink   (smart) · components/ NotificationList   (dumb)
       useNotifications.ts   (facade de la página y del contador)
     my-visits/
+      containers/  MyVisitsPage   (smart) · components/ MyVisitRow  VisitDetails  ReasonPanel   (dumb)
+      useMyVisits.ts (facade) · usePropertyTitles.ts (título de cada propiedad, que la visita no trae)
 ```
 
 | Smart (container) | Dumbs que usa |
@@ -95,8 +97,9 @@ frontend/src/
 | `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `FavoriteControl`, `PropertyContactSection` |
 | `PropertyContactSection` | `VisitRequestForm` (`onSubmitRequest`), `InquiryForm` (`onSubmitInquiry`) |
 | `NotificationsPage` | `NotificationList` (`onMarkRead`), `Pagination` |
+| `MyVisitsPage` | `MyVisitRow` (`onCancel`), `VisitDetails`, `ReasonPanel`, `FilterSelect`, `Pagination` |
 | `FavoritesPage`, `FavoriteControl` | `FavoriteList` (`onRemove`), `FavoriteToggle` (`onToggle`), `Pagination` |
-| `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `StatusFilter` (`onStatusChange`) |
+| `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `FilterSelect` (`onChange`) |
 | `PropertyCreatePage`, `PropertyEditPage` | `PropertyDataForm` (`onSubmit`), `PropertyFeaturesForm` (`onSubmit`), `PropertyImagesForm` (`onUpload`), `PublishChecklist`, `PropertyActions` |
 | `VisitRequestsPage` | `VisitRequestList`, `ScheduleVisitDialog` |
 | `LeadFollowUpPage` | `LeadTimeline`, `FollowUpForm`, `CloseLeadDialog` (`onClose(outcome)`) |
@@ -136,6 +139,7 @@ frontend/src/
 - Se envían desde el detalle, solo con rol `CLIENT` y si la propiedad está `PUBLISHED`. Sin sesión, un enlace lleva a ingresar y vuelve a la misma ficha.
 - **`Idempotency-Key` obligatorio en los POST de visit:** `useIdempotencyKey` reutiliza la clave si se reintenta lo mismo, para que un corte de red no duplique la solicitud, y usa otra si cambió el contenido, porque el servicio responde 422. `crypto.randomUUID` no existe fuera de HTTPS o localhost: `newIdempotencyKey` tiene alternativa para cuando se abre por la IP de la red local.
 - El `datetime-local` da hora local: se manda en UTC con `localInputToUtc`.
+- **Mis visitas** (`/mis-visitas`, solo `CLIENT`): el estado y la página viven en la URL. Una visita solo se cancela si está `SCHEDULED`. El contrato no trae el título de la propiedad: `usePropertyTitles` lo pide al catálogo, y si ya no está publicada muestra "Propiedad no disponible".
 
 ## Sesión y tokens
 

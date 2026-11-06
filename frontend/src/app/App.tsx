@@ -8,6 +8,7 @@ import { CatalogPage } from '../features/catalog/containers/CatalogPage'
 import { FavoritesPage } from '../features/favorites/containers/FavoritesPage'
 import { LoginPage } from '../features/auth/containers/LoginPage'
 import { RegisterPage } from '../features/auth/containers/RegisterPage'
+import { MyVisitsPage } from '../features/my-visits/containers/MyVisitsPage'
 import { NotificationsPage } from '../features/notifications/containers/NotificationsPage'
 import { PropertyDetailPage } from '../features/property-detail/containers/PropertyDetailPage'
 import { EmptyState } from '../shared/ui/EmptyState'
@@ -34,6 +35,14 @@ export function App() {
           element={
             <RequireAuth>
               <NotificationsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="mis-visitas"
+          element={
+            <RequireAuth roles={['CLIENT']}>
+              <MyVisitsPage />
             </RequireAuth>
           }
         />

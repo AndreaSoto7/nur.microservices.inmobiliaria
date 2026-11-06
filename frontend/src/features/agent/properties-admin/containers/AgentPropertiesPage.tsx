@@ -1,14 +1,15 @@
 import { useCallback } from 'react'
 import { Link } from 'react-router'
 import type { PropertySummary, PropertyTransition } from '../../../../core/models/listing'
+import { PROPERTY_STATUSES } from '../../../../core/models/listing'
 import { PROPERTY_STATUS_LABELS } from '../../../../shared/format/property'
+import { FilterSelect } from '../../../../shared/ui/FilterSelect'
 import { Button } from '../../../../shared/ui/Button'
 import { EmptyState } from '../../../../shared/ui/EmptyState'
 import { ErrorMessage } from '../../../../shared/ui/ErrorMessage'
 import { Pagination } from '../../../../shared/ui/Pagination'
 import { RowListSkeleton } from '../../../../shared/ui/RowListSkeleton'
 import { PropertyAdminList } from '../components/PropertyAdminList'
-import { StatusFilter } from '../components/StatusFilter'
 import { useAgentProperties } from '../useAgentProperties'
 import { usePropertyTransition } from '../usePropertyTransition'
 
@@ -49,7 +50,13 @@ export function AgentPropertiesPage() {
             <p className="results-count" role="status">
               {total === 1 ? '1 propiedad' : `${total} propiedades`}
             </p>
-            <StatusFilter value={status} onStatusChange={changeStatus} />
+            <FilterSelect
+              label="Estado"
+              value={status}
+              options={PROPERTY_STATUSES}
+              labels={PROPERTY_STATUS_LABELS}
+              onChange={changeStatus}
+            />
           </div>
           {transitionError && <ErrorMessage message={transitionError} />}
           {page && page.data.length > 0 ? (
