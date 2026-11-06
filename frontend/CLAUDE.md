@@ -1,6 +1,6 @@
 # frontend — React + Vite + TypeScript
 
-Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están la base, el cliente HTTP, la sesión, registro, login, "Mi cuenta", el catálogo público, el detalle de propiedad y "Mis propiedades" del agente; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están la base, el cliente HTTP, la sesión, registro, login, "Mi cuenta", el catálogo público, el detalle de propiedad, "Mis propiedades" del agente y favoritos; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
@@ -49,7 +49,7 @@ Paleta, tokens, tipografía, estados de pantalla y accesibilidad: [`docs/convenc
 frontend/src/
   app/             raíz de composición: App.tsx (rutas), AppLayout (smart), components/AppHeader (dumb)
   core/            cliente HTTP (vía gateway), auth (token, refresh), rutas protegidas, modelos de la API
-    api/           httpClient.ts (apiRequest; admite headers propios y FormData), problem.ts (ApiError a partir del problem+json), catalogApi.ts, propertiesApi.ts
+    api/           httpClient.ts (apiRequest; admite headers propios y FormData), problem.ts (ApiError a partir del problem+json), catalogApi.ts, propertiesApi.ts, favoritesApi.ts
     auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
     models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts)
   shared/format/   formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones, estados y extras
@@ -78,13 +78,17 @@ frontend/src/
         usePropertyForm.ts (facade) · propertyFormValues.ts (formulario ↔ request del contrato)
         propertyRequirements.ts   qué falta para publicar y validación de fotos (funciones puras, con tests)
       visit-requests/  lead-follow-up/
-    favorites/   my-visits/
+    favorites/
+      containers/  FavoritesPage  FavoriteControl   (smart) · components/ FavoriteList  FavoriteToggle   (dumb)
+      useFavorites.ts   (facade de la página y del botón)
+    my-visits/
 ```
 
 | Smart (container) | Dumbs que usa |
 |---|---|
 | `CatalogPage`: filtros en la URL, catálogo de listing vía `useCatalog` | `PropertyFilters` (`onFiltersChange`), `SortSelect` (`onSortChange`), `PropertyCardList`, `PropertyGridSkeleton`, `Pagination` |
-| `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `VisitRequestForm` (`onSubmitRequest`), `FavoriteToggle` |
+| `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `FavoriteControl`, `VisitRequestForm` (`onSubmitRequest`) |
+| `FavoritesPage`, `FavoriteControl` | `FavoriteList` (`onRemove`), `FavoriteToggle` (`onToggle`), `Pagination` |
 | `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `StatusFilter` (`onStatusChange`) |
 | `PropertyCreatePage`, `PropertyEditPage` | `PropertyDataForm` (`onSubmit`), `PropertyFeaturesForm` (`onSubmit`), `PropertyImagesForm` (`onUpload`), `PublishChecklist`, `PropertyActions` |
 | `VisitRequestsPage` | `VisitRequestList`, `ScheduleVisitDialog` |
@@ -106,6 +110,13 @@ frontend/src/
 - Publicar exige dormitorios, baños, superficie y al menos una foto: `PublishChecklist` lo explica y el botón queda desactivado hasta completarlo.
 - **Fotos:** `GET .../images/{id}` es público y responde 404 si la propiedad está en `DRAFT` o `PAUSED`, así que ahí solo se muestra la cantidad, sin miniaturas. La vista previa local tampoco se usa: la CSP bloquea `blob:`. El front revisa formato, tamaño y cantidad antes de subir, pero la firma real la valida listing.
 - `POST /properties` no es idempotente: ante un 504 se avisa que el borrador pudo crearse, para que no se duplique al reintentar.
+
+## Favoritos
+
+- Ruta `/favoritos`, para `CLIENT` o `AGENT`. La página vive en la URL.
+- El contrato no dice si una propiedad es favorita: se deriva de `GET /favorites` con `size=100`, el máximo. Con más de 100 favoritos, el botón del detalle podría ofrecer guardar una que ya está guardada.
+- `FAVORITE_ALREADY_EXISTS` y `FAVORITE_NOT_FOUND` no se muestran como error: lo que se pedía ya es cierto, por ejemplo por un cambio en otra pestaña.
+- Solo se guarda una propiedad `PUBLISHED`, pero se puede quitar en cualquier estado. Si ya no es visible, la lista avisa "Ya no está disponible".
 
 ## Sesión y tokens
 

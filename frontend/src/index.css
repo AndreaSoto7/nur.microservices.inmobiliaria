@@ -154,6 +154,10 @@ a {
   width: 100%;
 }
 
+.stack--full {
+  justify-items: stretch;
+}
+
 /* Cabecera */
 
 .app-header {
@@ -1094,4 +1098,36 @@ a {
 
 .gallery__thumb--static {
   cursor: default;
+}
+
+/* Favoritos */
+
+.favorite-item {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: var(--space-2);
+  height: 100%;
+}
+
+.favorite-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.favorite-toggle__icon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.favorite-control {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.favorite-control .button {
+  width: 100%;
 }

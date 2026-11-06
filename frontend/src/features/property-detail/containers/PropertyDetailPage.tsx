@@ -8,6 +8,7 @@ import { Button } from '../../../shared/ui/Button'
 import { EmptyState } from '../../../shared/ui/EmptyState'
 import { ErrorMessage } from '../../../shared/ui/ErrorMessage'
 import { LoadingState } from '../../../shared/ui/LoadingState'
+import { FavoriteControl } from '../../favorites/containers/FavoriteControl'
 import { ImageGallery } from '../components/ImageGallery'
 import { PropertySpecs } from '../components/PropertySpecs'
 import { usePropertyDetail } from '../usePropertyDetail'
@@ -65,6 +66,7 @@ export function PropertyDetailPage() {
                 <p className="notice notice--warning">Reservada: no recibe visitas nuevas</p>
               )}
               <PropertySpecs property={property} />
+              <FavoriteControl propertyId={property.id} propertyStatus={property.status} />
             </aside>
           </div>
         </article>

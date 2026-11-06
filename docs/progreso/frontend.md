@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Favoritos: botón en el detalle y página propia con paginación. Probado contra listing real, en navegador y con CSP | #94 |
 | feat | Mis propiedades (agente), parte 3: características, subida de fotos y requisitos para publicar. Probado de punta a punta contra listing real, en navegador y con CSP | #93 |
 | feat | Mis propiedades (agente), parte 2: crear un borrador y editar sus datos, precio y ubicación | #92 |
 | feat | Mis propiedades (agente), parte 1: lista con filtro por estado y cambios de estado, con confirmación si son irreversibles. El cliente HTTP ahora admite headers propios, multipart y 201 sin body | #91 |
@@ -36,7 +37,7 @@
 - [x] Detalle de propiedad con galería
 - [ ] Probar el catálogo vía gateway con propiedades reales (vacío ya responde bien; con datos solo se probó simulado)
 - [ ] Pantalla de avisos (notification ya tiene API)
-- [ ] Favoritos
+- [x] Favoritos
 - [ ] Enviar una consulta y solicitar una visita
 - [ ] Mis visitas (estado de las solicitudes)
 

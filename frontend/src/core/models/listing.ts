@@ -115,6 +115,11 @@ export interface IdResponse {
   id: string
 }
 
+export interface Favorite {
+  property: PropertySummary
+  savedAt: string
+}
+
 export interface PageMeta {
   number: number
   size: number

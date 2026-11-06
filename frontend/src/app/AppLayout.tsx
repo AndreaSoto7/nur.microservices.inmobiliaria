@@ -18,6 +18,7 @@ export function AppLayout() {
     status === 'authenticated' ? (
       <>
         {hasRole('AGENT') && <NavLink to="/agente/propiedades">Mis propiedades</NavLink>}
+        {(hasRole('CLIENT') || hasRole('AGENT')) && <NavLink to="/favoritos">Favoritos</NavLink>}
         <NavLink to="/cuenta">Mi cuenta</NavLink>
       </>
     ) : status === 'anonymous' ? (
