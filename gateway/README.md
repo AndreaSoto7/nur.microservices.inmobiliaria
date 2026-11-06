@@ -41,5 +41,6 @@ Todas tienen valor por defecto, y un valor inválido impide arrancar. Están en 
 | `/api/v1/properties/**`, `/api/v1/favorites/**`, `/api/v1/catalog/**` | `listing-service` |
 | `/api/v1/inquiries/**`, `/api/v1/visits/**`, `/api/v1/leads/**` | `visit-service` |
 | `/api/v1/audit/**` | `audit-service` (opcional) |
+| `/api/v1/notifications/**` | `notification-service` |
 
 El path se reenvía sin reescribirlo. `GET /health` lo responde el propio gateway. Rutas públicas y reglas de acceso: [`CLAUDE.md`](CLAUDE.md#rutas).

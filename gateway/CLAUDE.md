@@ -56,6 +56,7 @@ Módulo: `github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway`.
 | `/api/v1/catalog/**` | `listing-service` | Pública (`GET`) |
 | `/api/v1/inquiries/**`, `/api/v1/visits/**`, `/api/v1/leads/**` | `visit-service` | JWT |
 | `/api/v1/audit/**` | `audit-service` (opcional) | JWT (`ADMIN` lo valida el servicio) |
+| `/api/v1/notifications/**` | `notification-service` | JWT |
 
 - El destino es un **nombre de servicio de Consul**, nunca una dirección fija. El path se reenvía **sin reescribirlo**.
 - **Rutas públicas** (sin JWT). Las de auth se comparan **de forma exacta**, por método y path. Los paths con segmentos `..` o vacíos (`//`) se rechazan con 400, evaluando por segmentos sobre `r.URL.Path` ya decodificado (así `%2e%2e` tampoco pasa).
