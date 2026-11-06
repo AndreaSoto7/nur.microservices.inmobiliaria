@@ -66,4 +66,9 @@ public class JdbcCatalogProjection implements CatalogProjection {
         params.put("updatedAt", Timestamp.from(p.updatedAt()));
         jdbc.update(UPSERT, params);
     }
+
+    @Override
+    public void clear() {
+        jdbc.update("DELETE FROM property_catalog", Map.of());
+    }
 }

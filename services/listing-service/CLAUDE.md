@@ -78,6 +78,7 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 - El lado comando es el aggregate `Property`. El lado consulta es la tabla `property_catalog`, una proyección desnormalizada que se actualiza **en la misma transacción** que cada comando (upsert al publicar, editar o reservar; borrado al pausar, vender o alquilar).
 - Endpoints públicos (detalle en el OpenAPI): `GET /api/v1/catalog/properties` con filtros `zone` (sin distinguir mayúsculas), `type`, `operation`, `minPrice`, `maxPrice`, `bedrooms` (mínimo), `features` (todas las pedidas), paginación y orden por `price`, `publishedAt`, `areaM2` o `bedrooms`, y `GET /api/v1/catalog/properties/{propertyId}`.
 - Los filtros se arman con un **Builder** (`CatalogCriteria`) y se traducen a SQL con **Specification** (`CatalogSqlSpecifications`). La proyección la escribe `JdbcCatalogProjection` (puerto `CatalogProjection`) y la lee `JdbcCatalogReadModel`.
+- La proyección es descartable: `RebuildCatalogHandler` la vacía y la vuelve a llenar desde `properties` en una transacción, sin publicar eventos. Se dispara al arrancar con `CATALOG_REBUILD_ON_STARTUP=true` (`CatalogRebuildRunner`); no tiene endpoint para no tocar el contrato público.
 
 ## Estructura (paquete base `com.inmobiliaria.listing`)
 
@@ -151,7 +152,12 @@ spring.cloud.consul.discovery.health-check-critical-timeout=1m
 ./mvnw test                   # corre antes Checkstyle (fase validate)
 ./mvnw verify
 ./mvnw checkstyle:check       # solo el linter
+
+# Reconstruir el catálogo público si se desincronizó (desde la raíz del repo)
+CATALOG_REBUILD_ON_STARTUP=true docker compose -f infra/docker-compose.yml up -d --force-recreate listing-service
 ```
+
+Después de reconstruir, vuelve a levantarlo sin la variable para que las réplicas nuevas no repitan el trabajo.
 
 **Linter:** Checkstyle ([ADR 0006](../../docs/adr/0006-linter-java-listing.md)), reglas en `config/checkstyle/checkstyle.xml`. Revisa sin reformatear: 4 espacios, 120 columnas, sin imports sin usar ni comodines, llaves siempre y errores comunes. Si una violación bloquea `./mvnw test`, se arregla el código, no se baja la regla sin acordarlo.
 

@@ -9,4 +9,7 @@ import com.inmobiliaria.listing.domain.model.Property;
 public interface CatalogProjection {
 
     void sync(Property property);
+
+    /** Vacía el catálogo. Solo para reconstruirlo desde cero (RebuildCatalogHandler). */
+    void clear();
 }

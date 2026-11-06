@@ -4,6 +4,7 @@ import com.inmobiliaria.listing.domain.model.Property;
 import com.inmobiliaria.listing.domain.model.PropertyId;
 import com.inmobiliaria.listing.domain.repository.PropertyRepository;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -20,6 +21,11 @@ public class InMemoryPropertyRepository implements PropertyRepository {
     @Override
     public void save(Property property) {
         store.put(property.id(), copy(property));
+    }
+
+    @Override
+    public List<PropertyId> findAllIds() {
+        return List.copyOf(store.keySet());
     }
 
     public Property get(PropertyId id) {
