@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Oportunidades: agregar notas y cerrar como ganada o perdida. Probada contra el stack real la cadena completa: cerrar como ganada reserva la propiedad por evento y avisa al agente | este PR |
+| feat | Oportunidades: agregar notas y cerrar como ganada o perdida. Probada contra el stack real la cadena completa: cerrar como ganada reserva la propiedad por evento y avisa al agente | #101 |
 | feat | Consultas recibidas: quién preguntó, sobre qué propiedad, y el mensaje con sus datos de contacto al abrirla. Probado contra visit real | #100 |
 | feat | Panel de agente con menú propio y solicitudes de visita: programar, rechazar, cancelar y marcar realizada. Probado contra visit real, salvo marcar realizada, que exige que haya terminado el horario | #99 |
 | feat | Mis visitas: lista con estados y filtro, y cancelar una visita programada. Probado contra visit real | #98 |
