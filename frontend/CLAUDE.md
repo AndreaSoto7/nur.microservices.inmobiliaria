@@ -1,6 +1,6 @@
 # frontend — React + Vite + TypeScript
 
-Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están la base, el cliente HTTP, la sesión, registro, login, "Mi cuenta", el catálogo público, el detalle de propiedad, "Mis propiedades" del agente, favoritos y avisos; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están registro, login, "Mi cuenta", catálogo, detalle, favoritos, avisos, consultas y visitas del interesado, y el panel de agente salvo oportunidades; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
@@ -83,6 +83,9 @@ frontend/src/
       visit-requests/
         containers/  AgentVisitsPage   (smart) · components/ AgentVisitRow  ScheduleVisitForm   (dumb)
         useAgentVisits.ts (facade) · visitActions.ts (cuándo se puede marcar realizada, con tests)
+      inquiries/
+        containers/  AgentInquiriesPage  InquiryDetailSection   (smart) · components/ InquiryRow  InquiryContent   (dumb)
+        useAgentInquiries.ts (facade)
       lead-follow-up/
     favorites/
       containers/  FavoritesPage  FavoriteControl   (smart) · components/ FavoriteList  FavoriteToggle   (dumb)
@@ -106,6 +109,7 @@ frontend/src/
 | `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `FilterSelect` (`onChange`) |
 | `PropertyCreatePage`, `PropertyEditPage` | `PropertyDataForm` (`onSubmit`), `PropertyFeaturesForm` (`onSubmit`), `PropertyImagesForm` (`onUpload`), `PublishChecklist`, `PropertyActions` |
 | `AgentVisitsPage` | `AgentVisitRow` (`onSchedule`, `onReject`, `onCancel`, `onComplete`), `ScheduleVisitForm`, `ReasonPanel`, `VisitDetails` |
+| `AgentInquiriesPage` | `InquiryRow` (`onToggle`), `InquiryDetailSection`, `InquiryContent` |
 | `LeadFollowUpPage` | `LeadTimeline`, `FollowUpForm`, `CloseLeadDialog` (`onClose(outcome)`) |
 
 ## Catálogo
@@ -131,6 +135,10 @@ frontend/src/
 - El horario propuesto viene cargado con la fecha que pidió el interesado. El título sale de `GET /properties/{id}`, porque el agente también ve sus propiedades sin publicar.
 - "Marcar realizada" solo aparece cuando terminó el horario: antes, visit responde `VISIT_COMPLETION_TOO_EARLY`.
 - El error de una acción se muestra en su fila y el formulario sigue abierto, para corregir sin volver a escribir.
+
+## Consultas (agente)
+
+- Ruta `/agente/consultas`. El mensaje de una consulta se pide recién al abrirla.
 
 ## Favoritos
 

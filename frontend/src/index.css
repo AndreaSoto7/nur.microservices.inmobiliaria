@@ -1218,3 +1218,13 @@ a {
 .favorite-control .button {
   width: 100%;
 }
+
+.specs .inquiry__message {
+  font-weight: 400;
+  white-space: pre-line;
+}
+
+.specs dd a {
+  display: inline-block;
+  min-height: 1.5rem;
+}
