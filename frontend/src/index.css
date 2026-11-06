@@ -589,6 +589,7 @@ a {
   gap: var(--space-3);
 }
 
+.chip-group,
 .filters__features {
   display: flex;
   flex-wrap: wrap;
@@ -598,6 +599,7 @@ a {
   border: 0;
 }
 
+.chip-group legend,
 .filters__features legend {
   margin-bottom: var(--space-2);
   padding: 0;
@@ -1080,4 +1082,16 @@ a {
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
+}
+
+.checklist {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+}
+
+.gallery__thumb--static {
+  cursor: default;
 }

@@ -15,6 +15,8 @@ interface PropertyActionsProps {
   busy: boolean
   /** Transición que se resalta como acción principal de la zona. */
   primary?: PropertyTransition
+  /** Transiciones que todavía no se pueden ejecutar: el container explica por qué. */
+  blocked?: PropertyTransition[]
   onRun: (transition: PropertyTransition) => void
 }
 
@@ -24,6 +26,7 @@ export const PropertyActions = memo(function PropertyActions({
   operationType,
   busy,
   primary,
+  blocked,
   onRun,
 }: PropertyActionsProps) {
   const [confirming, setConfirming] = useState<PropertyAction | null>(null)
@@ -61,7 +64,7 @@ export const PropertyActions = memo(function PropertyActions({
         <Button
           key={action.transition}
           variant={action.transition === primary ? 'primary' : 'secondary'}
-          disabled={busy}
+          disabled={busy || blocked?.includes(action.transition)}
           aria-label={`${action.label}: ${title}`}
           onClick={() => (action.irreversible ? setConfirming(action) : onRun(action.transition))}
         >

@@ -104,6 +104,13 @@ export interface CreatePropertyRequest extends EditPropertyRequest {
   operationType: OperationType
 }
 
+export interface UpdateFeaturesRequest {
+  bedrooms: number
+  bathrooms: number
+  areaM2: number
+  features: Feature[]
+}
+
 export interface IdResponse {
   id: string
 }
