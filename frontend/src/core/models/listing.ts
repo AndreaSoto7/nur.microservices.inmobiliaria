@@ -92,6 +92,22 @@ export interface PropertyDetail {
   updatedAt: string
 }
 
+export interface EditPropertyRequest {
+  title: string
+  description?: string
+  price: Money
+  location: Location
+}
+
+export interface CreatePropertyRequest extends EditPropertyRequest {
+  propertyType: PropertyType
+  operationType: OperationType
+}
+
+export interface IdResponse {
+  id: string
+}
+
 export interface PageMeta {
   number: number
   size: number

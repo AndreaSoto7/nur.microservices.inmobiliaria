@@ -55,6 +55,7 @@
   --radius-pill: 999px;
   --shadow-raised: 0 4px 14px rgb(27 39 51 / 10%);
   --control-height: 2.75rem;
+  --textarea-height: 8rem;
 
   font-family:
     system-ui,
@@ -126,6 +127,10 @@ a {
 
 .page--wide {
   max-width: 1120px;
+}
+
+.page--medium {
+  max-width: 720px;
 }
 
 .page--narrow {
@@ -278,6 +283,7 @@ a {
 
 .field input:not([type='radio'], [type='checkbox']),
 .field select,
+.field textarea,
 .select {
   width: 100%;
   min-width: 0;
@@ -290,6 +296,16 @@ a {
   background: var(--color-surface);
   border: 1px solid var(--color-field-border);
   border-radius: var(--radius-md);
+}
+
+.field textarea {
+  min-height: var(--textarea-height);
+  resize: vertical;
+}
+
+.field select:disabled {
+  color: var(--color-muted);
+  background: var(--color-bg);
 }
 
 .field input::placeholder {
@@ -306,7 +322,9 @@ a {
   appearance: none;
 }
 
-.field input[aria-invalid='true'] {
+.field input[aria-invalid='true'],
+.field select[aria-invalid='true'],
+.field textarea[aria-invalid='true'] {
   border-color: var(--color-error);
   border-width: 2px;
 }
@@ -386,6 +404,11 @@ a {
 .notice--warning {
   color: var(--color-warning);
   background: var(--color-warning-bg);
+}
+
+.notice--success {
+  color: var(--color-success);
+  background: var(--color-success-bg);
 }
 
 .badge {
@@ -954,6 +977,15 @@ a {
 
 /* Listas de gestión: mismas filas para propiedades, visitas, consultas y oportunidades */
 
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+
 .row-list {
   display: grid;
   gap: var(--space-3);
@@ -981,6 +1013,11 @@ a {
   line-height: 1.35;
   letter-spacing: 0;
   overflow-wrap: anywhere;
+}
+
+.row-card__title a {
+  display: inline-block;
+  min-height: 1.5rem;
 }
 
 .row-card__meta {
@@ -1018,4 +1055,29 @@ a {
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--color-warning);
+}
+
+/* Editor de propiedad */
+
+.editor {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.editor__section {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.form__row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: var(--space-4);
+}
+
+.form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
 }

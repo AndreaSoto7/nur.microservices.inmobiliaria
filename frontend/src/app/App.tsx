@@ -1,7 +1,9 @@
-import { Link, Route, Routes } from 'react-router'
+import { Link, Outlet, Route, Routes } from 'react-router'
 import { RequireAuth } from '../core/auth/RequireAuth'
 import { AccountPage } from '../features/account/containers/AccountPage'
 import { AgentPropertiesPage } from '../features/agent/properties-admin/containers/AgentPropertiesPage'
+import { PropertyCreatePage } from '../features/agent/property-form/containers/PropertyCreatePage'
+import { PropertyEditPage } from '../features/agent/property-form/containers/PropertyEditPage'
 import { CatalogPage } from '../features/catalog/containers/CatalogPage'
 import { LoginPage } from '../features/auth/containers/LoginPage'
 import { RegisterPage } from '../features/auth/containers/RegisterPage'
@@ -29,10 +31,14 @@ export function App() {
           path="agente/propiedades"
           element={
             <RequireAuth roles={['AGENT']}>
-              <AgentPropertiesPage />
+              <Outlet />
             </RequireAuth>
           }
-        />
+        >
+          <Route index element={<AgentPropertiesPage />} />
+          <Route path="nueva" element={<PropertyCreatePage />} />
+          <Route path=":propertyId" element={<PropertyEditPage />} />
+        </Route>
         <Route
           path="*"
           element={

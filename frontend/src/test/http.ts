@@ -36,6 +36,13 @@ export function routeFetch(routes: Record<string, RouteHandler>) {
   return fn
 }
 
+/** Cuerpos JSON que recibió una ruta, en orden. */
+export function sentBodies(fn: ReturnType<typeof routeFetch>, method: string, path: string) {
+  return fn.mock.calls
+    .filter(([url, init]) => init?.method === method && new URL(String(url)).pathname === path)
+    .map(([, init]) => JSON.parse(String(init?.body ?? 'null')) as unknown)
+}
+
 /** Deja la sesión lista para recuperarse al montar la app, con el usuario indicado. */
 export function sessionRoutes(user: CurrentUser): Record<string, RouteHandler> {
   localStorage.setItem('inmobiliaria.refreshToken', 'refresh-guardado')

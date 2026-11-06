@@ -89,6 +89,7 @@ Solo hay tema claro: `color-scheme: light`.
 | --------------- | ------------ | ----------------------- |
 | `.page`         | 960 px       | Por defecto             |
 | `.page--wide`   | 1120 px      | Catálogo y detalle      |
+| `.page--medium` | 720 px       | Editores largos         |
 | `.page--narrow` | 440 px       | Formularios y mi cuenta |
 
 - **Toda pantalla va dentro de un `.page`,** que ya trae el margen lateral.
@@ -97,7 +98,7 @@ Solo hay tema claro: `color-scheme: light`.
 
 ## Componentes
 
-Antes de crear uno, revisa `shared/ui/`: `Button`, `TextField`, `StatusBadge`, `RowListSkeleton`, `EmptyState`, `ErrorMessage`, `LoadingState`, `Pagination` e iconos en `icons.tsx`.
+Antes de crear uno, revisa `shared/ui/`: `Button`, `TextField`, `SelectField`, `TextAreaField`, `StatusBadge`, `RowListSkeleton`, `EmptyState`, `ErrorMessage`, `LoadingState`, `Pagination` e iconos en `icons.tsx`.
 
 - **Botones:** `<Button>` real, nunca un `div` con `onClick`. Variantes `primary` y `secondary`.
 - **Tarjeta de propiedad:** en este orden, foto, precio, título, tipo y zona, y datos. El precio es lo primero que se lee.

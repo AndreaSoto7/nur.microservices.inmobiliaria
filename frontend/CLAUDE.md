@@ -53,7 +53,7 @@ frontend/src/
     auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
     models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts)
   shared/format/   formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones, estados y extras
-  shared/ui/       dumbs genéricos: Button, TextField, StatusBadge, RowListSkeleton, ErrorMessage, LoadingState, Pagination, EmptyState, icons
+  shared/ui/       dumbs genéricos: Button, TextField, SelectField, TextAreaField, StatusBadge, RowListSkeleton, ErrorMessage, LoadingState, Pagination, EmptyState, icons
   test/            setup de Vitest, mocks de fetch y renderApp
   features/
     auth/          LoginPage, RegisterPage (smart) · LoginForm, RegisterForm (dumb) · useAuthActions (facade)
@@ -72,7 +72,10 @@ frontend/src/
         components/  PropertyAdminList  PropertyActions  PropertyStatusBadge  StatusFilter   (dumb)
         useAgentProperties.ts (facade; estado y página en la URL) · usePropertyTransition.ts (facade)
         propertyActions.ts    qué transiciones ofrecer según el estado (función pura, con tests)
-      property-form/  visit-requests/  lead-follow-up/
+      property-form/
+        containers/  PropertyCreatePage.tsx  PropertyEditPage.tsx   (smart) · components/ PropertyDataForm (dumb)
+        usePropertyForm.ts (facade) · propertyFormValues.ts (formulario ↔ request del contrato)
+      visit-requests/  lead-follow-up/
     favorites/   my-visits/
 ```
 
@@ -81,6 +84,7 @@ frontend/src/
 | `CatalogPage`: filtros en la URL, catálogo de listing vía `useCatalog` | `PropertyFilters` (`onFiltersChange`), `SortSelect` (`onSortChange`), `PropertyCardList`, `PropertyGridSkeleton`, `Pagination` |
 | `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `VisitRequestForm` (`onSubmitRequest`), `FavoriteToggle` |
 | `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `StatusFilter` (`onStatusChange`) |
+| `PropertyCreatePage`, `PropertyEditPage` | `PropertyDataForm` (`onSubmit`), `PropertyActions` |
 | `VisitRequestsPage` | `VisitRequestList`, `ScheduleVisitDialog` |
 | `LeadFollowUpPage` | `LeadTimeline`, `FollowUpForm`, `CloseLeadDialog` (`onClose(outcome)`) |
 
@@ -94,8 +98,9 @@ frontend/src/
 
 ## Mis propiedades (agente)
 
-- Ruta `/agente/propiedades`, solo con rol `AGENT`. El filtro de estado y la página viven en la URL.
+- Rutas `/agente/propiedades`, `/agente/propiedades/nueva` y `/agente/propiedades/:propertyId`, solo con rol `AGENT`. El filtro de estado y la página viven en la URL.
 - `availableActions` solo evita ofrecer acciones imposibles: las reglas las hace cumplir listing, y sus 409 se muestran con su `detail`. Vender y alquilar son irreversibles, por eso piden confirmación.
+- El tipo y la operación no se editan (contrato). El `PUT` reemplaza la ubicación completa: al guardar se conservan la latitud y la longitud, aunque el formulario no las muestre.
 
 ## Sesión y tokens
 
