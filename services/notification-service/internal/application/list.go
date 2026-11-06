@@ -10,6 +10,9 @@ import (
 // MaxPageSize es el tamaño máximo de página (rule api-rest).
 const MaxPageSize = 100
 
+// MaxPage acota el OFFSET: sin tope, una página enorme lo desbordaría.
+const MaxPage = 1_000_000
+
 // ErrInvalidPagination indica una página o un tamaño fuera de rango.
 var ErrInvalidPagination = errors.New("paginación inválida")
 
@@ -59,7 +62,7 @@ func NewListNotifications(reader NotificationReader) *ListNotifications {
 
 // Handle devuelve la página pedida.
 func (h *ListNotifications) Handle(ctx context.Context, query ListNotificationsQuery) (NotificationPage, error) {
-	if query.Page < 1 || query.Size < 1 || query.Size > MaxPageSize {
+	if query.Page < 1 || query.Page > MaxPage || query.Size < 1 || query.Size > MaxPageSize {
 		return NotificationPage{}, ErrInvalidPagination
 	}
 	items, total, err := h.reader.ListByRecipient(ctx, query)

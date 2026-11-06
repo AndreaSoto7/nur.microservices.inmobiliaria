@@ -338,6 +338,7 @@ func TestListRejectsInvalidPagination(t *testing.T) {
 	}{
 		{"página cero", 0, 20},
 		{"página negativa", -1, 20},
+		{"página sobre el máximo", MaxPage + 1, 20},
 		{"tamaño cero", 1, 0},
 		{"tamaño negativo", 1, -1},
 		{"tamaño sobre el máximo", 1, MaxPageSize + 1},
