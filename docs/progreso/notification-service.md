@@ -9,7 +9,7 @@
 | Tipo | Qué se hizo | PR |
 |---|---|---|
 | docs | ADR 0007: se retoma el servicio, con avisos solo dentro de la app. Diseño, base y progreso | #73 |
-| feat | Contrato OpenAPI (listar y marcar como leído) y consumidores en el catálogo de eventos | este PR |
+| feat | Contrato OpenAPI (listar y marcar como leído) y consumidores en el catálogo de eventos | #74 |
 
 ## Pendientes
 
