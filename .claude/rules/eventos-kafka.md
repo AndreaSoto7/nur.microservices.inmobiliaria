@@ -22,7 +22,7 @@ El catálogo oficial de eventos, sus topics, productores y consumidores está en
 - **Un topic por aggregate:** `<servicio>.<aggregate>.events`, por ejemplo `listing.property.events`, `visit.visit.events` o `identity.user.events`.
 - **La clave del mensaje es el `aggregateId`.** Así Kafka garantiza el orden de los eventos de una misma propiedad o visita.
 - **Dead-letter:** `<topic>.dlq`.
-- **Consumer group:** el nombre del servicio consumidor (`visit-service`, `listing-service`, `audit-service`).
+- **Consumer group:** el nombre del servicio consumidor (`visit-service`, `listing-service`, `notification-service`, `audit-service`).
 - **Quién consume qué** y las políticas que disparan los eventos: `contracts/events/README.md` y el `CLAUDE.md` de cada servicio.
 
 ## Envoltorio (envelope) obligatorio
@@ -63,7 +63,7 @@ Cada `payload` tiene su schema en `contracts/events/<servicio>/<evento-kebab>.v<
   - Nunca te quedes en un loop infinito ni tumbes el consumidor.
 - **Ignora** los `eventType` que no conoces, sin fallar. Así se pueden agregar eventos nuevos al topic sin romperte.
 - **Filtra por `(eventType, eventVersion)`** e ignora las versiones que no conoces. Mientras conviven v1 y v2, procesa una sola versión de cada hecho.
-- **Todos los consumidores del proyecto arrancan desde el principio del topic** (`fromBeginning`, `auto.offset.reset=earliest`): visit para conocer las propiedades ya publicadas, listing y audit para no perder eventos. Repetir un evento viejo es inofensivo porque el consumidor es idempotente y las reglas de estado lo descartan.
+- **Todos los consumidores del proyecto arrancan desde el principio del topic** (`fromBeginning`, `auto.offset.reset=earliest`): visit para conocer las propiedades ya publicadas; listing, notification y audit para no perder eventos. Repetir un evento viejo es inofensivo porque el consumidor es idempotente y las reglas de estado lo descartan.
 - Traduce el evento a tu propio modelo (anti-corruption layer). No reutilices clases del productor.
 
 ## Versionado de eventos

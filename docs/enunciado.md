@@ -46,7 +46,7 @@ Una propiedad puede recibir múltiples consultas y solicitudes de visita. Conser
 | Search | Consultas, filtros, vistas optimizadas del catálogo | lado query de `listing-service` (ADR 0005) |
 | Lead / Visit | Contactos, solicitudes, programación de visitas | `visit-service` (NestJS) |
 | Favorite | Propiedades guardadas | dentro de `listing-service` (ADR 0003) |
-| Notification | Avisos ante solicitudes, visitas y cambios | fuera de alcance por tiempo (ADR 0005): el cliente ve el estado de sus solicitudes en la app |
+| Notification | Avisos ante solicitudes, visitas y cambios | `notification-service` (Go, ADR 0007): avisos dentro de la app |
 | _(propio)_ | Registro de todos los eventos | `audit-service`, opcional (ADR 0005) |
 
 ## Criterios técnicos obligatorios (evaluados)

@@ -4,6 +4,7 @@
 - **Fecha:** 2026-11-04
 - **Autores:** @JairoSolizOrtiz1
 - **Modifica:** [0001](0001-arquitectura-y-stack.md) (tabla de servicios)
+- **Modificado por:** [0007](0007-retomar-notification-service.md) (`notification-service` vuelve al alcance)
 
 ## Contexto
 
