@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Mis visitas: lista con estados y filtro, y cancelar una visita programada. Probado contra visit real | este PR |
+| feat | Mis visitas: lista con estados y filtro, y cancelar una visita programada. Probado contra visit real | #98 |
 | feat | Enviar una consulta y solicitar una visita desde el detalle, con `Idempotency-Key`. Probado contra visit real, hasta el aviso que recibe el agente | #97 |
 | feat | Avisos: página con filtro de no leídos, marcar como leído y contador en la cabecera | #95 |
 | feat | Favoritos: botón en el detalle y página propia con paginación. Probado contra listing real, en navegador y con CSP | #94 |
