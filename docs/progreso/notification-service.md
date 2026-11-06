@@ -17,7 +17,7 @@
 | feat | Validación del access token con el JWKS de identity, con caché, recarga limitada y renovación cada 5 minutos | #80 |
 | feat | API: listar mis avisos (paginado, con filtro `unread`) y marcarlos como leídos, con JWT | #82 |
 | feat | Consumidor de Kafka: `UserRegistered`, `VisitRequested` y `PropertyReserved` crean avisos. Idempotente, con 3 reintentos y DLQ | #84 |
-| feat | Servicio y base en el compose | este PR |
+| feat | Servicio y base en el compose | #85 |
 
 ## Pendientes
 
