@@ -37,13 +37,13 @@ Esta es la fuente de verdad de los eventos entre servicios. Si un evento no est�
 | `PropertyReserved` | 1 | listing.property.events | listing | visit, notification, audit* | Una propiedad pasa a `RESERVED` |
 | `PropertySold` | 1 | listing.property.events | listing | visit, audit* | Una propiedad pasa a `SOLD` |
 | `PropertyRented` | 1 | listing.property.events | listing | visit, audit* | Una propiedad pasa a `RENTED` |
-| `InquiryReceived` | 1 | visit.inquiry.events | visit | audit* | Un interesado envía una consulta |
-| `VisitRequested` | 1 | visit.visit.events | visit | notification, audit* | Un interesado solicita una visita |
-| `VisitScheduled` | 1 | visit.visit.events | visit | audit* | El agente programa la visita |
-| `VisitRejected` | 1 | visit.visit.events | visit | audit* | El agente rechaza la solicitud, o el sistema la rechaza porque la propiedad se reservó, vendió o alquiló |
-| `VisitCancelled` | 1 | visit.visit.events | visit | audit* | El cliente o el agente cancela, o el sistema la cancela porque la propiedad se vendió o alquiló |
-| `VisitCompleted` | 1 | visit.visit.events | visit | audit* | La visita se realizó |
-| `LeadOpened` | 1 | visit.lead.events | visit | audit* | Una consulta o solicitud de visita abre una oportunidad |
+| [`InquiryReceived`](visit/inquiry-received.v1.schema.json) | 1 | visit.inquiry.events | visit | audit* | Un interesado envía una consulta |
+| [`VisitRequested`](visit/visit-requested.v1.schema.json) | 1 | visit.visit.events | visit | notification, audit* | Un interesado solicita una visita |
+| [`VisitScheduled`](visit/visit-scheduled.v1.schema.json) | 1 | visit.visit.events | visit | audit* | El agente programa la visita |
+| [`VisitRejected`](visit/visit-rejected.v1.schema.json) | 1 | visit.visit.events | visit | audit* | El agente rechaza la solicitud, o el sistema la rechaza porque la propiedad se reservó, vendió o alquiló |
+| [`VisitCancelled`](visit/visit-cancelled.v1.schema.json) | 1 | visit.visit.events | visit | audit* | El cliente o el agente cancela, o el sistema la cancela porque la propiedad se vendió o alquiló |
+| [`VisitCompleted`](visit/visit-completed.v1.schema.json) | 1 | visit.visit.events | visit | audit* | La visita se realizó |
+| [`LeadOpened`](visit/lead-opened.v1.schema.json) | 1 | visit.lead.events | visit | audit* | Una consulta o solicitud de visita abre una oportunidad |
 | [`LeadFollowUpRegistered`](visit/lead-follow-up-registered.v1.schema.json) | 1 | visit.lead.events | visit | audit* | El agente registra un seguimiento de la oportunidad |
 | [`LeadClosed`](visit/lead-closed.v1.schema.json) | 1 | visit.lead.events | visit | listing, audit* | El agente cierra la oportunidad como ganada (`WON`) o perdida (`LOST`) |
 
@@ -67,7 +67,7 @@ Detalle y reglas en el [ADR 0005](../../docs/adr/0005-realinear-servicios-y-cade
 | `VisitRequested` | `agentId` | `VISIT_REQUESTED` |
 | `PropertyReserved` con `actor: SYSTEM` | `agentId` | `PROPERTY_RESERVED` |
 
-Cuando visit defina los schemas de `InquiryReceived`, `VisitScheduled`, `VisitRejected` y `VisitCancelled`, notification agrega su aviso. Necesita que lleven `agentId` o `clientId`, según a quién se avisa.
+Los schemas de `InquiryReceived`, `VisitScheduled`, `VisitRejected` y `VisitCancelled` incluyen `agentId` y `clientId`. Los avisos que procesa Notification se enumeran en la tabla anterior.
 
 ## Schemas definidos
 
@@ -82,4 +82,5 @@ Cuando visit defina los schemas de `InquiryReceived`, `VisitScheduled`, `VisitRe
 - [x] [`visit/inquiry-received.v1.schema.json`](visit/inquiry-received.v1.schema.json)
 - [x] [`visit/lead-follow-up-registered.v1.schema.json`](visit/lead-follow-up-registered.v1.schema.json)
 - [x] [`visit/lead-closed.v1.schema.json`](visit/lead-closed.v1.schema.json)
+- [x] [`visit/visit-scheduled.v1.schema.json`](visit/visit-scheduled.v1.schema.json)
 - [ ] El resto se crea con `/nuevo-evento` cuando el servicio productor lo implemente.

@@ -26,6 +26,7 @@
 **Base**
 
 - [ ] Scaffold con `/scaffold-servicio visit`
+- [x] Primera migración de PostgreSQL para las tablas de Visit y las claves de idempotencia
 - [x] Contrato `contracts/openapi/visit-service.yaml`
 
 **Consultas y visitas (enunciado)**
