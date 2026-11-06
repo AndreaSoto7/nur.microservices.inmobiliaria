@@ -32,3 +32,11 @@ services:
   notification-service:
     ports:
       - "127.0.0.1:8005:8005"
+
+  visit-db:
+    ports:
+      - "127.0.0.1:5435:5432"
+
+  visit-service:
+    ports:
+      - "127.0.0.1:8003:8003"

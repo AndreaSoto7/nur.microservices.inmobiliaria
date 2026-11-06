@@ -19,6 +19,7 @@ IDENTITY_SECRET_KEY=$(openssl rand -hex 32)
 IDENTITY_DB_PASSWORD=$(openssl rand -hex 16)
 LISTING_DB_PASSWORD=$(openssl rand -hex 16)
 NOTIFICATION_DB_PASSWORD=$(openssl rand -hex 16)
+VISIT_DB_PASSWORD=$(openssl rand -hex 16)
 IDENTITY_JWT_PRIVATE_KEY='$private_key'
 ENV
 

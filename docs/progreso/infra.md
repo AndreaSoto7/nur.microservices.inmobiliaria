@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | visit-service en el compose (`visit-db`, `visit-migrate` y `visit-service`), con `VISIT_DB_PASSWORD` y puertos de depuración 8003 y 5435 | este PR |
 | feat | Compose base y de depuración con Kafka KRaft, Kafka UI, Consul, topics e identity | #26 |
 | feat | Gateway en el compose (8080). Healthcheck de las bases por TCP: con un volumen nuevo, `pg_isready` por socket daba listo durante la inicialización, y identity moría con `Connection refused` | #69 |
 | feat | notification-service y su base en el compose. `start_period` en las bases: un volumen nuevo en una máquina ocupada tardaba más que el healthcheck, y Compose cancelaba el arranque | #85 |
