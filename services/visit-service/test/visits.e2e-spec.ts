@@ -21,7 +21,9 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
   const pausedPropertyId = randomUUID();
   const inquiryPropertyId = randomUUID();
   const inboxPropertyId = randomUUID();
+  const leadClosePropertyId = randomUUID();
   const propertyIds = [
+    leadClosePropertyId,
     propertyId,
     pausedPropertyId,
     inquiryPropertyId,
@@ -1073,6 +1075,135 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
         .default(new Ajv2020())
         .validate(schema, events[0].envelope.payload),
     ).toBe(true);
+  });
+
+  it('cierra oportunidades como ganadas o perdidas sin duplicar el evento ni aceptar más notas', async () => {
+    const ids = [randomUUID(), randomUUID()];
+    const [wonId, lostId] = ids;
+    await database.query(
+      `INSERT INTO leads (id, property_id, client_id, agent_id, status, opened_at)
+       VALUES ($1,$3,$4,$6,'OPEN',now()), ($2,$3,$5,$6,'OPEN',now())`,
+      [...ids, leadClosePropertyId, clientId, otherClientId, agentId],
+    );
+
+    const http = request(app.getHttpServer());
+    const path = '/api/v1/leads/';
+    const note = 'Confirmación registrada.';
+    const winning = { outcome: 'WON', note: '  ' + note + ' ' };
+    const close = (
+      leadId: string,
+      token: string | null,
+      payload: object = winning,
+      key: string = randomUUID(),
+    ) => {
+      const action = http
+        .post(path + leadId + '/close')
+        .set('Idempotency-Key', key)
+        .set('X-Correlation-Id', 'close-lead-test');
+      return (token ? action.auth(token, { type: 'bearer' }) : action).send(
+        payload,
+      );
+    };
+    await close(wonId, null).expect(401);
+    await close(wonId, clientToken).expect(403);
+    await close(wonId, otherAgentToken)
+      .expect(404)
+      .expect(/LEAD_NOT_FOUND/);
+    await close(wonId, agentToken, {}).expect(400);
+    await close(wonId, agentToken, { outcome: 'PENDING' }).expect(400);
+    await close(wonId, agentToken, { outcome: 'WON', note: 'Texto\0' }).expect(
+      400,
+    );
+    await close(wonId, agentToken, { ...winning, agentId }).expect(400);
+
+    const key = randomUUID();
+    const expected = { id: wonId, status: 'CLOSED', outcome: 'WON' };
+    await Promise.all([
+      close(wonId, agentToken, winning, key).expect(200, expected),
+      close(wonId, agentToken, winning, key).expect(200, expected),
+    ]);
+    await close(wonId, agentToken, { outcome: 'LOST' }, key).expect(422);
+    await close(wonId, agentToken)
+      .expect(409)
+      .expect(/LEAD_NOT_OPEN/);
+    await close(lostId, agentToken, { outcome: 'LOST' }).expect(200, {
+      id: lostId,
+      status: 'CLOSED',
+      outcome: 'LOST',
+    });
+    await http
+      .post(path + wonId + '/follow-ups')
+      .auth(agentToken, { type: 'bearer' })
+      .set('Idempotency-Key', randomUUID())
+      .send({ note: 'Nota tardía.' })
+      .expect(409)
+      .expect(/LEAD_NOT_OPEN/);
+    const rows = await database.query<
+      {
+        id: string;
+        status: string;
+        outcome: string;
+        closeNote: string | null;
+        closedAt: Date;
+        version: number;
+      }[]
+    >(
+      `SELECT id, status, outcome, close_note AS "closeNote", closed_at AS "closedAt", version::integer
+         FROM leads WHERE id IN ($1,$2) ORDER BY outcome`,
+      ids,
+    );
+    expect(rows).toEqual([
+      {
+        id: lostId,
+        status: 'CLOSED',
+        outcome: 'LOST',
+        closeNote: null,
+        closedAt: expect.any(Date),
+        version: 1,
+      },
+      {
+        id: wonId,
+        status: 'CLOSED',
+        outcome: 'WON',
+        closeNote: note,
+        closedAt: expect.any(Date),
+        version: 1,
+      },
+    ]);
+    const events = await database.query<
+      { topic: string; envelope: { payload: unknown } }[]
+    >(
+      "SELECT topic, envelope FROM outbox WHERE aggregate_id IN ($1,$2) AND envelope->>'eventType' = 'LeadClosed' ORDER BY envelope->'payload'->>'outcome'",
+      ids,
+    );
+    expect(events).toEqual(
+      rows.map(({ id, outcome, closedAt }) => ({
+        topic: 'visit.lead.events',
+        envelope: expect.objectContaining({
+          eventVersion: 1,
+          aggregateType: 'Lead',
+          aggregateId: id,
+          occurredAt: closedAt.toISOString(),
+          correlationId: 'close-lead-test',
+          payload: {
+            leadId: id,
+            propertyId: leadClosePropertyId,
+            agentId,
+            clientId: id === wonId ? clientId : otherClientId,
+            outcome,
+          },
+        }),
+      })),
+    );
+    const schemaPath = new URL(
+      '../../../contracts/events/visit/lead-closed.v1.schema.json',
+      import.meta.url,
+    );
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as object;
+    const validate = addFormats.default(new Ajv2020()).compile(schema);
+    expect(events.every(({ envelope }) => validate(envelope.payload))).toBe(
+      true,
+    );
   });
 
   it('valida credenciales, rol, formato, fecha y estado de la propiedad', async () => {

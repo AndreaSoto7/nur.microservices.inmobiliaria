@@ -16,6 +16,7 @@
 | feat | Enviar consultas sobre propiedades publicadas y abrir una oportunidad con el primer contacto | Pendiente |
 | feat | Listar las consultas del agente y las visitas de cada participante, con filtros y paginación | Pendiente |
 | feat | Listar oportunidades del agente y registrar notas de seguimiento | Pendiente |
+| feat | Cerrar oportunidades como ganadas o perdidas y emitir LeadClosed | Pendiente |
 
 ## Pendientes
 
@@ -40,14 +41,13 @@
 - [x] Abrir la oportunidad (`Lead`) con la primera solicitud de visita (ADR 0005 sección 3.4)
 - [x] Abrir la oportunidad con la primera consulta si no existe una abierta
 - [x] Listar oportunidades asignadas y registrar notas mientras estén abiertas
-- [ ] Cerrar la oportunidad como `WON` o `LOST`
+- [x] Cerrar la oportunidad como `WON` o `LOST`
 
 **Eventos**
 
 - [x] Publicador de `outbox` integrado en Visit
 
-- [x] Outbox: `InquiryReceived`, `VisitRequested`, `VisitScheduled`, `VisitRejected`, `VisitCancelled`, `VisitCompleted`, `LeadOpened` y `LeadFollowUpRegistered`
-- [ ] Outbox: `LeadClosed`
+- [x] Outbox: `InquiryReceived`, `VisitRequested`, `VisitScheduled`, `VisitRejected`, `VisitCancelled`, `VisitCompleted`, `LeadOpened`, `LeadFollowUpRegistered` y `LeadClosed`
 - [x] Proyección de propiedades idempotente (`processed_events`)
 
 **Políticas (ADR 0005, secciones 3.2 y 3.3)**

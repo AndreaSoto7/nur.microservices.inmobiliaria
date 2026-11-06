@@ -5,6 +5,7 @@ import type {
 } from '../../inquiries/domain/inquiry.js';
 import type {
   Lead,
+  LeadClosure,
   LeadFollowUp,
   LeadFollowUpDetails,
   LeadStatus,
@@ -53,7 +54,8 @@ export type RequestKey = {
     | 'cancel-visit'
     | 'complete-visit'
     | 'send-inquiry'
-    | 'register-lead-follow-up';
+    | 'register-lead-follow-up'
+    | 'close-lead';
 };
 
 export type VisitEvent = {
@@ -65,7 +67,8 @@ export type VisitEvent = {
     | 'VisitCancelled'
     | 'VisitCompleted'
     | 'LeadOpened'
-    | 'LeadFollowUpRegistered';
+    | 'LeadFollowUpRegistered'
+    | 'LeadClosed';
   aggregateId: string;
   occurredAt: Date;
   correlationId: string;
@@ -91,6 +94,7 @@ export interface VisitTransaction {
   saveVisit(visit: Visit, note: string | undefined): Promise<void>;
   saveInquiry(inquiry: Inquiry): Promise<void>;
   findAssignedLead(id: string, agentId: string): Promise<Lead | undefined>;
+  saveLeadClosure(id: string, closure: LeadClosure): Promise<void>;
   saveLeadFollowUp(followUp: LeadFollowUp): Promise<void>;
   openLead(contact: LeadContact): Promise<string | undefined>;
   enqueue(event: VisitEvent): Promise<string>;

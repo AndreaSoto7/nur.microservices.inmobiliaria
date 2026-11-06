@@ -6,6 +6,7 @@ import { GetInquiryByIdHandler } from './inquiries/application/get-inquiry-by-id
 import { ListAgentInquiriesHandler } from './inquiries/application/list-agent-inquiries.js';
 import { SendInquiryHandler } from './inquiries/application/send-inquiry.js';
 import { InquiriesController } from './inquiries/presentation/inquiries.controller.js';
+import { CloseLeadHandler } from './leads/application/close-lead.js';
 import {
   GetLeadFollowUpHandler,
   ListAgentLeadsHandler,
@@ -54,6 +55,7 @@ import { VisitsController } from './visits/presentation/visits.controller.js';
     ListAgentInquiriesHandler,
     ListAgentLeadsHandler,
     RegisterLeadFollowUpHandler,
+    CloseLeadHandler,
     GetLeadFollowUpHandler,
     ListVisitsHandler,
     { provide: VISIT_REPOSITORY, useClass: PostgresVisits },

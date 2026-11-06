@@ -8,7 +8,7 @@ import {
   type VisitRepository,
 } from '../../visits/domain/visit.repository.js';
 import {
-  InvalidLeadFollowUpNoteError,
+  InvalidLeadNoteError,
   LeadNotOpenError,
   type LeadFollowUp,
 } from '../domain/lead.js';
@@ -66,7 +66,7 @@ export class RegisterLeadFollowUpHandler implements ICommandHandler<RegisterLead
       } catch (error) {
         if (error instanceof LeadNotOpenError)
           throw new VisitProblem('LEAD_NOT_OPEN');
-        if (error instanceof InvalidLeadFollowUpNoteError)
+        if (error instanceof InvalidLeadNoteError)
           throw new VisitProblem('VALIDATION_ERROR');
         throw error;
       }

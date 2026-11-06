@@ -9,6 +9,7 @@ import type {
 } from '../../inquiries/domain/inquiry.js';
 import {
   Lead,
+  type LeadClosure,
   type LeadFollowUp,
   type LeadFollowUpDetails,
   type LeadStatus,
@@ -335,6 +336,14 @@ class PostgresVisitTransaction implements VisitTransaction {
       : undefined;
   }
 
+  async saveLeadClosure(id: string, closure: LeadClosure): Promise<void> {
+    await this.manager.query(
+      `UPDATE leads SET status = 'CLOSED', outcome = $2, close_note = $3,
+        closed_at = $4, version = version + 1 WHERE id = $1`,
+      [id, closure.outcome, closure.note ?? null, closure.closedAt],
+    );
+  }
+
   async saveLeadFollowUp(followUp: LeadFollowUp): Promise<void> {
     await this.manager.query(
       `INSERT INTO lead_follow_ups (id, lead_id, agent_id, note, created_at) VALUES ($1,$2,$3,$4,$5)`,
@@ -372,7 +381,9 @@ class PostgresVisitTransaction implements VisitTransaction {
   async enqueue(event: VisitEvent): Promise<string> {
     const eventId = randomUUID();
     const aggregateType =
-      event.type === 'LeadOpened' || event.type === 'LeadFollowUpRegistered'
+      event.type === 'LeadOpened' ||
+      event.type === 'LeadFollowUpRegistered' ||
+      event.type === 'LeadClosed'
         ? 'Lead'
         : event.type === 'InquiryReceived'
           ? 'Inquiry'

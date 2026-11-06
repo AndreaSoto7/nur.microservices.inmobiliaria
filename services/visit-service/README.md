@@ -52,6 +52,8 @@ Visit guarda `InquiryReceived`, `VisitRequested`, `LeadOpened`, `VisitScheduled`
 - `GET /api/v1/leads`: oportunidades del agente autenticado. Admite `propertyId`, `status` (`OPEN` o `CLOSED`), paginación y `sort=openedAt,asc`. Por defecto muestra las más recientes primero.
 - `POST /api/v1/leads/{leadId}/follow-ups`: el agente asignado registra una `note` obligatoria en una oportunidad abierta. Envía un UUID en `Idempotency-Key`. El `Location` de la respuesta apunta a la nota, accesible solo para el agente asignado. `LeadFollowUpRegistered` no contiene el texto.
 
+- `POST /api/v1/leads/{leadId}/close`: el agente asignado cierra una oportunidad abierta con `outcome` (`WON` o `LOST`) y una `note` opcional. Requiere un UUID en `Idempotency-Key`. Visit emite `LeadClosed` en ambos casos; Listing solo intenta reservar con `WON`.
+
 ## Recibir propiedades de Listing
 
 Desde la raíz del repositorio, puedes levantar Kafka y sus topics:

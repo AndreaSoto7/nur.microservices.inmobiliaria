@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
   Param,
   Post,
   Query,
@@ -13,7 +14,13 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsIn,
+  IsString,
+  Matches,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator';
 import type { Response } from 'express';
 import {
   ensureCorrelationId,
@@ -31,6 +38,8 @@ import {
   GetLeadFollowUpQuery,
   ListAgentLeadsQuery,
 } from '../application/lead-queries.js';
+import { CloseLeadCommand } from '../application/close-lead.js';
+import { leadOutcomes, type LeadOutcome } from '../domain/lead.js';
 import { RegisterLeadFollowUpCommand } from '../application/register-lead-follow-up.js';
 
 class RegisterFollowUpDto {
@@ -38,6 +47,17 @@ class RegisterFollowUpDto {
   @Matches(/\S/u)
   @MaxLength(2000)
   note!: string;
+}
+
+class CloseLeadDto {
+  @IsIn(leadOutcomes)
+  outcome!: LeadOutcome;
+
+  @ValidateIf((_, value: unknown) => value !== undefined)
+  @IsString()
+  @Matches(/\S/u)
+  @MaxLength(2000)
+  note?: string;
 }
 
 @Controller('api/v1/leads')
@@ -70,6 +90,36 @@ export class LeadsController {
     ensureCorrelationId(request, response);
     return this.queries.execute(
       new ListAgentLeadsQuery(request.principal.id, { ...filter, status }),
+    );
+  }
+
+  @Post(':leadId/close')
+  @HttpCode(200)
+  @VisitRoles(['AGENT'])
+  closeLead(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+    @Param('leadId') leadId: string,
+    @Headers('idempotency-key') key: string | undefined,
+    @Body() body: CloseLeadDto,
+  ) {
+    if (
+      !uuidPattern.test(leadId) ||
+      !key ||
+      !uuidPattern.test(key) ||
+      !body?.outcome
+    ) {
+      throw new VisitProblem('VALIDATION_ERROR');
+    }
+    return this.commands.execute(
+      new CloseLeadCommand(
+        leadId.toLowerCase(),
+        request.principal.id,
+        key.toLowerCase(),
+        body.outcome,
+        body.note,
+        ensureCorrelationId(request, response),
+      ),
     );
   }
 
