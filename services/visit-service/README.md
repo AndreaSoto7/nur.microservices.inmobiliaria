@@ -82,7 +82,20 @@ El servicio responde en `http://localhost:8003/health` y PostgreSQL escucha en `
 
 Configura `CONSUL_HTTP_ADDR` con la URL de Consul accesible desde Visit. Visit se registra como `visit-service` al arrancar, y se da de baja al apagar. Consul usa `/health` para comprobar su disponibilidad. Si Visit corre fuera de Docker, usa `SERVICE_ADDRESS` para indicar una dirección accesible desde Consul y el Gateway.
 
-Configura `JWT_JWKS_URL` con la dirección del JWKS de Identity accesible desde Visit. Las peticiones por el Gateway usan el access token de Identity en `Authorization: Bearer <token>`.
+### Integración con Identity
+
+Identity se encarga del registro, el inicio de sesión y la emisión de tokens. No necesita llamar a Visit ni consultar su base de datos. La única llamada HTTP directa entre estos servicios va de Visit a Identity para obtener las claves públicas (JWKS).
+
+1. El frontend usa `POST /api/v1/auth/register` y `POST /api/v1/auth/login` por el Gateway. Luego envía el `accessToken` en `Authorization: Bearer <token>` al llamar a `/api/v1/visits`, `/api/v1/inquiries` o `/api/v1/leads`.
+2. El Gateway valida el token y reenvía la cabecera `Authorization`. Visit también verifica la firma `RS256` con el `kid` y el JWKS de Identity. Exige `typ=at+jwt`, `iss=identity-service`, `aud=inmobiliaria`, un `exp` vigente, `sub` con el UUID del usuario y `roles` como lista de cadenas.
+3. Visit toma el ID del usuario de `sub`. Un `CLIENT` puede solicitar y consultar sus visitas. El `AGENT` asignado puede programarlas y gestionar sus oportunidades. Visit comprueba la asignación con sus propios datos.
+
+Configura `JWT_JWKS_URL` desde la red donde corre Visit:
+
+- En la misma red de Docker: `http://identity-service:8001/api/v1/auth/.well-known/jwks.json`.
+- Si Visit corre en el host e Identity está publicado localmente en el puerto 8001: `http://127.0.0.1:8001/api/v1/auth/.well-known/jwks.json`.
+
+Para verificar la conexión, inicia sesión como `CLIENT` y solicita una visita a una propiedad publicada con `POST /api/v1/visits`. La respuesta esperada es `201`. Con el token `AGENT` asignado, llama a `POST /api/v1/visits/{visitId}/schedule` y espera `200` con estado `SCHEDULED`. Las dos operaciones requieren un UUID en `Idempotency-Key`. Consulta el [contrato OpenAPI](../../contracts/openapi/visit-service.yaml) para ver los campos de cada petición y el [registro de pruebas](../../docs/progreso/visit-service.md#pendientes) para la verificación con Identity real.
 
 ## Migraciones de PostgreSQL desde el host
 
