@@ -16,7 +16,7 @@ public class GetCatalogPropertyHandler {
     @Transactional(readOnly = true)
     public PropertyDetailView handle(GetCatalogPropertyQuery query) {
         return properties.findById(query.propertyId())
-                .filter(p -> p.status().isListed())
+                .filter(p -> p.status().isVisibleInCatalog())
                 .map(PropertyDetailView::from)
                 .orElseThrow(() -> new PropertyNotFoundException(query.propertyId()));
     }

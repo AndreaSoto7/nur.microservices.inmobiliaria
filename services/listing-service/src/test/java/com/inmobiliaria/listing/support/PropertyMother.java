@@ -2,7 +2,7 @@ package com.inmobiliaria.listing.support;
 
 import com.inmobiliaria.listing.domain.model.Actor;
 import com.inmobiliaria.listing.domain.model.Area;
-import com.inmobiliaria.listing.domain.model.Feature;
+import com.inmobiliaria.listing.domain.model.Amenity;
 import com.inmobiliaria.listing.domain.model.Location;
 import com.inmobiliaria.listing.domain.model.Money;
 import com.inmobiliaria.listing.domain.model.OperationType;
@@ -36,7 +36,7 @@ public final class PropertyMother {
     /** DRAFT con datos completos y una foto: lista para publicar. */
     public static Property readyToPublish(OperationType operation) {
         Property property = draft(operation);
-        property.updateFeatures(3, 2, new Area(new BigDecimal("240.5")), Set.of(Feature.GARAGE, Feature.GARDEN),
+        property.updateCharacteristics(3, 2, new Area(new BigDecimal("240.5")), Set.of(Amenity.GARAGE, Amenity.GARDEN),
                 T0);
         property.addImage(jpeg(property), T0);
         return property;

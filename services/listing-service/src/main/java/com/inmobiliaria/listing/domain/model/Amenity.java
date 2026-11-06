@@ -1,7 +1,7 @@
 package com.inmobiliaria.listing.domain.model;
 
 /** Extras de una propiedad. La lista válida la decide el dominio (docs/base-de-datos/listing-service.md). */
-public enum Feature {
+public enum Amenity {
     GARAGE,
     GARDEN,
     POOL,

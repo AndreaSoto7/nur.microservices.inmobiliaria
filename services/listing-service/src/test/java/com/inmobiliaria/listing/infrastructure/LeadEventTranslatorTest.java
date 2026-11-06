@@ -3,7 +3,7 @@ package com.inmobiliaria.listing.infrastructure;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.inmobiliaria.listing.application.policy.LeadClosedNotification;
+import com.inmobiliaria.listing.application.policy.LeadClosed;
 import com.inmobiliaria.listing.infrastructure.messaging.LeadEventTranslator;
 import com.inmobiliaria.listing.infrastructure.messaging.LeadEventTranslator.MalformedEventException;
 import org.junit.jupiter.api.Test;
@@ -29,9 +29,9 @@ class LeadEventTranslatorTest {
 
     @Test
     void should_translate_lead_closed_v1() {
-        LeadClosedNotification event = translator.translate(envelope("LeadClosed", 1, WON)).orElseThrow();
+        LeadClosed event = translator.translate(envelope("LeadClosed", 1, WON)).orElseThrow();
 
-        assertThat(event.outcome()).isEqualTo(LeadClosedNotification.Outcome.WON);
+        assertThat(event.outcome()).isEqualTo(LeadClosed.Outcome.WON);
         assertThat(event.propertyId()).hasToString("3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01");
         assertThat(event.correlationId()).isEqualTo("corr-9");
     }

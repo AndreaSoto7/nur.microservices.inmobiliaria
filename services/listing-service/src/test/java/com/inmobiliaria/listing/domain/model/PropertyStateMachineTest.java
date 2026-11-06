@@ -87,7 +87,7 @@ class PropertyStateMachineTest {
     private static Property inStatus(PropertyStatus status, OperationType operation) {
         Property property = Property.create(UUID.randomUUID(), "Departamento céntrico", "", PropertyType.APARTMENT,
                 operation, Money.bob(new BigDecimal("950000")), Location.ofZone("Centro"), NOW);
-        property.updateFeatures(2, 1, new Area(new BigDecimal("85")), Set.of(), NOW);
+        property.updateCharacteristics(2, 1, new Area(new BigDecimal("85")), Set.of(), NOW);
         UUID imageId = UUID.randomUUID();
         property.addImage(new PropertyImage(imageId, "image/png", 2048, "properties/" + imageId, NOW), NOW);
         switch (status) {

@@ -39,7 +39,7 @@ public class InMemoryPropertyRepository implements PropertyRepository {
     private static Property copy(Property p) {
         return Property.reconstitute(p.id(), p.agentId(), p.title(), p.description(), p.type(), p.operation(),
                 p.status(), p.price(), p.location(), p.bedrooms().orElse(null), p.bathrooms().orElse(null),
-                p.area().orElse(null), p.features(), p.images(), p.publishedAt().orElse(null), p.createdAt(),
+                p.area().orElse(null), p.amenities(), p.images(), p.publishedAt().orElse(null), p.createdAt(),
                 p.updatedAt());
     }
 }

@@ -19,8 +19,8 @@ import com.inmobiliaria.listing.application.command.ReleaseReservationCommand;
 import com.inmobiliaria.listing.application.command.ReleaseReservationHandler;
 import com.inmobiliaria.listing.application.command.ReservePropertyCommand;
 import com.inmobiliaria.listing.application.command.ReservePropertyHandler;
-import com.inmobiliaria.listing.application.command.UpdatePropertyFeaturesCommand;
-import com.inmobiliaria.listing.application.command.UpdatePropertyFeaturesHandler;
+import com.inmobiliaria.listing.application.command.UpdatePropertyCharacteristicsCommand;
+import com.inmobiliaria.listing.application.command.UpdatePropertyCharacteristicsHandler;
 import com.inmobiliaria.listing.application.common.CommandMetadata;
 import com.inmobiliaria.listing.application.query.GetPropertyByIdHandler;
 import com.inmobiliaria.listing.application.query.GetPropertyByIdQuery;
@@ -28,7 +28,7 @@ import com.inmobiliaria.listing.application.query.ListAgentPropertiesHandler;
 import com.inmobiliaria.listing.application.query.ListAgentPropertiesQuery;
 import com.inmobiliaria.listing.application.query.PropertyReadModel;
 import com.inmobiliaria.listing.domain.model.Area;
-import com.inmobiliaria.listing.domain.model.Feature;
+import com.inmobiliaria.listing.domain.model.Amenity;
 import com.inmobiliaria.listing.domain.model.Location;
 import com.inmobiliaria.listing.domain.model.Money;
 import com.inmobiliaria.listing.domain.model.PropertyId;
@@ -78,7 +78,7 @@ public class PropertyController {
 
     private final CreatePropertyHandler create;
     private final EditPropertyHandler edit;
-    private final UpdatePropertyFeaturesHandler updateFeatures;
+    private final UpdatePropertyCharacteristicsHandler updateCharacteristics;
     private final AddPropertyImagesHandler addImages;
     private final PublishPropertyHandler publish;
     private final PausePropertyHandler pause;
@@ -90,14 +90,14 @@ public class PropertyController {
     private final GetPropertyByIdHandler getById;
 
     public PropertyController(CreatePropertyHandler create, EditPropertyHandler edit,
-            UpdatePropertyFeaturesHandler updateFeatures, AddPropertyImagesHandler addImages,
+            UpdatePropertyCharacteristicsHandler updateCharacteristics, AddPropertyImagesHandler addImages,
             PublishPropertyHandler publish, PausePropertyHandler pause, ReservePropertyHandler reserve,
             ReleaseReservationHandler releaseReservation, MarkPropertySoldHandler markSold,
             MarkPropertyRentedHandler markRented, ListAgentPropertiesHandler listMine,
             GetPropertyByIdHandler getById) {
         this.create = create;
         this.edit = edit;
-        this.updateFeatures = updateFeatures;
+        this.updateCharacteristics = updateCharacteristics;
         this.addImages = addImages;
         this.publish = publish;
         this.pause = pause;
@@ -144,12 +144,12 @@ public class PropertyController {
     @PutMapping("/{propertyId}/features")
     public ResponseEntity<Void> updateFeatures(@PathVariable UUID propertyId,
             @Valid @RequestBody UpdateFeaturesRequest body, @AuthenticationPrincipal Jwt jwt) {
-        Set<Feature> features = EnumSet.noneOf(Feature.class);
+        Set<Amenity> amenities = EnumSet.noneOf(Amenity.class);
         if (body.features() != null) {
-            body.features().forEach(f -> features.add(Features.parse(f)));
+            body.features().forEach(f -> amenities.add(Amenities.parse(f)));
         }
-        updateFeatures.handle(new UpdatePropertyFeaturesCommand(new PropertyId(propertyId), body.bedrooms(),
-                body.bathrooms(), new Area(body.areaM2()), features, agent(jwt)));
+        updateCharacteristics.handle(new UpdatePropertyCharacteristicsCommand(new PropertyId(propertyId),
+                body.bedrooms(), body.bathrooms(), new Area(body.areaM2()), amenities, agent(jwt)));
         return ResponseEntity.noContent().build();
     }
 

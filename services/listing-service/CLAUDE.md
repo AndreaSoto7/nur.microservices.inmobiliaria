@@ -24,7 +24,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 
 ## Dominio
 
-**Aggregate `Property`** (raíz) con `PropertyImage` (máx. 5) y `Feature` dentro. Value objects: `PropertyId`, `Money`, `Location`, `Area`, `PropertyStatus`, `PropertyType`, `OperationType`.
+**Aggregate `Property`** (raíz) con `PropertyImage` (máx. 5) y `Amenity` (extras) dentro. Value objects: `PropertyId`, `Money`, `Location`, `Area`, `PropertyStatus`, `PropertyType`, `OperationType`.
 
 Máquina de estados (toda otra transición lanza un error de dominio → 409):
 
@@ -45,7 +45,7 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 | Diagrama | Comando o consulta | Regla del diagrama | Evento |
 |---|---|---|---|
 | `createListingCommand` | `CreatePropertyCommand` | Tipo y operación válidos, precio > 0 y zona obligatorios; nace en `DRAFT` | `PropertyCreated` (interno) |
-| `registerPropertiesCommand` | `UpdatePropertyFeaturesCommand` | Dormitorios y baños ≥ 0, superficie > 0, extras válidos | interno; `PropertyUpdated` si está publicada o reservada |
+| `registerPropertiesCommand` | `UpdatePropertyCharacteristicsCommand` | Dormitorios y baños ≥ 0, superficie > 0, extras válidos | interno; `PropertyUpdated` si está publicada o reservada |
 | `publishListingCommand` | `PublishPropertyCommand` | Desde `DRAFT` o `PAUSED`; al menos 1 foto; datos completos | `PropertyPublished` |
 | `editListingCommand` | `EditPropertyCommand` | Solo el agente dueño; no si está vendida o alquilada | `PropertyUpdated` si está publicada o reservada |
 | `pauseListingCommand` | `PausePropertyCommand` | Solo si está `PUBLISHED` | `PropertyPaused` |
@@ -84,7 +84,7 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 
 ```
 domain/
-  model/          Property (raíz), PropertyId, Money, Location, Area, Feature, PropertyStatus, PropertyImage, Actor
+  model/          Property (raíz), PropertyId, Money, Location, Area, Amenity, PropertyStatus, PropertyImage, Actor
                   Favorite (raíz aparte), FavoriteId
   event/          PropertyEvent (sealed interface con un record por evento de dominio)
   repository/     PropertyRepository, FavoriteRepository (interfaces)
@@ -93,7 +93,7 @@ application/
   command/        un Command + Handler por caso de uso; PropertyCommandSupport (cargar, verificar dueño, guardar,
                   proyectar y publicar en una transacción); ImageTypeDetector (MIME real por magic bytes)
   query/          SearchCatalogQuery, ListAgentPropertiesQuery, ...; CatalogReadModel y PropertyReadModel (puertos)
-  policy/         ReserveOnLeadWonPolicy y LeadClosedNotification (reacciona a LeadClosed)
+  policy/         ReserveOnLeadWonPolicy y LeadClosed (evento ya traducido) (reacciona a LeadClosed)
   port/           EventPublisher, CatalogProjection, ImageStorage, ProcessedEventStore, Clock
   common/         CommandMetadata (actor, usuario, correlationId, causationId), PageRequest, PageResult, ImageUrls
   exception/      PropertyNotFoundException (404), NotPropertyOwnerException (403), FavoriteNotFoundException (404)

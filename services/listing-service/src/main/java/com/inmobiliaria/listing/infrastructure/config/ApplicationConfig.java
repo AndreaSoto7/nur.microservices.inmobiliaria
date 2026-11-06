@@ -13,7 +13,7 @@ import com.inmobiliaria.listing.application.command.RebuildCatalogHandler;
 import com.inmobiliaria.listing.application.command.ReleaseReservationHandler;
 import com.inmobiliaria.listing.application.command.RemoveFavoriteHandler;
 import com.inmobiliaria.listing.application.command.ReservePropertyHandler;
-import com.inmobiliaria.listing.application.command.UpdatePropertyFeaturesHandler;
+import com.inmobiliaria.listing.application.command.UpdatePropertyCharacteristicsHandler;
 import com.inmobiliaria.listing.application.policy.ReserveOnLeadWonPolicy;
 import com.inmobiliaria.listing.application.port.CatalogProjection;
 import com.inmobiliaria.listing.application.port.Clock;
@@ -52,8 +52,8 @@ public class ApplicationConfig {
     }
 
     @Bean
-    UpdatePropertyFeaturesHandler updatePropertyFeaturesHandler(PropertyCommandSupport support) {
-        return new UpdatePropertyFeaturesHandler(support);
+    UpdatePropertyCharacteristicsHandler updatePropertyCharacteristicsHandler(PropertyCommandSupport support) {
+        return new UpdatePropertyCharacteristicsHandler(support);
     }
 
     @Bean

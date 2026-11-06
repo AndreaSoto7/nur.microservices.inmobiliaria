@@ -14,7 +14,7 @@ public class FakeCatalogProjection implements CatalogProjection {
 
     @Override
     public void sync(Property property) {
-        if (property.status().isListed()) {
+        if (property.status().isVisibleInCatalog()) {
             rows.put(property.id(), property.status());
         } else {
             rows.remove(property.id());

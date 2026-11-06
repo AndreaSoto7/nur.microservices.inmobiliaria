@@ -1,7 +1,7 @@
 package com.inmobiliaria.listing.infrastructure.persistence;
 
 import com.inmobiliaria.listing.application.query.CatalogCriteria;
-import com.inmobiliaria.listing.domain.model.Feature;
+import com.inmobiliaria.listing.domain.model.Amenity;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,8 +22,8 @@ final class CatalogSqlSpecifications {
         criteria.maxPrice().ifPresent(max -> filters.add(SqlFilter.of("price_amount <= :maxPrice", "maxPrice", max)));
         criteria.minBedrooms().ifPresent(bedrooms ->
                 filters.add(SqlFilter.of("bedrooms >= :minBedrooms", "minBedrooms", bedrooms)));
-        if (!criteria.features().isEmpty()) {
-            String[] features = criteria.features().stream().map(Feature::name).sorted().toArray(String[]::new);
+        if (!criteria.amenities().isEmpty()) {
+            String[] features = criteria.amenities().stream().map(Amenity::name).sorted().toArray(String[]::new);
             filters.add(SqlFilter.of("features @> CAST(:features AS varchar(30)[])", "features", features));
         }
         return filters;

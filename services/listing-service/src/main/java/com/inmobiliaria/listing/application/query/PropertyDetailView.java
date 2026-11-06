@@ -1,7 +1,7 @@
 package com.inmobiliaria.listing.application.query;
 
 import com.inmobiliaria.listing.application.common.ImageUrls;
-import com.inmobiliaria.listing.domain.model.Feature;
+import com.inmobiliaria.listing.domain.model.Amenity;
 import com.inmobiliaria.listing.domain.model.Property;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -48,7 +48,7 @@ public record PropertyDetailView(
                 p.location().zone(), p.location().address(), p.location().latitude(), p.location().longitude(),
                 p.bedrooms().orElse(null), p.bathrooms().orElse(null),
                 p.area().map(a -> a.squareMeters()).orElse(null),
-                p.features().stream().map(Feature::name).sorted().toList(), images,
+                p.amenities().stream().map(Amenity::name).sorted().toList(), images,
                 p.publishedAt().orElse(null), p.createdAt(), p.updatedAt());
     }
 }

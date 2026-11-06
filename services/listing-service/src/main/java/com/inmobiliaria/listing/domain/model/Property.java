@@ -45,7 +45,7 @@ public class Property {
     private Integer bedrooms;
     private Integer bathrooms;
     private Area area;
-    private final Set<Feature> features = EnumSet.noneOf(Feature.class);
+    private final Set<Amenity> amenities = EnumSet.noneOf(Amenity.class);
     private final List<PropertyImage> images = new ArrayList<>();
     private PropertyStatus status;
     private Instant publishedAt;
@@ -80,7 +80,7 @@ public class Property {
      */
     public static Property reconstitute(PropertyId id, UUID agentId, String title, String description,
             PropertyType type, OperationType operation, PropertyStatus status, Money price, Location location,
-            Integer bedrooms, Integer bathrooms, Area area, Set<Feature> features, List<PropertyImage> images,
+            Integer bedrooms, Integer bathrooms, Area area, Set<Amenity> amenities, List<PropertyImage> images,
             Instant publishedAt, Instant createdAt, Instant updatedAt) {
         Property property = new Property(id, agentId, type, operation, createdAt);
         property.title = title;
@@ -91,7 +91,7 @@ public class Property {
         property.bedrooms = bedrooms;
         property.bathrooms = bathrooms;
         property.area = area;
-        property.features.addAll(features);
+        property.amenities.addAll(amenities);
         property.images.addAll(images);
         property.publishedAt = publishedAt;
         property.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt");
@@ -101,29 +101,29 @@ public class Property {
     // ─── Edición ─────────────────────────────────────────────────────────────
 
     public void edit(String title, String description, Money price, Location location, Instant now) {
-        requireNotClosed("editar");
+        requireNotSoldOrRented("editar");
         this.title = validTitle(title);
         this.description = validDescription(description);
         this.price = Objects.requireNonNull(price, "price");
         this.location = Objects.requireNonNull(location, "location");
-        touched(now);
+        recordChange(now);
     }
 
-    public void updateFeatures(int bedrooms, int bathrooms, Area area, Set<Feature> features, Instant now) {
-        requireNotClosed("cambiar las características de");
+    public void updateCharacteristics(int bedrooms, int bathrooms, Area area, Set<Amenity> amenities, Instant now) {
+        requireNotSoldOrRented("cambiar las características de");
         if (bedrooms < 0 || bathrooms < 0) {
             throw new InvalidValueException("PROPERTY_INVALID_FEATURES", "Dormitorios y baños no pueden ser negativos");
         }
         this.bedrooms = bedrooms;
         this.bathrooms = bathrooms;
         this.area = Objects.requireNonNull(area, "area");
-        this.features.clear();
-        this.features.addAll(Objects.requireNonNull(features, "features"));
-        touched(now);
+        this.amenities.clear();
+        this.amenities.addAll(Objects.requireNonNull(amenities, "amenities"));
+        recordChange(now);
     }
 
     public void addImage(PropertyImage image, Instant now) {
-        requireNotClosed("agregar imágenes a");
+        requireNotSoldOrRented("agregar imágenes a");
         if (images.size() >= MAX_IMAGES) {
             throw new DomainException("PROPERTY_IMAGE_LIMIT",
                     "Una propiedad tiene como máximo " + MAX_IMAGES + " imágenes");
@@ -209,7 +209,7 @@ public class Property {
     public Optional<Integer> bedrooms() { return Optional.ofNullable(bedrooms); }
     public Optional<Integer> bathrooms() { return Optional.ofNullable(bathrooms); }
     public Optional<Area> area() { return Optional.ofNullable(area); }
-    public Set<Feature> features() { return Collections.unmodifiableSet(features); }
+    public Set<Amenity> amenities() { return Collections.unmodifiableSet(amenities); }
     public List<PropertyImage> images() { return Collections.unmodifiableList(images); }
     public PropertyStatus status() { return status; }
     public Optional<Instant> publishedAt() { return Optional.ofNullable(publishedAt); }
@@ -228,8 +228,8 @@ public class Property {
                 "No se puede " + action + " una propiedad en estado " + status);
     }
 
-    private void requireNotClosed(String action) {
-        if (status.isClosed()) {
+    private void requireNotSoldOrRented(String action) {
+        if (status.isSoldOrRented()) {
             throw new InvalidStateTransitionException(
                     "No se puede " + action + " una propiedad en estado " + status);
         }
@@ -248,9 +248,9 @@ public class Property {
     }
 
     /** Los cambios de una propiedad visible se avisan a visit y al catálogo con PropertyUpdated. */
-    private void touched(Instant now) {
+    private void recordChange(Instant now) {
         updatedAt = now;
-        if (status.isListed()) {
+        if (status.isVisibleInCatalog()) {
             pendingEvents.add(new PropertyEvent.PropertyUpdated(id, now));
         }
     }

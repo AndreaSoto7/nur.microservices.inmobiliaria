@@ -29,6 +29,6 @@ public class AddFavoriteHandler {
         if (favorites.exists(command.userId(), command.propertyId())) {
             throw new DomainException("FAVORITE_ALREADY_EXISTS", "La propiedad ya está en tus favoritos");
         }
-        favorites.save(Favorite.save(command.userId(), property.id(), property.status(), clock.now()));
+        favorites.save(Favorite.add(command.userId(), property.id(), property.status(), clock.now()));
     }
 }

@@ -24,7 +24,7 @@ public final class Favorite {
     }
 
     /** Solo se guarda una propiedad PUBLISHED. Que no se repita lo verifica el caso de uso (y la base). */
-    public static Favorite save(UUID userId, PropertyId propertyId, PropertyStatus propertyStatus, Instant now) {
+    public static Favorite add(UUID userId, PropertyId propertyId, PropertyStatus propertyStatus, Instant now) {
         if (propertyStatus != PropertyStatus.PUBLISHED) {
             throw new DomainException("FAVORITE_PROPERTY_NOT_PUBLISHED",
                     "Solo se pueden guardar propiedades publicadas");
@@ -32,7 +32,7 @@ public final class Favorite {
         return new Favorite(FavoriteId.newId(), userId, propertyId, now);
     }
 
-    public static Favorite rehydrate(FavoriteId id, UUID userId, PropertyId propertyId, Instant createdAt) {
+    public static Favorite reconstitute(FavoriteId id, UUID userId, PropertyId propertyId, Instant createdAt) {
         return new Favorite(id, userId, propertyId, createdAt);
     }
 

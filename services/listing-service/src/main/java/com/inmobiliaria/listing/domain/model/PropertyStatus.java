@@ -10,12 +10,12 @@ public enum PropertyStatus {
     RENTED;
 
     /** Visible en el catálogo público. */
-    public boolean isListed() {
+    public boolean isVisibleInCatalog() {
         return this == PUBLISHED || this == RESERVED;
     }
 
     /** Vendida o alquilada: ya no se edita. */
-    public boolean isClosed() {
+    public boolean isSoldOrRented() {
         return this == SOLD || this == RENTED;
     }
 }
