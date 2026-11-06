@@ -3,7 +3,7 @@ info:
   title: visit-service
   version: 0.1.0
   description: |
-    Propuesta inicial para solicitar y consultar una visita.
+    API de consultas, solicitudes y gestión de visitas.
     La relación con Listing se verifica en la copia local alimentada por listing.property.events.
     Identity emite el access token RS256. Visit verifica firma con JWKS, kid, exp,
     iss=identity-service, aud=inmobiliaria y typ=at+jwt.
@@ -13,10 +13,342 @@ servers:
 security:
   - bearerAuth: []
 tags:
+  - name: leads
+  - name: inquiries
   - name: visits
   - name: health
 paths:
+  /api/v1/leads:
+    get:
+      tags: [leads]
+      operationId: listAgentLeads
+      summary: Listar oportunidades asignadas
+      description: Solo AGENT. El agente se toma del JWT.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/FilterPropertyId'
+        - name: sort
+          in: query
+          description: Orden por fecha; los empates se resuelven por ID.
+          schema:
+            type: string
+            enum: ['openedAt,desc', 'openedAt,asc']
+            default: 'openedAt,desc'
+        - name: status
+          in: query
+          schema: {$ref: '#/components/schemas/LeadStatus'}
+      responses:
+        '200':
+          description: Página de resultados. Una página fuera del rango devuelve data vacío.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LeadPage'}
+              example: {data: [], page: {number: 1, size: 20, totalElements: 0, totalPages: 0}}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/leads/{leadId}/close:
+    post:
+      tags: [leads]
+      operationId: closeLead
+      summary: Cerrar una oportunidad como ganada o perdida
+      description: |
+        Solo el AGENT asignado puede cerrar un Lead OPEN.
+        Se requiere outcome y la nota de cierre es opcional.
+        Repetir la misma clave con los mismos datos devuelve el resultado original durante 24 horas.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/LeadId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CloseLead'}
+      responses:
+        '200':
+          description: Oportunidad cerrada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ClosedLead'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: LEAD_NOT_FOUND si la oportunidad no existe o pertenece a otro agente.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: LEAD_NOT_OPEN si la oportunidad ya está cerrada.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/leads/{leadId}/follow-ups:
+    post:
+      tags: [leads]
+      operationId: registerLeadFollowUp
+      summary: Registrar una nota de seguimiento
+      description: |
+        Solo el AGENT asignado puede registrar una nota en un Lead OPEN.
+        Repetir la misma clave con los mismos datos devuelve el resultado original durante 24 horas.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/LeadId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RegisterLeadFollowUp'}
+      responses:
+        '201':
+          description: Seguimiento registrado.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+            Location:
+              required: true
+              schema: {type: string}
+              example: /api/v1/leads/05de258b-be6c-4f61-b6ac-ac67cc961b03/follow-ups/5142a8be-97ea-479b-9a40-02162994fb36
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CreatedFollowUp'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: LEAD_NOT_FOUND si la oportunidad no existe o pertenece a otro agente.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: LEAD_NOT_OPEN si la oportunidad está cerrada.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/leads/{leadId}/follow-ups/{followUpId}:
+    get:
+      tags: [leads]
+      operationId: getLeadFollowUp
+      summary: Consultar una nota de seguimiento
+      description: Solo el agente asignado a la oportunidad puede leer su nota.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/LeadId'
+        - name: followUpId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      responses:
+        '200':
+          description: Nota registrada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LeadFollowUp'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: LEAD_FOLLOW_UP_NOT_FOUND si la nota no existe o no está en una oportunidad del agente.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/inquiries:
+    get:
+      tags: [inquiries]
+      operationId: listAgentInquiries
+      summary: Listar consultas asignadas al agente
+      description: Requiere AGENT. El agente se toma del JWT. El mensaje completo, el correo y el teléfono se consultan por ID.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/FilterPropertyId'
+        - name: sort
+          in: query
+          description: Orden por fecha; los empates se resuelven por ID.
+          schema:
+            type: string
+            enum: ['createdAt,desc', 'createdAt,asc']
+            default: 'createdAt,desc'
+      responses:
+        '200':
+          description: Página de resultados. Una página fuera del rango devuelve data vacío.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AgentInquiryPage'}
+              example: {data: [], page: {number: 1, size: 20, totalElements: 0, totalPages: 0}}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [inquiries]
+      operationId: sendInquiry
+      summary: Enviar una consulta sobre una propiedad publicada
+      description: |
+        Requiere rol CLIENT. La propiedad debe figurar como PUBLISHED en la copia
+        local de Visit. El cliente proviene del JWT y el agente de la propiedad.
+        Si no hay una oportunidad abierta para el par cliente y propiedad, se abre una.
+        La misma clave y los mismos datos devuelven el resultado original durante 24 horas.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SendInquiry'}
+      responses:
+        '201':
+          description: Consulta registrada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+            Location:
+              required: true
+              schema: {type: string}
+              example: /api/v1/inquiries/05de258b-be6c-4f61-b6ac-ac67cc961b03
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CreatedInquiry'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: PROPERTY_NOT_FOUND si la propiedad no está en la copia local.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: PROPERTY_UNAVAILABLE si la propiedad no está publicada.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/inquiries/{inquiryId}:
+    get:
+      tags: [inquiries]
+      operationId: getInquiryById
+      summary: Consultar el detalle de una consulta
+      description: Solo el cliente que la envió o el agente asignado puede verla.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: inquiryId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      responses:
+        '200':
+          description: Detalle de la consulta.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Inquiry'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: INQUIRY_NOT_FOUND si la consulta no existe o el usuario no participa en ella.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/visits:
+    get:
+      tags: [visits]
+      operationId: listVisits
+      summary: Listar visitas propias
+      description: AGENT ve las visitas asignadas y CLIENT las que solicitó. Si el token tiene ambos roles se usa AGENT.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/FilterPropertyId'
+        - name: sort
+          in: query
+          description: Orden por fecha; los empates se resuelven por ID.
+          schema:
+            type: string
+            enum: ['requestedAt,desc', 'requestedAt,asc']
+            default: 'requestedAt,desc'
+        - name: status
+          in: query
+          schema: {$ref: '#/components/schemas/VisitStatus'}
+      responses:
+        '200':
+          description: Página de resultados. Una página fuera del rango devuelve data vacío.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/VisitPage'}
+              example: {data: [], page: {number: 1, size: 20, totalElements: 0, totalPages: 0}}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [visits]
       operationId: requestVisit
@@ -74,7 +406,7 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
               example:
                 type: https://inmobiliaria.local/problems/property-not-found
-                title: Propiedad no disponible para solicitar visita
+                title: Propiedad no encontrada
                 status: 404
                 code: PROPERTY_NOT_FOUND
                 correlationId: request-123
@@ -173,6 +505,250 @@ paths:
                 correlationId: request-123
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/visits/{visitId}/schedule:
+    post:
+      tags: [visits]
+      operationId: scheduleVisit
+      summary: Programar una solicitud pendiente
+      description: |
+        Solo el AGENT asignado puede programar una visita REQUESTED.
+        La fecha de inicio debe ser futura. Visit fija la duración en 60 minutos
+        y rechaza horarios superpuestos de un mismo agente. Dos visitas
+        consecutivas pueden compartir la hora de fin e inicio.
+        Un reintento con la misma clave, visita y cuerpo devuelve el resultado
+        original durante 24 horas. Reutilizar la clave con otros datos devuelve 422.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: visitId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ScheduleVisit'}
+      responses:
+        '200':
+          description: Visita programada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ScheduledVisit'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: La visita no existe o pertenece a otro agente.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: |
+            VISIT_NOT_REQUESTED si la visita ya no está pendiente.
+            VISIT_INVALID_SCHEDULE si la fecha de inicio no es futura.
+            VISIT_SCHEDULE_CONFLICT si el agente tiene otra visita en ese horario.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/visits/{visitId}/reject:
+    post:
+      tags: [visits]
+      operationId: rejectVisit
+      summary: Rechazar una solicitud pendiente
+      description: |
+        Solo el AGENT asignado puede rechazar una visita REQUESTED.
+        Un reintento con la misma clave, visita y motivo devuelve el resultado
+        original durante 24 horas. Reutilizar la clave con otros datos devuelve 422.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: visitId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RejectVisit'}
+      responses:
+        '200':
+          description: Solicitud rechazada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RejectedVisit'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: VISIT_NOT_FOUND si la visita no existe o pertenece a otro agente.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: VISIT_NOT_REQUESTED si la visita ya no está pendiente.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/visits/{visitId}/cancel:
+    post:
+      tags: [visits]
+      operationId: cancelVisit
+      summary: Cancelar una visita programada
+      description: |
+        El CLIENT que solicitó la visita o el AGENT asignado puede cancelarla.
+        La visita debe estar SCHEDULED y su hora de inicio debe ser futura.
+        El motivo es opcional; si se envía, debe contener texto.
+        Un reintento con la misma clave, visita y motivo devuelve el resultado
+        original durante 24 horas. Reutilizar la clave con otros datos devuelve 422.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: visitId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CancelVisit'}
+      responses:
+        '200':
+          description: Visita cancelada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CancelledVisit'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: VISIT_NOT_FOUND si la visita no existe o no pertenece al cliente ni al agente autenticado.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: |
+            VISIT_NOT_SCHEDULED si la visita no está programada.
+            VISIT_CANCELLATION_TOO_LATE si la hora de inicio ya llegó o pasó.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/visits/{visitId}/complete:
+    post:
+      tags: [visits]
+      operationId: completeVisit
+      summary: Marcar una visita como realizada
+      description: |
+        Solo el AGENT asignado puede completar una visita SCHEDULED cuando
+        llega o pasa su hora de fin. Repetir la misma clave para esa visita
+        devuelve el resultado original durante 24 horas.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: visitId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {type: object, maxProperties: 0}
+      responses:
+        '200':
+          description: Visita completada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CompletedVisit'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: VISIT_NOT_FOUND si la visita no existe o pertenece a otro agente.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: |
+            VISIT_NOT_SCHEDULED si la visita no está programada.
+            VISIT_COMPLETION_TOO_EARLY si la hora de fin todavía no llegó.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
   /health:
     get:
       tags: [health]
@@ -215,6 +791,23 @@ components:
   securitySchemes:
     bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
   parameters:
+    LeadId:
+      name: leadId
+      in: path
+      required: true
+      schema: {$ref: '#/components/schemas/Uuid'}
+    Page:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 2147483647, default: 1}
+    PageSize:
+      name: size
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    FilterPropertyId:
+      name: propertyId
+      in: query
+      schema: {$ref: '#/components/schemas/Uuid'}
     CorrelationId:
       name: X-Correlation-Id
       in: header
@@ -308,21 +901,227 @@ components:
         propertyId: {$ref: '#/components/schemas/Uuid'}
         proposedAt: {$ref: '#/components/schemas/UtcDateTime'}
         clientNote: {type: string, maxLength: 500}
+    InquiryFields:
+      type: object
+      required: [propertyId, contactName, contactEmail, message]
+      properties:
+        propertyId: {$ref: '#/components/schemas/Uuid'}
+        contactName: {type: string, minLength: 1, maxLength: 150, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+        contactEmail: {type: string, format: email, maxLength: 254, pattern: '^[^\s\u0000]+$'}
+        contactPhone: {type: string, minLength: 1, maxLength: 30, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+        message: {type: string, minLength: 1, maxLength: 2000, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+    SendInquiry:
+      allOf:
+        - $ref: '#/components/schemas/InquiryFields'
+      unevaluatedProperties: false
+      example:
+        propertyId: 3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
+        contactName: María Pérez
+        contactEmail: maria@example.com
+        message: ¿Se permiten mascotas en esta propiedad?
+    CreatedInquiry:
+      type: object
+      required: [id]
+      additionalProperties: false
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+      example: {id: 05de258b-be6c-4f61-b6ac-ac67cc961b03}
+    Inquiry:
+      allOf:
+        - $ref: '#/components/schemas/InquiryFields'
+        - type: object
+          required: [id, createdAt]
+          properties:
+            id: {$ref: '#/components/schemas/Uuid'}
+            createdAt: {$ref: '#/components/schemas/UtcDateTime'}
+      unevaluatedProperties: false
     CreatedVisit:
       type: object
       required: [id]
       additionalProperties: false
       properties:
         id: {$ref: '#/components/schemas/Uuid'}
+    LeadOutcome:
+      type: string
+      enum: [WON, LOST]
+    CloseLead:
+      type: object
+      additionalProperties: false
+      required: [outcome]
+      properties:
+        outcome: {$ref: '#/components/schemas/LeadOutcome'}
+        note: {type: string, minLength: 1, maxLength: 2000, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+      example: {outcome: WON, note: El cliente confirmó que desea continuar.}
+    ClosedLead:
+      type: object
+      additionalProperties: false
+      required: [id, status, outcome]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, const: CLOSED}
+        outcome: {$ref: '#/components/schemas/LeadOutcome'}
+      example: {id: 05de258b-be6c-4f61-b6ac-ac67cc961b03, status: CLOSED, outcome: WON}
+    LeadStatus:
+      type: string
+      enum: [OPEN, CLOSED]
+    Lead:
+      type: object
+      additionalProperties: false
+      required: [id, propertyId, clientId, status, openedAt]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        propertyId: {$ref: '#/components/schemas/Uuid'}
+        clientId: {$ref: '#/components/schemas/Uuid'}
+        status: {$ref: '#/components/schemas/LeadStatus'}
+        openedAt: {$ref: '#/components/schemas/UtcDateTime'}
+        closedAt: {$ref: '#/components/schemas/UtcDateTime'}
+        outcome: {$ref: '#/components/schemas/LeadOutcome'}
+    LeadPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Lead'}
+        page: {$ref: '#/components/schemas/PageMetadata'}
+    RegisterLeadFollowUp:
+      type: object
+      additionalProperties: false
+      required: [note]
+      properties:
+        note: {type: string, minLength: 1, maxLength: 2000, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+      example: {note: El cliente pidió más detalles sobre la propiedad.}
+    CreatedFollowUp:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+      example: {id: 5142a8be-97ea-479b-9a40-02162994fb36}
+    LeadFollowUp:
+      type: object
+      additionalProperties: false
+      required: [id, leadId, note, createdAt]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        leadId: {$ref: '#/components/schemas/Uuid'}
+        note: {type: string}
+        createdAt: {$ref: '#/components/schemas/UtcDateTime'}
+    PageMetadata:
+      type: object
+      additionalProperties: false
+      required: [number, size, totalElements, totalPages]
+      properties:
+        number: {type: integer, minimum: 1}
+        size: {type: integer, minimum: 1, maximum: 100}
+        totalElements: {type: integer, minimum: 0}
+        totalPages: {type: integer, minimum: 0}
+    AgentInquiryPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/AgentInquirySummary'}
+        page: {$ref: '#/components/schemas/PageMetadata'}
+    AgentInquirySummary:
+      type: object
+      additionalProperties: false
+      required: [id, propertyId, contactName, createdAt]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        propertyId: {$ref: '#/components/schemas/Uuid'}
+        contactName: {type: string}
+        createdAt: {$ref: '#/components/schemas/UtcDateTime'}
+    VisitPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Visit'}
+        page: {$ref: '#/components/schemas/PageMetadata'}
+    VisitStatus:
+      type: string
+      enum: [REQUESTED, SCHEDULED, COMPLETED, CANCELLED, REJECTED]
     Visit:
       type: object
       required: [id, propertyId, status, proposedAt, requestedAt]
       properties:
         id: {$ref: '#/components/schemas/Uuid'}
         propertyId: {$ref: '#/components/schemas/Uuid'}
-        status: {type: string, enum: [REQUESTED, SCHEDULED, COMPLETED, CANCELLED, REJECTED]}
+        status: {$ref: '#/components/schemas/VisitStatus'}
         proposedAt: {$ref: '#/components/schemas/UtcDateTime'}
         requestedAt: {$ref: '#/components/schemas/UtcDateTime'}
+        scheduledStart: {$ref: '#/components/schemas/UtcDateTime'}
+        scheduledEnd: {$ref: '#/components/schemas/UtcDateTime'}
+        completedAt:
+          $ref: '#/components/schemas/UtcDateTime'
+          description: Fecha en que el agente registró la visita como realizada.
+        resolutionReason:
+          $ref: '#/components/schemas/VisitResolutionReason'
+          description: Motivo visible al consultar una visita rechazada o cancelada, si se indicó.
+    VisitResolutionReason:
+      type: string
+      minLength: 1
+      maxLength: 500
+      pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'
+    RejectVisit:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason: {$ref: '#/components/schemas/VisitResolutionReason'}
+      example: {reason: 'El horario propuesto no está disponible.'}
+    RejectedVisit:
+      type: object
+      required: [id, status]
+      additionalProperties: false
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, const: REJECTED}
+      example: {id: '05de258b-be6c-4f61-b6ac-ac67cc961b03', status: REJECTED}
+    CancelVisit:
+      type: object
+      additionalProperties: false
+      properties:
+        reason: {$ref: '#/components/schemas/VisitResolutionReason'}
+      example: {reason: 'Surgió un imprevisto.'}
+    CancelledVisit:
+      type: object
+      required: [id, status]
+      additionalProperties: false
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, const: CANCELLED}
+      example: {id: '05de258b-be6c-4f61-b6ac-ac67cc961b03', status: CANCELLED}
+    CompletedVisit:
+      type: object
+      required: [id, status]
+      additionalProperties: false
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, const: COMPLETED}
+      example: {id: '05de258b-be6c-4f61-b6ac-ac67cc961b03', status: COMPLETED}
+    ScheduleVisit:
+      type: object
+      required: [scheduledStart]
+      additionalProperties: false
+      properties:
+        scheduledStart: {$ref: '#/components/schemas/UtcDateTime'}
+      example: {scheduledStart: '2026-11-12T19:00:00Z'}
+    ScheduledVisit:
+      type: object
+      required: [id, status, scheduledStart, scheduledEnd]
+      additionalProperties: false
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, const: SCHEDULED}
+        scheduledStart: {$ref: '#/components/schemas/UtcDateTime'}
+        scheduledEnd: {$ref: '#/components/schemas/UtcDateTime'}
     Health:
       type: object
       required: [status]

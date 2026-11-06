@@ -1,6 +1,6 @@
 # visit-service — NestJS (TypeScript)
 
-Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, que siempre aplica. Todavía no hay código: lo que sigue es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, que siempre aplica. La base local y el modelo inicial de visitas están en desarrollo. Consulta el [README](README.md) para ejecutar la base. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
@@ -26,8 +26,8 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 
 | Aggregate | Estados | Invariantes del event storming |
 |---|---|---|
-| `Inquiry` | — | Propiedad `PUBLISHED`; mensaje y datos de contacto obligatorios |
-| `Visit` | `REQUESTED → SCHEDULED → COMPLETED`; `REQUESTED → REJECTED`; `REQUESTED`/`SCHEDULED → CANCELLED` | Propiedad `PUBLISHED`; fecha propuesta futura; **máx. 1 solicitud pendiente por cliente y propiedad**; **el agente no tiene dos visitas que se crucen**; rechazo con motivo obligatorio; cancelar solo antes de la fecha; completar solo si la fecha ya pasó |
+| `Inquiry` | — | Propiedad `PUBLISHED`; mensaje, nombre y correo obligatorios; teléfono opcional |
+| `Visit` | `REQUESTED → SCHEDULED → COMPLETED`; `REQUESTED → REJECTED`; `SCHEDULED → CANCELLED` | Propiedad `PUBLISHED`; fecha propuesta futura; **máx. 1 solicitud pendiente por cliente y propiedad**; **el agente no tiene dos visitas que se crucen**; rechazo con motivo obligatorio; el cliente o agente asignado cancela solo antes de la hora de inicio; el agente asignado completa al llegar o pasar la hora de fin |
 | `Lead` (oportunidad) | `OPEN → CLOSED` (`WON` o `LOST`) | Una sola abierta por cliente y propiedad; seguimiento solo del agente asignado, con nota, y si está abierta; resultado obligatorio al cerrar |
 
 Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es entidad hija de `Lead`.
@@ -47,14 +47,16 @@ Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es 
 | _(política interna)_ | `OpenLeadCommand` | `LeadOpened` |
 | `registerVisitTracing` | `RegisterLeadFollowUpCommand` | `LeadFollowUpRegistered` |
 | `closeOportunityCommand` | `CloseLeadCommand` | `LeadClosed` (lo consume listing) |
+| — | `GetInquiryByIdQuery` (cliente dueño o agente asignado) | — |
 | — | `GetVisitByIdQuery` (cliente dueño o agente asignado) | — |
-| — | `ListMyVisitsQuery` (cliente), `ListAgentVisitsQuery`, `ListAgentInquiriesQuery`, `ListAgentLeadsQuery` | — |
+| — | `GetLeadFollowUpQuery` (agente asignado) | — |
+| — | `ListVisitsQuery` (por rol), `ListAgentInquiriesQuery`, `ListAgentLeadsQuery` | — |
 
-`VisitRejected` y `VisitCancelled` llevan `reason` y `actor` (`CLIENT`, `AGENT` o `SYSTEM`). `LeadClosed` lleva `propertyId`, `agentId`, `clientId` y `outcome`.
+`VisitRejected` lleva `reason` obligatorio y `actor` (`AGENT` o `SYSTEM`). `VisitCancelled` lleva `reason` (puede ser `null`) y `actor` (`CLIENT`, `AGENT` o `SYSTEM`). `LeadClosed` lleva `propertyId`, `agentId`, `clientId` y `outcome`.
 
 ## Eventos y políticas
 
-- **Publica** con outbox, clave = id del aggregate. Catálogo en `contracts/events/README.md`. El primer contrato define [`VisitRequested`](../../contracts/events/visit/visit-requested.v1.schema.json) y [`LeadOpened`](../../contracts/events/visit/lead-opened.v1.schema.json).
+- **Publica** con outbox, clave = id del aggregate. Catálogo en `contracts/events/README.md`. Visit ya genera `InquiryReceived`, `VisitRequested`, `LeadOpened`, `VisitScheduled`, `VisitRejected`, `VisitCancelled`, `VisitCompleted`, `LeadFollowUpRegistered` y `LeadClosed`.
 - **Consume** `listing.property.events` (consumer group `visit-service`, desde el principio, idempotente con `processed_events`):
   1. **Copia local:** upsert de `PropertySnapshot` solo si `occurredAt` es más nuevo que el último aplicado.
   2. **Política 3.2 — `PropertyReserved`:** `RejectVisitCommand` por cada visita `REQUESTED` de la propiedad, con `reason: PROPERTY_RESERVED` y `actor: SYSTEM`. Las `SCHEDULED` se mantienen.

@@ -127,7 +127,7 @@ CREATE TABLE visits (
     proposed_at        timestamptz  NOT NULL,           -- fecha que propone el cliente (futura al solicitar)
     client_note        varchar(500),
     scheduled_start    timestamptz,                     -- fecha y hora que fija el agente
-    scheduled_end      timestamptz,                     -- start + duración fija del dominio (por ejemplo, 1 h)
+    scheduled_end      timestamptz,                     -- start + duración fija del dominio de 1 h
     resolution_reason  varchar(500),                    -- motivo del agente, o PROPERTY_RESERVED / PROPERTY_UNAVAILABLE
     resolved_by        varchar(10)  CHECK (resolved_by IN ('CLIENT', 'AGENT', 'SYSTEM')),
     resolved_at        timestamptz,                     -- al rechazar, cancelar o completar
@@ -189,7 +189,23 @@ CREATE INDEX lead_follow_ups_lead_idx ON lead_follow_ups (lead_id, created_at);
 
 -- ─── Mensajería ─────────────────────────────────────────────────────────────
 -- outbox y processed_events: ver docs/base-de-datos/README.md
+
+-- Reintentos HTTP de las operaciones de creación.
+CREATE TABLE idempotency_records (
+    client_id       uuid         NOT NULL,
+    operation       varchar(50)  NOT NULL,
+    idempotency_key uuid         NOT NULL,
+    request_hash    char(64)     NOT NULL CHECK (request_hash ~ '^[0-9a-f]{64}$'),
+    response_status smallint     NOT NULL CHECK (response_status BETWEEN 200 AND 599),
+    response_body   jsonb        NOT NULL,
+    response_headers jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    expires_at      timestamptz  NOT NULL DEFAULT (now() + interval '24 hours'),
+    PRIMARY KEY (client_id, operation, idempotency_key)
+);
+CREATE INDEX idempotency_records_expiration_idx ON idempotency_records (expires_at);
 ```
+
+La clave de idempotencia se guarda por cliente y operación. El hash SHA-256 identifica el cuerpo normalizado. La respuesta incluye el estado, el cuerpo y las cabeceras que se deben repetir, como `Location`. El registro vence a las 24 horas y la aplicación deberá ignorarlo al vencer.
 
 ## Del event storming a la base
 
@@ -200,7 +216,7 @@ CREATE INDEX lead_follow_ups_lead_idx ON lead_follow_ups (lead_id, created_at);
 | `ScheduleVisit` | Solo `REQUESTED`; fecha futura; sin cruce de horario del agente → dominio + `visits_agent_no_overlap` | `UPDATE visits` | `VisitScheduled` |
 | `RejectVisit` | Solo `REQUESTED`; motivo obligatorio → dominio + `visits_rejected_has_reason` | `UPDATE visits` | `VisitRejected` |
 | `CancelVisit` | Solo `SCHEDULED` y antes de la fecha → dominio | `UPDATE visits` | `VisitCancelled` |
-| `CompleteVisit` | Solo `SCHEDULED` con fecha pasada → dominio | `UPDATE visits` | `VisitCompleted` |
+| `CompleteVisit` | Solo `SCHEDULED` al llegar o pasar `scheduled_end` → dominio | `UPDATE visits` | `VisitCompleted` |
 | `RegisterLeadFollowUp` | Solo el agente asignado; nota obligatoria; oportunidad abierta → dominio + `CHECK` | `INSERT lead_follow_ups`, `UPDATE leads.version` | `LeadFollowUpRegistered` |
 | `CloseLead` | Resultado obligatorio; cerrada no admite más seguimientos → dominio + `leads_outcome_matches_status` | `UPDATE leads` | `LeadClosed` → **lo consume listing** |
 
@@ -212,9 +228,9 @@ Es una excepción consciente a "un aggregate por transacción": los dos viven en
 
 ### Consumidor de `listing.property.events`
 
-**Copia local** (todos los eventos de propiedad), en una transacción:
+**Copia local**, en una transacción (para eventos con política, el registro de procesado se difiere al paso final):
 
-1. `INSERT INTO processed_events`. Si ya existe, se descarta el duplicado.
+1. Verificar `processed_events`. Para eventos sin política, registrar el ID en esta misma transacción. Si ya existe, descartar el duplicado.
 2. Upsert en `property_snapshots` solo si `occurredAt > last_event_at`. `PropertyPublished` trae todos los datos; los demás eventos actualizan `status` (y `PropertyUpdated`, también `title` y `zone`).
 
 **Políticas 3.2 y 3.3** (`PropertyReserved`, `PropertySold`, `PropertyRented`), después de actualizar la copia:
@@ -223,10 +239,10 @@ Es una excepción consciente a "un aggregate por transacción": los dos viven en
 2. **Una transacción por visita** (un aggregate por transacción): `RejectVisit` o `CancelVisit` con `resolved_by = 'SYSTEM'`, más su fila en `outbox`.
 3. Al final, `INSERT INTO processed_events` del evento.
 
-Si el consumidor se cae a la mitad, el evento se vuelve a procesar. No hay problema: el paso 1 solo selecciona visitas que siguen `REQUESTED` o `SCHEDULED`, así que las ya rechazadas o canceladas no se tocan dos veces.
+Si el consumidor se cae a la mitad, el evento se vuelve a procesar mientras su estado y fecha todavía coincidan con la copia local. No hay problema: el paso 1 solo selecciona visitas que siguen `REQUESTED` o `SCHEDULED`, así que las ya rechazadas o canceladas no se tocan dos veces.
 
 ## Notas
 
 - **Sin foreign key a `property_snapshots`:** la copia se puede vaciar y reconstruir leyendo `listing.property.events` desde el principio, y eso no debe romper consultas ni visitas ya guardadas.
-- **Datos personales:** `inquiries` guarda nombre, email y teléfono del interesado, porque el agente los necesita para contactarlo. Al escribir el schema de `InquiryReceived` con `/nuevo-evento`, conviene que lleve solo IDs y el mensaje, sin los datos de contacto.
-- **Duración de la visita:** la decide el dominio (por ejemplo, 1 hora fija) y la guarda en `scheduled_end`. Así la base cumple la regla de cruce de horarios aunque dos visitas del mismo agente se programen al mismo tiempo.
+- **Datos personales:** `inquiries` guarda nombre, email y teléfono del interesado, porque el agente los necesita para contactarlo. El evento `InquiryReceived` solo lleva identificadores. El mensaje también queda en Visit porque puede contener datos personales.
+- **Duración de la visita:** el dominio fija 60 minutos y guarda la hora de fin en `scheduled_end`. Así la base cumple la regla de cruce de horarios aunque dos visitas del mismo agente se programen al mismo tiempo.
