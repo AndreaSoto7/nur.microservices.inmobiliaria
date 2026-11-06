@@ -57,6 +57,7 @@ type stateKey struct{}
 // y ErrorHandler necesita saber a cuál marcar.
 type requestState struct {
 	instance discovery.Instance
+	body     *trackedBody
 }
 
 // New arma el proxy.
@@ -92,6 +93,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		problem.Write(w, r, problem.RouteNotFound)
 		return
 	}
+	limit := h.bodyLimit(r)
+	if r.ContentLength > limit {
+		problem.Write(w, r, problem.PayloadTooLarge)
+		return
+	}
 	instance, ok := h.picker.Pick(route.Service)
 	if !ok {
 		problem.Write(w, r, problem.NoHealthyInstance)
@@ -105,6 +111,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	state := &requestState{instance: instance}
 	r = r.WithContext(context.WithValue(r.Context(), stateKey{}, state))
+	if r.Body != nil && r.Body != http.NoBody {
+		state.body = h.trackBody(w, r, limit)
+		r.Body = state.body
+	}
 	h.reverse.ServeHTTP(w, r)
 }
 
@@ -150,15 +160,23 @@ func hideReplicaInLocation(resp *http.Response) {
 }
 
 // handleError marca la réplica solo si la culpa es suya. Si no, cualquier cliente podría sacar réplicas
-// de servicio: bastaría con cerrar una pestaña. El detalle del error tiene
+// de servicio: bastaría con cerrar una pestaña o mandar un body malformado. El detalle del error tiene
 // direcciones internas, así que va solo al log.
 func (h *Handler) handleError(w http.ResponseWriter, r *http.Request, err error) {
 	state, _ := r.Context().Value(stateKey{}).(*requestState)
-	if r.Context().Err() != nil {
+	bodyErr := state.body.readError()
+
+	var tooLarge *http.MaxBytesError
+	switch {
+	case errors.As(err, &tooLarge) || errors.As(bodyErr, &tooLarge):
+		problem.Write(w, r, problem.PayloadTooLarge)
+	case bodyErr != nil:
+		problem.Write(w, r, problem.BadRequest)
+	case r.Context().Err() != nil:
 		w.WriteHeader(statusClientClosed)
-		return
+	default:
+		h.reportUpstreamFailure(w, r, state.instance, err)
 	}
-	h.reportUpstreamFailure(w, r, state.instance, err)
 }
 
 // reportUpstreamFailure marca solo los errores de red. Ante cualquier otro no se sabe de quién es la

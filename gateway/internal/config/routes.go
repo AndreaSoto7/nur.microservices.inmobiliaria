@@ -26,6 +26,8 @@ const (
 	// imagePathSegments cuenta el vacío inicial de /api/v1/properties/{id}/images/{imageId}.
 	imagePathSegments = 7
 	imagesSegmentAt   = 5
+	// imageUploadSegments cuenta el vacío inicial de /api/v1/properties/{id}/images.
+	imageUploadSegments = 6
 )
 
 // routeTable es la tabla de rutas de gateway/CLAUDE.md.
@@ -93,6 +95,20 @@ func hasForbiddenCharacter(path string) bool {
 	return strings.ContainsFunc(path, func(char rune) bool {
 		return char == ';' || char == '\\' || char == '%' || char < ' ' || char == 0x7f
 	})
+}
+
+// IsAuthPath indica si el path es de autenticación: bodies chicos y lectura con deadline.
+func IsAuthPath(path string) bool {
+	return underPrefix(path, authPrefix)
+}
+
+// IsImageUpload indica si es una subida a la galería, la única ruta con bodies grandes.
+func IsImageUpload(method, path string) bool {
+	if method != http.MethodPost || !underPrefix(path, propertiesPrefix) {
+		return false
+	}
+	segments := strings.Split(path, "/")
+	return len(segments) == imageUploadSegments && segments[imagesSegmentAt] == "images"
 }
 
 func isPublic(method, path string) bool {
