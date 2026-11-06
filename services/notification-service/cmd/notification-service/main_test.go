@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"sync"
@@ -47,5 +48,41 @@ func TestServeRunsCleanupBeforeShuttingDownHTTP(t *testing.T) {
 	defer mu.Unlock()
 	if !answeredDuringCleanup {
 		t.Error("el servidor ya no respondía durante la limpieza")
+	}
+}
+
+func TestRetryUntilSucceedsWhenTheDependencyComesUp(t *testing.T) {
+	attempts := 0
+	err := retryUntil(context.Background(), time.Second, time.Millisecond, func(context.Context) error {
+		attempts++
+		if attempts < 3 {
+			return errors.New("todavía no")
+		}
+		return nil
+	})
+
+	if err != nil || attempts != 3 {
+		t.Errorf("error = %v, intentos = %d", err, attempts)
+	}
+}
+
+func TestRetryUntilGivesUpAfterTheLimit(t *testing.T) {
+	failure := errors.New("sigue caída")
+
+	err := retryUntil(context.Background(), 5*time.Millisecond, time.Millisecond, func(context.Context) error { return failure })
+
+	if !errors.Is(err, failure) {
+		t.Errorf("error = %v", err)
+	}
+}
+
+func TestRetryUntilStopsWhenCancelled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := retryUntil(ctx, time.Minute, time.Minute, func(context.Context) error { return errors.New("caída") })
+
+	if err == nil {
+		t.Error("retryUntil() no devolvió error")
 	}
 }

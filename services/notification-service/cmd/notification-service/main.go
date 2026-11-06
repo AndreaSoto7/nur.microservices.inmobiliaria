@@ -14,8 +14,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/config"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/consul"
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/postgres"
 	httpapi "github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/interfaces/http"
 )
 
@@ -25,6 +28,8 @@ const (
 	writeTimeout      = 30 * time.Second
 	idleTimeout       = 120 * time.Second
 	reRegisterEvery   = 60 * time.Second
+	startupRetryLimit = 30 * time.Second
+	startupRetryEvery = 2 * time.Second
 	deregisterTimeout = 2 * time.Second
 	// shutdownTimeout más la baja deben quedar bajo los 10 s de docker stop.
 	shutdownTimeout = 5 * time.Second
@@ -47,6 +52,18 @@ func run(logger *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		// El error de pgx podría incluir partes de la URL, que lleva la contraseña.
+		return errors.New("DATABASE_URL no es válida")
+	}
+	defer pool.Close()
+	migrate := func(ctx context.Context) error { return postgres.Migrate(ctx, pool) }
+	if err := retryUntil(ctx, startupRetryLimit, startupRetryEvery, migrate); err != nil {
+		return fmt.Errorf("preparar la base: %w", err)
+	}
+	repository := postgres.NewRepository(pool)
+
 	var listenConfig net.ListenConfig
 	listener, err := listenConfig.Listen(ctx, "tcp", ":"+strconv.Itoa(cfg.ServicePort))
 	if err != nil {
@@ -56,11 +73,31 @@ func run(logger *slog.Logger) error {
 	stopRegistration := startRegistration(ctx, cfg, logger)
 	router := httpapi.NewRouter(httpapi.Dependencies{
 		Logger: logger,
-		Ready:  func(context.Context) error { return nil },
+		Ready:  repository.Ping,
 	})
 
 	logger.Info("servicio escuchando", "port", cfg.ServicePort)
 	return serve(ctx, listener, router, stopRegistration)
+}
+
+// retryUntil reintenta mientras la dependencia termina de levantar: el compose espera a que la base esté
+// sana, pero fuera de él nadie lo garantiza.
+func retryUntil(ctx context.Context, limit, every time.Duration, attempt func(context.Context) error) error {
+	deadline := time.Now().Add(limit)
+	for {
+		err := attempt(ctx)
+		if err == nil {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("arranque cancelado: %w", ctx.Err())
+		case <-time.After(every):
+		}
+	}
 }
 
 // startRegistration registra la réplica ya con el listener abierto, para que el primer health check
