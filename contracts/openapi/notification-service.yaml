@@ -1,11 +1,12 @@
 openapi: 3.1.0
 info:
   title: notification-service
-  version: 1.0.0
+  version: 1.0.1
   description: |
     Avisos dentro de la app para agentes y clientes (ADR 0007). Se crean a partir de eventos de Kafka: la API solo los lee y los marca como leídos.
     Cada usuario ve solo los suyos: el destinatario es el `sub` del access token.
     El servicio valida la firma con el JWKS, `kid`, `alg=RS256`, `exp`, `iss=identity-service`, `aud=inmobiliaria` y `typ=at+jwt`.
+    Si no puede descargar el JWKS no sabe si el token es válido, y responde 503 `SERVICE_UNAVAILABLE`: no es que la sesión haya vencido.
     Además de los errores documentados, el gateway responde 400, 413, 429, 502, 503 y 504 (`GATEWAY_*`).
 servers:
   - url: http://localhost:8080
