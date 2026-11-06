@@ -18,16 +18,19 @@ export function RegisterPage() {
 
   return (
     <section className="page page--narrow">
-      <h1>Crear cuenta</h1>
-      <RegisterForm
-        onSubmit={handleSubmit}
-        submitting={submitting}
-        error={error}
-        fieldErrors={fieldErrors}
-      />
-      <p>
-        ¿Ya tienes cuenta? <Link to="/login">Ingresa</Link>
-      </p>
+      <div className="card auth-card">
+        <h1>Crear cuenta</h1>
+        <p className="auth-card__lead">Para buscar propiedades o publicar las tuyas.</p>
+        <RegisterForm
+          onSubmit={handleSubmit}
+          submitting={submitting}
+          error={error}
+          fieldErrors={fieldErrors}
+        />
+        <p className="auth-card__footer">
+          ¿Ya tienes cuenta? <Link to="/login">Ingresa</Link>
+        </p>
+      </div>
     </section>
   )
 }

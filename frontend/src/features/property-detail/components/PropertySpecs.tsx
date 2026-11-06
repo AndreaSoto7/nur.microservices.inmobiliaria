@@ -12,7 +12,7 @@ export const PropertySpecs = memo(function PropertySpecs({
   property: PropertyDetail
 }) {
   return (
-    <div className="card stack">
+    <>
       <dl className="specs">
         <dt>Tipo</dt>
         <dd>{PROPERTY_TYPE_LABELS[property.propertyType]}</dd>
@@ -43,14 +43,17 @@ export const PropertySpecs = memo(function PropertySpecs({
         )}
       </dl>
       {property.features.length > 0 && (
-        <ul className="feature-list" aria-label="Características">
-          {property.features.map((feature) => (
-            <li key={feature} className="chip chip--static">
-              {FEATURE_LABELS[feature]}
-            </li>
-          ))}
-        </ul>
+        <div className="detail__features">
+          <h2>Características</h2>
+          <ul className="feature-list">
+            {property.features.map((feature) => (
+              <li key={feature} className="chip chip--static">
+                {FEATURE_LABELS[feature]}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
-    </div>
+    </>
   )
 })

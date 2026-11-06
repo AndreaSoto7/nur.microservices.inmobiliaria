@@ -1,6 +1,7 @@
 import { memo, useState } from 'react'
 import { gatewayUrl } from '../../../core/config'
 import type { PropertyImage } from '../../../core/models/listing'
+import { HouseIcon } from '../../../shared/ui/icons'
 
 interface ImageGalleryProps {
   images: PropertyImage[]
@@ -16,8 +17,11 @@ export const ImageGallery = memo(function ImageGallery({ images, title }: ImageG
 
   if (!selected) {
     return (
-      <div className="gallery__placeholder" aria-hidden="true">
-        Sin fotos
+      <div className="gallery__empty" aria-hidden="true">
+        <div className="media-placeholder">
+          <HouseIcon className="media-placeholder__icon" />
+          Sin fotos
+        </div>
       </div>
     )
   }

@@ -21,11 +21,14 @@ export function LoginPage() {
 
   return (
     <section className="page page--narrow">
-      <h1>Ingresar</h1>
-      <LoginForm onSubmit={handleSubmit} submitting={submitting} error={error} />
-      <p>
-        ¿No tienes cuenta? <Link to="/registro">Créala aquí</Link>
-      </p>
+      <div className="card auth-card">
+        <h1>Ingresar</h1>
+        <p className="auth-card__lead">Usa el email y la contraseña de tu cuenta.</p>
+        <LoginForm onSubmit={handleSubmit} submitting={submitting} error={error} />
+        <p className="auth-card__footer">
+          ¿No tienes cuenta? <Link to="/registro">Créala aquí</Link>
+        </p>
+      </div>
     </section>
   )
 }
