@@ -26,8 +26,9 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 **Aggregate `Notification`:** `id`, `recipientId` (el `sub` del JWT), `type`, `message`, `propertyId` y `visitId` opcionales, `createdAt` y `readAt`.
 
 - `NewNotification` valida y genera el UUID. Sin destinatario o con un tipo desconocido, no se crea.
-- `MarkRead` es idempotente: marcar dos veces conserva la primera fecha.
-- `MarkRead` lo pide solo su destinatario. Si es de otro usuario, responde 404: no se revela que existe.
+- `NewNotification` deja los UUID en su forma canónica: el destinatario se compara con el `sub` del JWT.
+- `MarkReadBy` es idempotente: marcar dos veces conserva la primera fecha.
+- `MarkReadBy` lo pide solo su destinatario. A cualquier otro le responde `ErrNotificationNotFound` (404): no se revela que existe.
 
 **Tipos (`NotificationType`):** `WELCOME`, `VISIT_REQUESTED` y `PROPERTY_RESERVED`.
 
@@ -35,7 +36,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 
 | Tipo | Caso de uso | Disparador |
 |---|---|---|
-| Política | `NotifyOnEvent` | Un evento del catálogo (tabla de abajo) |
+| Política | `EventPolicies`, que decide a quién avisar y usa `NotifyOnEvent` | Un evento del catálogo (tabla de abajo) |
 | Comando | `MarkNotificationRead` | `PATCH /api/v1/notifications/{notificationId}` |
 | Consulta | `ListNotifications` | `GET /api/v1/notifications`, con `page`, `size` y `unread` |
 
@@ -52,7 +53,7 @@ Consumer group `notification-service`, desde el principio de cada topic.
 - **Idempotente:** el aviso y el `eventId` en `processed_events` se guardan en la misma transacción.
 - **Anti-corruption layer:** `infrastructure/kafka` traduce el evento a un comando propio. Del payload de `UserRegistered` solo lee `userId`: nunca el email ni el nombre.
 - **Se ignoran,** sin fallar, los `eventType` y las versiones desconocidas.
-- **Errores técnicos:** 3 reintentos con backoff, después `<topic>.dlq`, y sigue. Un mensaje ilegible va directo a la DLQ.
+- **Errores técnicos:** 3 reintentos con backoff, después `<topic>.dlq`, y sigue. Un mensaje ilegible, o con datos inválidos (`application.IsPermanent`), va directo a la DLQ.
 - **Pendientes:** los eventos que esperan el schema de visit están en el ADR 0007.
 
 ## Estructura
@@ -61,8 +62,9 @@ Consumer group `notification-service`, desde el principio de cada topic.
 services/notification-service/
   cmd/notification-service/main.go   wiring: config, base, Kafka, HTTP, Consul; graceful shutdown
   internal/
-    domain/                          Notification, NotificationType, errores, interfaz del repositorio
-    application/                     NotifyOnEvent, MarkNotificationRead, ListNotifications
+    domain/                          Notification, NotificationType, errores, NotificationRepository
+    application/                     EventPolicies, NotifyOnEvent, MarkNotificationRead, ListNotifications
+                                     y sus puertos: IdempotentNotificationStore, NotificationReader
     infrastructure/
       postgres/                      repositorio con pgx y migraciones embebidas
       kafka/                         consumidor, traductor de eventos y DLQ
