@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Enviar una consulta y solicitar una visita desde el detalle, con `Idempotency-Key`. Probado contra visit real, hasta el aviso que recibe el agente | este PR |
+| feat | Enviar una consulta y solicitar una visita desde el detalle, con `Idempotency-Key`. Probado contra visit real, hasta el aviso que recibe el agente | #97 |
 | feat | Avisos: página con filtro de no leídos, marcar como leído y contador en la cabecera | #95 |
 | feat | Favoritos: botón en el detalle y página propia con paginación. Probado contra listing real, en navegador y con CSP | #94 |
 | feat | Mis propiedades (agente), parte 3: características, subida de fotos y requisitos para publicar. Probado de punta a punta contra listing real, en navegador y con CSP | #93 |
