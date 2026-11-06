@@ -50,9 +50,9 @@ Paleta, tokens, tipografía, estados de pantalla y accesibilidad: [`docs/convenc
 frontend/src/
   app/             raíz de composición: App.tsx (rutas), AppLayout (smart), components/AppHeader (dumb)
   core/            cliente HTTP (vía gateway), auth (token, refresh), rutas protegidas, modelos de la API
-    api/           httpClient.ts (apiRequest; admite headers propios y FormData), problem.ts (ApiError a partir del problem+json), catalogApi.ts, propertiesApi.ts, favoritesApi.ts, notificationsApi.ts
+    api/           httpClient.ts (apiRequest; admite headers propios y FormData), problem.ts (ApiError a partir del problem+json), catalogApi.ts, propertiesApi.ts, favoritesApi.ts, notificationsApi.ts, visitsApi.ts, inquiriesApi.ts, idempotency.ts
     auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
-    models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts, notification.ts)
+    models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts, notification.ts, visit.ts)
   shared/format/   fechas en hora local, formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones, estados y extras
   shared/ui/       dumbs genéricos: Button, TextField, SelectField, TextAreaField, StatusBadge, RowListSkeleton, ErrorMessage, LoadingState, Pagination, EmptyState, icons
   test/            setup de Vitest, mocks de fetch y renderApp
@@ -65,8 +65,9 @@ frontend/src/
       useCatalog.ts                                                         (facade)
       catalogFilters.ts   filtros ↔ URL ↔ query del contrato (funciones puras, con tests)
     property-detail/
-      containers/  PropertyDetailPage.tsx (smart) · components/ ImageGallery, PropertySpecs (dumb)
+      containers/  PropertyDetailPage  PropertyContactSection   (smart) · components/ ImageGallery  PropertySpecs  VisitRequestForm  InquiryForm   (dumb)
       usePropertyDetail.ts (facade; un 404 es "ya no está disponible", no un error)
+      usePropertyContact.ts (facade de solicitar visita y enviar consulta)
     agent/
       properties-admin/
         containers/  AgentPropertiesPage.tsx (smart)
@@ -91,7 +92,8 @@ frontend/src/
 | Smart (container) | Dumbs que usa |
 |---|---|
 | `CatalogPage`: filtros en la URL, catálogo de listing vía `useCatalog` | `PropertyFilters` (`onFiltersChange`), `SortSelect` (`onSortChange`), `PropertyCardList`, `PropertyGridSkeleton`, `Pagination` |
-| `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `FavoriteControl`, `VisitRequestForm` (`onSubmitRequest`) |
+| `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `FavoriteControl`, `PropertyContactSection` |
+| `PropertyContactSection` | `VisitRequestForm` (`onSubmitRequest`), `InquiryForm` (`onSubmitInquiry`) |
 | `NotificationsPage` | `NotificationList` (`onMarkRead`), `Pagination` |
 | `FavoritesPage`, `FavoriteControl` | `FavoriteList` (`onRemove`), `FavoriteToggle` (`onToggle`), `Pagination` |
 | `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `StatusFilter` (`onStatusChange`) |
@@ -128,6 +130,12 @@ frontend/src/
 - Ruta `/avisos`, para cualquier usuario con sesión. El filtro "Solo sin leer" y la página viven en la URL.
 - `type` es `string` y no un enum: el contrato pide tolerar tipos nuevos, y el texto ya viene en `message`.
 - El contador de la cabecera se vuelve a pedir cada 60 s, porque los avisos nacen de eventos y nadie le avisa al navegador. Se monta solo con sesión. Si notification no responde, el enlace sigue ahí sin número.
+
+## Consultas y visitas (interesado)
+
+- Se envían desde el detalle, solo con rol `CLIENT` y si la propiedad está `PUBLISHED`. Sin sesión, un enlace lleva a ingresar y vuelve a la misma ficha.
+- **`Idempotency-Key` obligatorio en los POST de visit:** `useIdempotencyKey` reutiliza la clave si se reintenta lo mismo, para que un corte de red no duplique la solicitud, y usa otra si cambió el contenido, porque el servicio responde 422. `crypto.randomUUID` no existe fuera de HTTPS o localhost: `newIdempotencyKey` tiene alternativa para cuando se abre por la IP de la red local.
+- El `datetime-local` da hora local: se manda en UTC con `localInputToUtc`.
 
 ## Sesión y tokens
 

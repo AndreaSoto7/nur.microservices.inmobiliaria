@@ -12,6 +12,7 @@ import { FavoriteControl } from '../../favorites/containers/FavoriteControl'
 import { ImageGallery } from '../components/ImageGallery'
 import { PropertySpecs } from '../components/PropertySpecs'
 import { usePropertyDetail } from '../usePropertyDetail'
+import { PropertyContactSection } from './PropertyContactSection'
 
 /** Smart: lee el id de la ruta y compone la galería y la ficha. */
 export function PropertyDetailPage() {
@@ -67,6 +68,7 @@ export function PropertyDetailPage() {
               )}
               <PropertySpecs property={property} />
               <FavoriteControl propertyId={property.id} propertyStatus={property.status} />
+              <PropertyContactSection propertyId={property.id} propertyStatus={property.status} />
             </aside>
           </div>
         </article>
