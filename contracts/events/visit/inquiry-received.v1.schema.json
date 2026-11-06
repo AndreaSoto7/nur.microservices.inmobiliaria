@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inmobiliaria.local/contracts/events/visit/inquiry-received.v1.schema.json",
+  "title": "InquiryReceived v1 (payload)",
+  "description": "Un cliente envió una consulta sobre una propiedad publicada. No contiene el mensaje ni los datos de contacto.",
+  "type": "object",
+  "required": [
+    "inquiryId",
+    "propertyId",
+    "clientId",
+    "agentId"
+  ],
+  "properties": {
+    "propertyId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "clientId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "agentId": {
+      "$ref": "#/$defs/uuid"
+    },
+    "inquiryId": {
+      "$ref": "#/$defs/uuid",
+      "description": "Coincide con aggregateId del envelope."
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    }
+  },
+  "examples": [
+    {
+      "propertyId": "3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01",
+      "clientId": "81b4586e-348a-48ba-bc93-93341e3b0b4c",
+      "agentId": "8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "inquiryId": "5142a8be-97ea-479b-9a40-02162994fb36"
+    }
+  ]
+}

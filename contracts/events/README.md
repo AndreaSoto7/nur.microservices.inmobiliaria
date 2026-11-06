@@ -79,4 +79,5 @@ Cuando visit defina los schemas de `InquiryReceived`, `VisitScheduled`, `VisitRe
 - [x] [`visit/visit-rejected.v1.schema.json`](visit/visit-rejected.v1.schema.json)
 - [x] [`visit/visit-cancelled.v1.schema.json`](visit/visit-cancelled.v1.schema.json)
 - [x] [`visit/visit-completed.v1.schema.json`](visit/visit-completed.v1.schema.json)
+- [x] [`visit/inquiry-received.v1.schema.json`](visit/inquiry-received.v1.schema.json)
 - [ ] El resto se crea con `/nuevo-evento` cuando el servicio productor lo implemente.

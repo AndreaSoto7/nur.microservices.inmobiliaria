@@ -3,7 +3,7 @@ info:
   title: visit-service
   version: 0.1.0
   description: |
-    Propuesta inicial para solicitar y consultar una visita.
+    API de consultas, solicitudes y gestión de visitas.
     La relación con Listing se verifica en la copia local alimentada por listing.property.events.
     Identity emite el access token RS256. Visit verifica firma con JWKS, kid, exp,
     iss=identity-service, aud=inmobiliaria y typ=at+jwt.
@@ -13,9 +13,96 @@ servers:
 security:
   - bearerAuth: []
 tags:
+  - name: inquiries
   - name: visits
   - name: health
 paths:
+  /api/v1/inquiries:
+    post:
+      tags: [inquiries]
+      operationId: sendInquiry
+      summary: Enviar una consulta sobre una propiedad publicada
+      description: |
+        Requiere rol CLIENT. La propiedad debe figurar como PUBLISHED en la copia
+        local de Visit. El cliente proviene del JWT y el agente de la propiedad.
+        Si no hay una oportunidad abierta para el par cliente y propiedad, se abre una.
+        La misma clave y los mismos datos devuelven el resultado original durante 24 horas.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SendInquiry'}
+      responses:
+        '201':
+          description: Consulta registrada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+            Location:
+              required: true
+              schema: {type: string}
+              example: /api/v1/inquiries/05de258b-be6c-4f61-b6ac-ac67cc961b03
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CreatedInquiry'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: PROPERTY_NOT_FOUND si la propiedad no está en la copia local.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: PROPERTY_UNAVAILABLE si la propiedad no está publicada.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/inquiries/{inquiryId}:
+    get:
+      tags: [inquiries]
+      operationId: getInquiryById
+      summary: Consultar el detalle de una consulta
+      description: Solo el cliente que la envió o el agente asignado puede verla.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: inquiryId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      responses:
+        '200':
+          description: Detalle de la consulta.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Inquiry'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: INQUIRY_NOT_FOUND si la consulta no existe o el usuario no participa en ella.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/visits:
     post:
       tags: [visits]
@@ -74,7 +161,7 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
               example:
                 type: https://inmobiliaria.local/problems/property-not-found
-                title: Propiedad no disponible para solicitar visita
+                title: Propiedad no encontrada
                 status: 404
                 code: PROPERTY_NOT_FOUND
                 correlationId: request-123
@@ -552,6 +639,40 @@ components:
         propertyId: {$ref: '#/components/schemas/Uuid'}
         proposedAt: {$ref: '#/components/schemas/UtcDateTime'}
         clientNote: {type: string, maxLength: 500}
+    InquiryFields:
+      type: object
+      required: [propertyId, contactName, contactEmail, message]
+      properties:
+        propertyId: {$ref: '#/components/schemas/Uuid'}
+        contactName: {type: string, minLength: 1, maxLength: 150, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+        contactEmail: {type: string, format: email, maxLength: 254, pattern: '^[^\s\u0000]+$'}
+        contactPhone: {type: string, minLength: 1, maxLength: 30, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+        message: {type: string, minLength: 1, maxLength: 2000, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+    SendInquiry:
+      allOf:
+        - $ref: '#/components/schemas/InquiryFields'
+      unevaluatedProperties: false
+      example:
+        propertyId: 3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
+        contactName: María Pérez
+        contactEmail: maria@example.com
+        message: ¿Se permiten mascotas en esta propiedad?
+    CreatedInquiry:
+      type: object
+      required: [id]
+      additionalProperties: false
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+      example: {id: 05de258b-be6c-4f61-b6ac-ac67cc961b03}
+    Inquiry:
+      allOf:
+        - $ref: '#/components/schemas/InquiryFields'
+        - type: object
+          required: [id, createdAt]
+          properties:
+            id: {$ref: '#/components/schemas/Uuid'}
+            createdAt: {$ref: '#/components/schemas/UtcDateTime'}
+      unevaluatedProperties: false
     CreatedVisit:
       type: object
       required: [id]
