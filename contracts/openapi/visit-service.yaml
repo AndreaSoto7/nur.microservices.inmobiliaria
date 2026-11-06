@@ -56,6 +56,55 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/leads/{leadId}/close:
+    post:
+      tags: [leads]
+      operationId: closeLead
+      summary: Cerrar una oportunidad como ganada o perdida
+      description: |
+        Solo el AGENT asignado puede cerrar un Lead OPEN.
+        Se requiere outcome y la nota de cierre es opcional.
+        Repetir la misma clave con los mismos datos devuelve el resultado original durante 24 horas.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/LeadId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CloseLead'}
+      responses:
+        '200':
+          description: Oportunidad cerrada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ClosedLead'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: LEAD_NOT_FOUND si la oportunidad no existe o pertenece a otro agente.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: LEAD_NOT_OPEN si la oportunidad ya está cerrada.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/leads/{leadId}/follow-ups:
     post:
       tags: [leads]
@@ -892,6 +941,26 @@ components:
       additionalProperties: false
       properties:
         id: {$ref: '#/components/schemas/Uuid'}
+    LeadOutcome:
+      type: string
+      enum: [WON, LOST]
+    CloseLead:
+      type: object
+      additionalProperties: false
+      required: [outcome]
+      properties:
+        outcome: {$ref: '#/components/schemas/LeadOutcome'}
+        note: {type: string, minLength: 1, maxLength: 2000, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+      example: {outcome: WON, note: El cliente confirmó que desea continuar.}
+    ClosedLead:
+      type: object
+      additionalProperties: false
+      required: [id, status, outcome]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, const: CLOSED}
+        outcome: {$ref: '#/components/schemas/LeadOutcome'}
+      example: {id: 05de258b-be6c-4f61-b6ac-ac67cc961b03, status: CLOSED, outcome: WON}
     LeadStatus:
       type: string
       enum: [OPEN, CLOSED]
@@ -906,7 +975,7 @@ components:
         status: {$ref: '#/components/schemas/LeadStatus'}
         openedAt: {$ref: '#/components/schemas/UtcDateTime'}
         closedAt: {$ref: '#/components/schemas/UtcDateTime'}
-        outcome: {type: string, enum: [WON, LOST]}
+        outcome: {$ref: '#/components/schemas/LeadOutcome'}
     LeadPage:
       type: object
       additionalProperties: false

@@ -45,7 +45,7 @@ Esta es la fuente de verdad de los eventos entre servicios. Si un evento no est�
 | `VisitCompleted` | 1 | visit.visit.events | visit | audit* | La visita se realizó |
 | `LeadOpened` | 1 | visit.lead.events | visit | audit* | Una consulta o solicitud de visita abre una oportunidad |
 | [`LeadFollowUpRegistered`](visit/lead-follow-up-registered.v1.schema.json) | 1 | visit.lead.events | visit | audit* | El agente registra un seguimiento de la oportunidad |
-| `LeadClosed` | 1 | visit.lead.events | visit | listing, audit* | El agente cierra la oportunidad como ganada (`WON`) o perdida (`LOST`) |
+| [`LeadClosed`](visit/lead-closed.v1.schema.json) | 1 | visit.lead.events | visit | listing, audit* | El agente cierra la oportunidad como ganada (`WON`) o perdida (`LOST`) |
 
 ## Políticas: eventos que desencadenan comandos en otro servicio
 
@@ -81,4 +81,5 @@ Cuando visit defina los schemas de `InquiryReceived`, `VisitScheduled`, `VisitRe
 - [x] [`visit/visit-completed.v1.schema.json`](visit/visit-completed.v1.schema.json)
 - [x] [`visit/inquiry-received.v1.schema.json`](visit/inquiry-received.v1.schema.json)
 - [x] [`visit/lead-follow-up-registered.v1.schema.json`](visit/lead-follow-up-registered.v1.schema.json)
+- [x] [`visit/lead-closed.v1.schema.json`](visit/lead-closed.v1.schema.json)
 - [ ] El resto se crea con `/nuevo-evento` cuando el servicio productor lo implemente.
