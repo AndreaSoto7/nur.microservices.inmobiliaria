@@ -11,6 +11,7 @@
 | docs | ADR 0007: se retoma el servicio, con avisos solo dentro de la app. Diseño, base y progreso | #73 |
 | feat | Contrato OpenAPI (listar y marcar como leído) y consumidores en el catálogo de eventos | #74 |
 | chore | Scaffold: config, `/health` y `/health/ready`, registro en Consul con baja, problem+json, correlation-id, logs JSON, Dockerfile y lint | #75 |
+| feat | Dominio (`Notification`) y casos de uso: políticas ante eventos, marcar como leído y listar | este PR |
 
 ## Pendientes
 
@@ -22,8 +23,8 @@
 
 **Avisos (enunciado: solicitudes, visitas y cambios relevantes)**
 
-- [ ] Dominio: `Notification`, con sus reglas y tests
-- [ ] Casos de uso: `NotifyOnEvent`, `MarkNotificationRead` y `ListNotifications`
+- [x] Dominio: `Notification`, con sus reglas y tests
+- [x] Casos de uso: `NotifyOnEvent`, `MarkNotificationRead` y `ListNotifications`
 - [ ] Persistencia y API: listar mis avisos y marcarlos como leídos
 - [ ] Consumir `UserRegistered`, `VisitRequested` y `PropertyReserved` (idempotente, con DLQ)
 
