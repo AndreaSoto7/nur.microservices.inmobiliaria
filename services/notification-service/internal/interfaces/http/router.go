@@ -12,8 +12,11 @@ type ReadinessCheck func(ctx context.Context) error
 
 // Dependencies es lo que la API necesita del resto del servicio.
 type Dependencies struct {
-	Logger *slog.Logger
-	Ready  ReadinessCheck
+	Logger    *slog.Logger
+	Ready     ReadinessCheck
+	Validator TokenValidator
+	List      ListUseCase
+	MarkRead  MarkReadUseCase
 }
 
 // NewRouter arma las rutas de la API.
@@ -21,6 +24,8 @@ func NewRouter(deps Dependencies) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health)
 	mux.HandleFunc("GET /health/ready", readiness(deps))
+	mux.HandleFunc("GET /api/v1/notifications", requireUser(deps, listNotifications(deps)))
+	mux.HandleFunc("PATCH /api/v1/notifications/{notificationId}", requireUser(deps, markNotificationRead(deps)))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, r, problemNotFound)
 	})

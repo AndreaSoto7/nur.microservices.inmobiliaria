@@ -16,8 +16,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/application"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/config"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/consul"
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/jwks"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/postgres"
 	httpapi "github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/interfaces/http"
 )
@@ -71,9 +73,14 @@ func run(logger *slog.Logger) error {
 	}
 
 	stopRegistration := startRegistration(ctx, cfg, logger)
+	keys := jwks.NewKeySet(cfg.JWKSURL, time.Now)
+	go keys.Run(ctx, jwks.RefreshInterval, logger)
 	router := httpapi.NewRouter(httpapi.Dependencies{
-		Logger: logger,
-		Ready:  repository.Ping,
+		Logger:    logger,
+		Ready:     repository.Ping,
+		Validator: jwks.NewValidator(keys, cfg.JWTIssuer, cfg.JWTAudience, time.Now),
+		List:      application.NewListNotifications(repository),
+		MarkRead:  application.NewMarkNotificationRead(repository, time.Now),
 	})
 
 	logger.Info("servicio escuchando", "port", cfg.ServicePort)

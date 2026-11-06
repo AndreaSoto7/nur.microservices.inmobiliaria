@@ -18,8 +18,12 @@ type problem struct {
 }
 
 var (
-	problemNotFound = problem{http.StatusNotFound, "NOT_FOUND", "No encontrado", "El recurso solicitado no existe."}
-	problemInternal = problem{http.StatusInternalServerError, "INTERNAL_ERROR", "Error interno", "Ocurrió un error inesperado."}
+	problemValidation           = problem{http.StatusBadRequest, "VALIDATION_ERROR", "Datos inválidos", "Uno o más campos no son válidos."}
+	problemInvalidToken         = problem{http.StatusUnauthorized, "AUTH_INVALID_TOKEN", "Token inválido", "El token de acceso no es válido."}
+	problemNotificationNotFound = problem{http.StatusNotFound, "NOTIFICATION_NOT_FOUND", "Aviso no encontrado", "El aviso no existe."}
+	problemUnavailable          = problem{http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "Servicio no disponible", "No se pudo validar el acceso en este momento."}
+	problemNotFound             = problem{http.StatusNotFound, "NOT_FOUND", "No encontrado", "El recurso solicitado no existe."}
+	problemInternal             = problem{http.StatusInternalServerError, "INTERNAL_ERROR", "Error interno", "Ocurrió un error inesperado."}
 )
 
 type fieldError struct {
