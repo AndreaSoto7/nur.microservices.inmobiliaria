@@ -189,6 +189,9 @@ func TestListRejectsInvalidParameters(t *testing.T) {
 	}{
 		{"?page=abc", "page"},
 		{"?page=0", "page"},
+		// (page-1)*size desbordaría y daría un OFFSET negativo: un usuario podría provocar 500 a voluntad.
+		{"?page=9223372036854775807&size=2", "page"},
+		{"?page=1000001", "page"},
 		{"?size=abc", "size"},
 		{"?size=0", "size"},
 		{"?size=101", "size"},
@@ -282,11 +285,24 @@ func TestMarkRead(t *testing.T) {
 	}
 }
 
+func TestMarkReadNormalizesTheID(t *testing.T) {
+	a := newAPI(fakeValidator{})
+
+	rec := a.do(http.MethodPatch, listPath+"/"+strings.ToUpper(notificationID), `{"read":true}`, nil)
+
+	if rec.Code != http.StatusNoContent || a.markRead.received.NotificationID != notificationID {
+		t.Errorf("status = %d, id = %q", rec.Code, a.markRead.received.NotificationID)
+	}
+}
+
 func TestMarkReadRejectsInvalidRequests(t *testing.T) {
 	tests := []struct {
 		name, id, body, field string
 	}{
 		{"id que no es UUID", "abc", `{"read":true}`, "notificationId"},
+		// uuid.Validate los acepta y PostgreSQL no: terminarían en un 500.
+		{"id con prefijo urn", "urn:uuid:" + notificationID, `{"read":true}`, "notificationId"},
+		{"id sin guiones", "7b1e4c2a9d3f4a6b8c210f5e6d7c8b9a", `{"read":true}`, "notificationId"},
 		{"read en false", notificationID, `{"read":false}`, "read"},
 		{"sin read", notificationID, `{}`, "read"},
 		{"read de otro tipo", notificationID, `{"read":"true"}`, "read"},

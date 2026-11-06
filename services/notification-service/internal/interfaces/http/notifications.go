@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -79,8 +80,8 @@ func parseListQuery(r *http.Request) (application.ListNotificationsQuery, *field
 
 	if raw := values.Get("page"); raw != "" {
 		page, err := strconv.Atoi(raw)
-		if err != nil || page < 1 {
-			return query, &fieldError{Field: "page", Message: "Debe ser un entero mayor o igual a 1."}
+		if err != nil || page < 1 || page > application.MaxPage {
+			return query, &fieldError{Field: "page", Message: "Debe ser un entero entre 1 y 1000000."}
 		}
 		query.Page = page
 	}
@@ -146,8 +147,8 @@ type markReadRequest struct {
 
 func markNotificationRead(deps Dependencies) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("notificationId")
-		if err := uuid.Validate(id); err != nil {
+		id, valid := canonicalUUID(r.PathValue("notificationId"))
+		if !valid {
 			writeProblem(w, r, problemValidation, fieldError{Field: "notificationId", Message: "Debe ser un UUID."})
 			return
 		}
@@ -169,6 +170,16 @@ func markNotificationRead(deps Dependencies) http.HandlerFunc {
 			writeInternal(deps, w, r, err)
 		}
 	}
+}
+
+// canonicalUUID acepta solo la forma con guiones: uuid.Parse admite otras (urn:uuid:, sin guiones) que
+// PostgreSQL rechazaría, y terminarían en un 500.
+func canonicalUUID(value string) (string, bool) {
+	parsed, err := uuid.Parse(value)
+	if err != nil || parsed.String() != strings.ToLower(value) {
+		return "", false
+	}
+	return parsed.String(), true
 }
 
 func readsTrue(w http.ResponseWriter, r *http.Request) bool {

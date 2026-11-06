@@ -29,6 +29,7 @@ const (
 	readTimeout       = 15 * time.Second
 	writeTimeout      = 30 * time.Second
 	idleTimeout       = 120 * time.Second
+	maxHeaderBytes    = 64 << 10
 	reRegisterEvery   = 60 * time.Second
 	startupRetryLimit = 30 * time.Second
 	startupRetryEvery = 2 * time.Second
@@ -153,6 +154,7 @@ func serve(ctx context.Context, listener net.Listener, handler http.Handler, cle
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
 		IdleTimeout:       idleTimeout,
+		MaxHeaderBytes:    maxHeaderBytes,
 	}
 
 	serveErr := make(chan error, 1)
