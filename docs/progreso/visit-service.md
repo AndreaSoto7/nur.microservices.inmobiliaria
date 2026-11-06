@@ -55,3 +55,8 @@
 
 - [x] `PropertyReserved` → rechazar las visitas `REQUESTED` de esa propiedad (`reason: PROPERTY_RESERVED`, `actor: SYSTEM`)
 - [x] `PropertySold` / `PropertyRented` → rechazar las `REQUESTED` y cancelar las `SCHEDULED` futuras (`reason: PROPERTY_UNAVAILABLE`, `actor: SYSTEM`)
+
+**Verificación de integración**
+
+- [x] Visit y Listing real (copia local de main, a9978a6), con Kafka y dos bases PostgreSQL temporales. Listing publicó una propiedad y Visit la recibió. Al cerrar una oportunidad como WON, Listing la reservó; Visit rechazó 2 solicitudes pendientes y mantuvo 1 visita programada. Al vender la propiedad en Listing, Visit canceló esa visita futura. Se usaron JWT de prueba con un JWKS temporal.
+- [ ] Verificar el acceso a Visit por el Gateway con tokens emitidos por Identity.
