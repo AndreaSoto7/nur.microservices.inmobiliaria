@@ -179,11 +179,11 @@ func TestDifferentEventsCreateDifferentNotifications(t *testing.T) {
 	}
 }
 
-func TestInvalidEventDataIsReportedAsPermanent(t *testing.T) {
+func TestInvalidEventDataIsPermanent(t *testing.T) {
 	err := newPolicies(newStore()).OnUserRegistered(context.Background(), eventOne, "no-es-uuid")
 
-	if !errors.Is(err, domain.ErrInvalidNotification) {
-		t.Errorf("error = %v, want ErrInvalidNotification", err)
+	if !IsPermanent(err) {
+		t.Errorf("error = %v: reintentarlo no lo arregla", err)
 	}
 }
 
@@ -193,7 +193,7 @@ func TestStoreFailureIsReturnedForRetry(t *testing.T) {
 
 	err := newPolicies(store).OnUserRegistered(context.Background(), eventOne, userA)
 
-	if err == nil || errors.Is(err, domain.ErrInvalidNotification) {
+	if err == nil || IsPermanent(err) {
 		t.Errorf("error = %v: debe poder reintentarse", err)
 	}
 }
@@ -267,7 +267,7 @@ func TestListUnreadOnly(t *testing.T) {
 	store := newStore()
 	read := seeded(t, store, userA)
 	unread := seeded(t, store, userA)
-	store.items[read].MarkRead(testNow)
+	_ = store.items[read].MarkReadBy(userA, testNow)
 
 	page, err := NewListNotifications(store).Handle(context.Background(), ListNotificationsQuery{UserID: userA, Page: 1, Size: 20, UnreadOnly: true})
 	if err != nil {
@@ -321,5 +321,36 @@ func TestListDoesNotReturnAnotherPagesItems(t *testing.T) {
 	}
 	if slices.ContainsFunc(first.Items, func(view NotificationView) bool { return view.ID == second.Items[0].ID }) {
 		t.Error("un aviso aparece en dos páginas")
+	}
+}
+
+// Sin validar, size=0 dividiría por cero al calcular las páginas.
+func TestListRejectsInvalidPagination(t *testing.T) {
+	tests := []struct {
+		name       string
+		page, size int
+	}{
+		{"página cero", 0, 20},
+		{"página negativa", -1, 20},
+		{"tamaño cero", 1, 0},
+		{"tamaño negativo", 1, -1},
+		{"tamaño sobre el máximo", 1, MaxPageSize + 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewListNotifications(newStore()).Handle(context.Background(), ListNotificationsQuery{UserID: userA, Page: tt.page, Size: tt.size})
+
+			if !errors.Is(err, ErrInvalidPagination) {
+				t.Errorf("error = %v, want ErrInvalidPagination", err)
+			}
+		})
+	}
+}
+
+func TestListAcceptsTheMaximumSize(t *testing.T) {
+	_, err := NewListNotifications(newStore()).Handle(context.Background(), ListNotificationsQuery{UserID: userA, Page: 1, Size: MaxPageSize})
+	if err != nil {
+		t.Errorf("error = %v", err)
 	}
 }

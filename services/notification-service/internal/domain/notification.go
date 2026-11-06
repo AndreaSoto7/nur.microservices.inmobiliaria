@@ -60,24 +60,25 @@ func NewNotification(params NewNotificationParams, now time.Time) (*Notification
 	if !known {
 		return nil, fmt.Errorf("%w: tipo %q", ErrInvalidNotification, params.Type)
 	}
-	if err := uuid.Validate(params.RecipientID); err != nil {
+	recipientID, err := normalizeUUID(params.RecipientID)
+	if err != nil || recipientID == "" {
 		return nil, fmt.Errorf("%w: destinatario", ErrInvalidNotification)
 	}
-	for name, reference := range map[string]string{"propiedad": params.PropertyID, "visita": params.VisitID} {
-		if reference == "" {
-			continue
-		}
-		if err := uuid.Validate(reference); err != nil {
-			return nil, fmt.Errorf("%w: %s", ErrInvalidNotification, name)
-		}
+	propertyID, err := normalizeUUID(params.PropertyID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: propiedad", ErrInvalidNotification)
+	}
+	visitID, err := normalizeUUID(params.VisitID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: visita", ErrInvalidNotification)
 	}
 	return &Notification{
 		id:          uuid.NewString(),
-		recipientID: params.RecipientID,
+		recipientID: recipientID,
 		kind:        params.Type,
 		message:     message,
-		propertyID:  params.PropertyID,
-		visitID:     params.VisitID,
+		propertyID:  propertyID,
+		visitID:     visitID,
 		createdAt:   now,
 	}, nil
 }
@@ -109,15 +110,18 @@ func Reconstitute(params ReconstituteParams) *Notification {
 	}
 }
 
-// MarkRead marca el aviso como leído. Es idempotente: conserva la primera fecha.
-func (n *Notification) MarkRead(now time.Time) {
+// MarkReadBy marca el aviso como leído. Es idempotente: conserva la primera fecha. Solo puede hacerlo su
+// destinatario: a cualquier otro le responde ErrNotificationNotFound, para no revelar que el aviso existe.
+func (n *Notification) MarkReadBy(userID string, now time.Time) error {
+	normalized, err := normalizeUUID(userID)
+	if err != nil || normalized != n.recipientID {
+		return ErrNotificationNotFound
+	}
 	if n.readAt == nil {
 		n.readAt = &now
 	}
+	return nil
 }
-
-// BelongsTo indica si el aviso es de ese usuario.
-func (n *Notification) BelongsTo(userID string) bool { return n.recipientID == userID }
 
 // ID devuelve el identificador del aviso.
 func (n *Notification) ID() string { return n.id }
@@ -143,6 +147,19 @@ func (n *Notification) CreatedAt() time.Time { return n.createdAt }
 // ReadAt devuelve una copia de la fecha de lectura, o nil si no se leyó: el aggregate no expone su estado
 // para que se cambie desde afuera.
 func (n *Notification) ReadAt() *time.Time { return copyTime(n.readAt) }
+
+// normalizeUUID deja cada UUID en su forma canónica: el destinatario se compara contra el sub del JWT,
+// y el mismo UUID en otro formato dejaría al aviso sin dueño. Un valor vacío sigue vacío.
+func normalizeUUID(value string) (string, error) {
+	if value == "" {
+		return "", nil
+	}
+	parsed, err := uuid.Parse(value)
+	if err != nil {
+		return "", fmt.Errorf("UUID inválido: %w", err)
+	}
+	return parsed.String(), nil
+}
 
 func copyTime(value *time.Time) *time.Time {
 	if value == nil {

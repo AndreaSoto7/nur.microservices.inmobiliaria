@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -26,20 +25,15 @@ func NewMarkNotificationRead(repository domain.NotificationRepository, now func(
 	return &MarkNotificationRead{repository: repository, now: now}
 }
 
-// Handle responde domain.ErrNotificationNotFound también si el aviso es de otro usuario: no se revela
-// que existe.
+// Handle responde domain.ErrNotificationNotFound si el aviso no existe o es de otro usuario.
 func (h *MarkNotificationRead) Handle(ctx context.Context, command MarkNotificationReadCommand) error {
 	notification, err := h.repository.FindByID(ctx, command.NotificationID)
-	if errors.Is(err, domain.ErrNotificationNotFound) {
-		return domain.ErrNotificationNotFound
-	}
 	if err != nil {
 		return fmt.Errorf("cargar el aviso: %w", err)
 	}
-	if !notification.BelongsTo(command.UserID) {
-		return domain.ErrNotificationNotFound
+	if err := notification.MarkReadBy(command.UserID, h.now()); err != nil {
+		return fmt.Errorf("marcar el aviso: %w", err)
 	}
-	notification.MarkRead(h.now())
 	if err := h.repository.Save(ctx, notification); err != nil {
 		return fmt.Errorf("guardar el aviso: %w", err)
 	}

@@ -94,7 +94,9 @@ func TestNewNotificationRejectsInvalidData(t *testing.T) {
 func TestMarkReadSetsTheDate(t *testing.T) {
 	notification := newValid(t)
 
-	notification.MarkRead(now.Add(time.Hour))
+	if err := notification.MarkReadBy(recipient, now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
 
 	if notification.ReadAt() == nil || !notification.ReadAt().Equal(now.Add(time.Hour)) {
 		t.Errorf("ReadAt = %v", notification.ReadAt())
@@ -103,9 +105,9 @@ func TestMarkReadSetsTheDate(t *testing.T) {
 
 func TestMarkReadTwiceKeepsTheFirstDate(t *testing.T) {
 	notification := newValid(t)
-	notification.MarkRead(now.Add(time.Hour))
+	_ = notification.MarkReadBy(recipient, now.Add(time.Hour))
 
-	notification.MarkRead(now.Add(2 * time.Hour))
+	_ = notification.MarkReadBy(recipient, now.Add(2*time.Hour))
 
 	if !notification.ReadAt().Equal(now.Add(time.Hour)) {
 		t.Errorf("ReadAt = %v: debe conservar la primera fecha", notification.ReadAt())
@@ -114,7 +116,7 @@ func TestMarkReadTwiceKeepsTheFirstDate(t *testing.T) {
 
 func TestReadAtCannotBeChangedFromOutside(t *testing.T) {
 	notification := newValid(t)
-	notification.MarkRead(now)
+	_ = notification.MarkReadBy(recipient, now)
 
 	*notification.ReadAt() = now.Add(time.Hour)
 
@@ -123,14 +125,37 @@ func TestReadAtCannotBeChangedFromOutside(t *testing.T) {
 	}
 }
 
-func TestBelongsTo(t *testing.T) {
+// Es "no encontrado" y no "prohibido": no se revela que el aviso de otro usuario existe.
+func TestOnlyTheRecipientCanMarkRead(t *testing.T) {
 	notification := newValid(t)
 
-	if !notification.BelongsTo(recipient) {
-		t.Error("no reconoce a su destinatario")
+	err := notification.MarkReadBy(property, now)
+
+	if !errors.Is(err, ErrNotificationNotFound) {
+		t.Errorf("error = %v, want ErrNotificationNotFound", err)
 	}
-	if notification.BelongsTo(property) {
-		t.Error("reconoce a otro usuario")
+	if notification.ReadAt() != nil {
+		t.Error("otro usuario marcó el aviso")
+	}
+}
+
+// BelongsTo compara contra el sub del JWT: el mismo UUID en otro formato no debe dejar el aviso sin dueño.
+func TestUUIDsAreNormalized(t *testing.T) {
+	notification, err := NewNotification(NewNotificationParams{
+		RecipientID: "6F1C2A7E-1B2D-4C8E-9F10-5A6B7C8D9E01",
+		Type:        TypeVisitRequested,
+		PropertyID:  "urn:uuid:3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01",
+		VisitID:     "9a8b7c6d5e4f4a3b8c2d1e0f9a8b7c6d",
+	}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if notification.RecipientID() != recipient || notification.PropertyID() != property || notification.VisitID() != visit {
+		t.Errorf("IDs = %s, %s, %s", notification.RecipientID(), notification.PropertyID(), notification.VisitID())
+	}
+	if err := notification.MarkReadBy(recipient, now); err != nil {
+		t.Errorf("MarkReadBy() error = %v", err)
 	}
 }
 

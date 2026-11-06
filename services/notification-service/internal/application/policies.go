@@ -3,6 +3,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -39,8 +40,13 @@ func NewNotifyOnEvent(store IdempotentNotificationStore, now func() time.Time) *
 	return &NotifyOnEvent{store: store, now: now}
 }
 
-// Handle crea el aviso. Un error que envuelve domain.ErrInvalidNotification es permanente: reintentar
-// no lo arregla. Cualquier otro es técnico y se puede reintentar.
+// IsPermanent indica un error que reintentar no arregla: el evento trae datos inválidos. Cualquier otro
+// es técnico y se puede reintentar.
+func IsPermanent(err error) bool {
+	return errors.Is(err, domain.ErrInvalidNotification)
+}
+
+// Handle crea el aviso. Los errores se clasifican con IsPermanent.
 func (h *NotifyOnEvent) Handle(ctx context.Context, command NotifyOnEventCommand) error {
 	notification, err := domain.NewNotification(domain.NewNotificationParams{
 		RecipientID: command.RecipientID,
