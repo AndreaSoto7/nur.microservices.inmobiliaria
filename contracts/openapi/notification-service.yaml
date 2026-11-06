@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: notification-service
-  version: 1.0.1
+  version: 1.0.2
   description: |
     Avisos dentro de la app para agentes y clientes (ADR 0007). Se crean a partir de eventos de Kafka: la API solo los lee y los marca como leídos.
     Cada usuario ve solo los suyos: el destinatario es el `sub` del access token.
@@ -31,7 +31,7 @@ paths:
         - name: page
           in: query
           description: Empieza en 1.
-          schema: { type: integer, minimum: 1, default: 1 }
+          schema: { type: integer, minimum: 1, maximum: 1000000, default: 1 }
         - name: size
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
