@@ -59,4 +59,4 @@
 **Verificación de integración**
 
 - [x] Visit y Listing real (copia local de main, a9978a6), con Kafka y dos bases PostgreSQL temporales. Listing publicó una propiedad y Visit la recibió. Al cerrar una oportunidad como WON, Listing la reservó; Visit rechazó 2 solicitudes pendientes y mantuvo 1 visita programada. Al vender la propiedad en Listing, Visit canceló esa visita futura. Se usaron JWT de prueba con un JWKS temporal.
-- [ ] Verificar el acceso a Visit por el Gateway con tokens emitidos por Identity.
+- [x] Gateway e Identity de main (384a8a1), Visit y Consul en Docker con PostgreSQL temporal. Registro e inicio de sesión por el Gateway con tokens reales de Identity. Con una propiedad de prueba en la copia local, el cliente solicitó y consultó su visita y el agente asignado la programó. Sin access token o con refresh token se obtuvo 401, con un rol sin permiso 403 y para un cliente ajeno 404. Se comprobó el registro automático de Visit y su baja al apagar.

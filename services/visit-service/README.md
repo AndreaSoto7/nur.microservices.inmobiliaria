@@ -78,6 +78,12 @@ docker compose -f compose.dev.yaml up -d --wait
 
 El servicio responde en `http://localhost:8003/health` y PostgreSQL escucha en `127.0.0.1:5435`. Compose guarda los datos en un volumen local. Para detener los contenedores y conservar el volumen, usa `docker compose -f compose.dev.yaml down`.
 
+## Conectar Visit al Gateway
+
+Configura `CONSUL_HTTP_ADDR` con la URL de Consul accesible desde Visit. Visit se registra como `visit-service` al arrancar, y se da de baja al apagar. Consul usa `/health` para comprobar su disponibilidad. Si Visit corre fuera de Docker, usa `SERVICE_ADDRESS` para indicar una dirección accesible desde Consul y el Gateway.
+
+Configura `JWT_JWKS_URL` con la dirección del JWKS de Identity accesible desde Visit. Las peticiones por el Gateway usan el access token de Identity en `Authorization: Bearer <token>`.
+
 ## Migraciones de PostgreSQL desde el host
 
 Crea una base local `visit` en PostgreSQL 17. Configura `DATABASE_URL` en el entorno o en un archivo `.env` a partir de `.env.example`. El ejemplo usa el puerto 5435.

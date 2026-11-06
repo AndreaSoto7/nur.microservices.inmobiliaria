@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { existsSync } from 'node:fs';
 import { AppModule } from './app.module.js';
 import { connectListingConsumer } from './properties/listing-kafka.js';
+import { ConsulRegistrationService } from './shared/discovery/consul-registration.service.js';
 import { OutboxRelay } from './shared/messaging/outbox-relay.js';
 
 async function bootstrap(): Promise<void> {
@@ -28,6 +29,7 @@ async function bootstrap(): Promise<void> {
       logger.log('Consumidor de Listing iniciado', 'VisitKafka');
     }
     await app.listen(port, '0.0.0.0');
+    app.get(ConsulRegistrationService).start(port);
     if (brokers?.length) app.get(OutboxRelay).start(brokers);
   } catch (error) {
     await app.close();

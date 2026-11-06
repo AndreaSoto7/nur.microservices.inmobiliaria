@@ -16,6 +16,7 @@ import { LeadsController } from './leads/presentation/leads.controller.js';
 import { ListingEventsController } from './properties/listing-events.controller.js';
 import { PropertyVisitPolicy } from './properties/property-visit-policy.js';
 import { PropertyProjection } from './properties/property-projection.js';
+import { ConsulRegistrationService } from './shared/discovery/consul-registration.service.js';
 import { HealthController } from './shared/health/health.controller.js';
 import { IdentityGuard } from './shared/identity.guard.js';
 import { OutboxRelay } from './shared/messaging/outbox-relay.js';
@@ -43,6 +44,7 @@ import { VisitsController } from './visits/presentation/visits.controller.js';
   providers: [
     IdentityGuard,
     VisitDatabase,
+    ConsulRegistrationService,
     OutboxRelay,
     PropertyProjection,
     PropertyVisitPolicy,
