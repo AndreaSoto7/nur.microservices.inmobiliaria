@@ -24,20 +24,22 @@ Agentes publican casas y departamentos (venta o alquiler). Los interesados busca
 | identity-service | [`services/identity-service/CLAUDE.md`](services/identity-service/CLAUDE.md) | Django + DRF | @Tiesol | 8001 | `identity` | Registro, login, roles y emisión de JWT RS256 |
 | listing-service | [`services/listing-service/CLAUDE.md`](services/listing-service/CLAUDE.md) | Spring Boot | @AndreaSoto7 | 8002 | `listing` | Propiedades, galería, estados, favoritos y catálogo público (lado query). Reserva al ganarse una oportunidad |
 | visit-service | [`services/visit-service/CLAUDE.md`](services/visit-service/CLAUDE.md) | NestJS | _(completar)_ | 8003 | `visit` | Consultas, visitas y oportunidades (`Lead`). Rechaza o cancela visitas cuando la propiedad se reserva, vende o alquila |
+| notification-service | [`services/notification-service/CLAUDE.md`](services/notification-service/CLAUDE.md) | Go | _(completar)_ | 8005 | `notification` | Avisos dentro de la app ante solicitudes y cambios relevantes, a partir de eventos |
 | audit-service (opcional) | [`services/audit-service/CLAUDE.md`](services/audit-service/CLAUDE.md) | por decidir | _(completar)_ | 8004 | `audit` | Registro de solo inserción de todos los eventos, para `ADMIN` |
 | gateway | [`gateway/CLAUDE.md`](gateway/CLAUDE.md) | Go (propio) | @Tiesol | 8080 | — | Único punto de entrada: ruteo, JWT, CORS, rate limit, balanceo y discovery |
 | frontend | [`frontend/CLAUDE.md`](frontend/CLAUDE.md) | React + Vite + TS | _(completar)_ | 5173 | — | UI para interesados y agentes |
 | infra | [`infra/README.md`](infra/README.md) | Docker Compose | Zona compartida | Kafka 9092 · UI 8090 · Consul UI 8500 | — | Kafka (KRaft), Consul, bases y puertos de depuración |
 
-## Cómo se hablan los servicios ([ADR 0005](docs/adr/0005-realinear-servicios-y-cadenas-de-eventos.md))
+## Cómo se hablan los servicios ([ADR 0005](docs/adr/0005-realinear-servicios-y-cadenas-de-eventos.md) y [0007](docs/adr/0007-retomar-notification-service.md))
 
 ```
-cliente ──HTTP──► gateway ──► identity | listing | visit | audit   (réplicas descubiertas en Consul)
+cliente ──HTTP──► gateway ──► identity | listing | visit | notification | audit   (réplicas descubiertas en Consul)
 
 listing ──listing.property.events──► visit   copia local de propiedades + políticas:
                                              PropertyReserved → rechaza solicitudes pendientes
                                              PropertySold/Rented → rechaza y cancela visitas
 visit   ──visit.lead.events──────────► listing   LeadClosed (WON) → reserva la propiedad
+identity, listing, visit ──eventos────► notification   crea los avisos de cada usuario
 todos   ──todos los topics───────────► audit     (opcional)
 ```
 
@@ -48,7 +50,7 @@ Ningún servicio llama a otro por HTTP. El detalle de cada flecha está en el `C
 | Tema | Archivo |
 |---|---|
 | Enunciado y criterios evaluados | `docs/enunciado.md` |
-| Decisiones de arquitectura | `docs/adr/` (la más reciente sobre alcance: ADR 0005) |
+| Decisiones de arquitectura | `docs/adr/` (las más recientes sobre alcance: ADR 0005 y 0007) |
 | Catálogo de eventos, topics y consumidores | `contracts/events/README.md` |
 | APIs HTTP | `contracts/openapi/<servicio>-service.yaml` |
 | Esquemas de base de datos | `docs/base-de-datos/` |
@@ -103,7 +105,7 @@ Los términos propios de un solo servicio están en su `CLAUDE.md`.
 - **Ramas:** `<tipo>/<scope>-<descripcion-corta>` (`feat/listing-publicar-propiedad`).
 - **Commits:** Conventional Commits, `tipo(scope): descripción en español`.
   - Tipos: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`.
-  - Scopes: `identity`, `listing`, `visit`, `audit`, `gateway`, `frontend`, `contracts`, `infra`, `docs`, `claude`.
+  - Scopes: `identity`, `listing`, `visit`, `notification`, `audit`, `gateway`, `frontend`, `contracts`, `infra`, `docs`, `claude`.
 - **Antes de subir:** `git fetch origin` y `git rebase origin/main`. En tu rama, `git push --force-with-lease`. Nunca force push a `main` ni a ramas ajenas.
 - **PRs chicos** (idealmente menos de 400 líneas) y de un solo componente, con la plantilla de `.github/`.
 - **Lockfiles** se commitean. No reformatees archivos que no tocaste.

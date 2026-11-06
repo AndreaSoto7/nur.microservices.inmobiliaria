@@ -39,6 +39,7 @@ paths:
 | identity (Django) | `pytest` + `pytest-django` | `ruff check .` · `ruff format .` |
 | listing (Spring) | JUnit 5, AssertJ, Mockito, `@WebMvcTest`, `@DataJpaTest` → `./mvnw test` | Spotless (si se adopta) |
 | visit (NestJS) | Jest → `npm run test` | ESLint + Prettier → `npm run lint` |
+| notification (Go) | `go test ./...`: dominio y aplicación puros, `httptest`, y el repositorio contra PostgreSQL con `TEST_DATABASE_URL` | `gofmt`, `go vet`, `golangci-lint run` |
 | audit (opcional) | Según el stack elegido (`services/audit-service/CLAUDE.md`) | Según el stack elegido |
 | gateway (Go) | `go test ./...` con `net/http/httptest`: servicios falsos y discovery falso, sin Consul real | `gofmt`, `go vet`, `golangci-lint run` |
 | frontend (React) | Vitest + React Testing Library → `npm run test` | ESLint + Prettier → `npm run lint` |

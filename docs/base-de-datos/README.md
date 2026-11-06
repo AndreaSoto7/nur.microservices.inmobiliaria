@@ -14,6 +14,7 @@ Diseño de referencia de la base de cada servicio, derivado del event storming y
 | identity-service | `identity` | `users`, `used_refresh_tokens`, `revoked_refresh_families`, `outbox` | [identity-service.md](identity-service.md) (ya implementado) |
 | listing-service | `listing` | `properties`, `property_features`, `property_images`, `favorites`, `property_catalog`, `outbox`, `processed_events` | [listing-service.md](listing-service.md) |
 | visit-service | `visit` | `property_snapshots`, `inquiries`, `visits`, `leads`, `lead_follow_ups`, `outbox`, `processed_events` | [visit-service.md](visit-service.md) |
+| notification-service | `notification` | `notifications`, `processed_events` | [notification-service.md](notification-service.md) |
 | audit-service (opcional) | `audit` | `audit_events` | [audit-service.md](audit-service.md) |
 
 ## Convenciones
@@ -61,6 +62,7 @@ CREATE TABLE processed_events (
 | identity | Sí | No (no consume) |
 | listing | Sí | Sí (`visit.lead.events`) |
 | visit | Sí | Sí (`listing.property.events`) |
+| notification | No (no publica) | Sí (`identity.user.events`, `listing.property.events`, `visit.visit.events`) |
 | audit | No (no publica) | No: su clave primaria `event_id` ya es la idempotencia |
 
 ## Mapa de lo que viaja por Kafka
@@ -81,6 +83,9 @@ flowchart LR
         visits
         leads
     end
+    subgraph notification[notification · base notification]
+        notifications
+    end
     subgraph audit[audit · base audit · opcional]
         audit_events
     end
@@ -88,6 +93,9 @@ flowchart LR
     properties -- "listing.property.events" --> property_snapshots
     leads -- "visit.lead.events (LeadClosed)" --> properties
     properties -. "proyección en la misma transacción" .-> property_catalog
+    users -- "identity.user.events" --> notifications
+    properties -- "listing.property.events" --> notifications
+    visits -- "visit.visit.events" --> notifications
     users -. "todos los topics" .-> audit_events
     properties -.-> audit_events
     visits -.-> audit_events
