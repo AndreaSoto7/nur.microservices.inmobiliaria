@@ -1,3 +1,7 @@
+import type {
+  Inquiry,
+  InquiryDetails,
+} from '../../inquiries/domain/inquiry.js';
 import type { Visit, VisitSlot, VisitStatus } from './visit.js';
 
 export const VISIT_REPOSITORY = Symbol('VISIT_REPOSITORY');
@@ -35,11 +39,13 @@ export type RequestKey = {
     | 'schedule-visit'
     | 'reject-visit'
     | 'cancel-visit'
-    | 'complete-visit';
+    | 'complete-visit'
+    | 'send-inquiry';
 };
 
 export type VisitEvent = {
   type:
+    | 'InquiryReceived'
     | 'VisitRequested'
     | 'VisitScheduled'
     | 'VisitRejected'
@@ -53,6 +59,13 @@ export type VisitEvent = {
   payload: Record<string, string | null>;
 };
 
+export type LeadContact = {
+  propertyId: string;
+  clientId: string;
+  agentId: string;
+  openedAt: Date;
+};
+
 export interface VisitTransaction {
   lockRequest(key: RequestKey): Promise<void>;
   findRequest<T extends VisitCreation>(
@@ -62,7 +75,8 @@ export interface VisitTransaction {
     id: string,
   ): Promise<{ id: string; agentId: string; status: string } | undefined>;
   saveVisit(visit: Visit, note: string | undefined): Promise<void>;
-  openLead(visit: Visit): Promise<string | undefined>;
+  saveInquiry(inquiry: Inquiry): Promise<void>;
+  openLead(contact: LeadContact): Promise<string | undefined>;
   enqueue(event: VisitEvent): Promise<string>;
   lockAgentSchedule(agentId: string): Promise<void>;
   findAssignedVisit(id: string, agentId: string): Promise<Visit | undefined>;
@@ -91,6 +105,10 @@ export interface VisitRepository {
   transaction<T>(
     work: (transaction: VisitTransaction) => Promise<T>,
   ): Promise<T>;
+  findVisibleInquiry(
+    id: string,
+    principal: VisitPrincipal,
+  ): Promise<InquiryDetails | undefined>;
   findVisible(
     id: string,
     principal: VisitPrincipal,

@@ -13,6 +13,7 @@
 | feat | Rechazar visitas pendientes, registrar el motivo y emitir VisitRejected | Pendiente |
 | feat | Cancelar visitas programadas antes del inicio y liberar el horario | Pendiente |
 | feat | Marcar visitas realizadas al llegar la hora de fin y emitir VisitCompleted | Pendiente |
+| feat | Enviar consultas sobre propiedades publicadas y abrir una oportunidad con el primer contacto | Pendiente |
 
 ## Pendientes
 
@@ -26,7 +27,7 @@
 **Consultas y visitas (enunciado)**
 
 - [x] Snapshot local de propiedades: consumir `listing.property.events` (sin llamar a listing por HTTP)
-- [ ] Enviar una consulta sobre una propiedad (`Inquiry`)
+- [x] Enviar una consulta sobre una propiedad (`Inquiry`)
 - [x] Solicitar una visita (`Visit` en `REQUESTED`, solo si la propiedad está `PUBLISHED`)
 - [x] El cliente consulta el detalle y estado de una solicitud propia
 - [ ] El agente revisa las consultas y solicitudes recibidas
@@ -35,15 +36,15 @@
 - [x] Cancelar una visita programada antes del inicio, por el cliente o agente asignado
 - [x] Completar una visita programada al llegar o pasar la hora de fin, por el agente asignado
 - [x] Abrir la oportunidad (`Lead`) con la primera solicitud de visita (ADR 0005 sección 3.4)
-- [ ] Abrir la oportunidad con la primera consulta
+- [x] Abrir la oportunidad con la primera consulta si no existe una abierta
 - [ ] Registrar el seguimiento del interesado y cerrar la oportunidad como `WON` o `LOST` (`Lead`)
 
 **Eventos**
 
 - [x] Publicador de `outbox` integrado en Visit
 
-- [x] Outbox: `VisitRequested`, `VisitScheduled`, `VisitRejected`, `VisitCancelled`, `VisitCompleted` y `LeadOpened`
-- [ ] Outbox: `InquiryReceived`, `LeadFollowUpRegistered`, `LeadClosed`
+- [x] Outbox: `InquiryReceived`, `VisitRequested`, `VisitScheduled`, `VisitRejected`, `VisitCancelled`, `VisitCompleted` y `LeadOpened`
+- [ ] Outbox: `LeadFollowUpRegistered`, `LeadClosed`
 - [x] Proyección de propiedades idempotente (`processed_events`)
 
 **Políticas (ADR 0005, secciones 3.2 y 3.3)**

@@ -244,5 +244,5 @@ Si el consumidor se cae a la mitad, el evento se vuelve a procesar. No hay probl
 ## Notas
 
 - **Sin foreign key a `property_snapshots`:** la copia se puede vaciar y reconstruir leyendo `listing.property.events` desde el principio, y eso no debe romper consultas ni visitas ya guardadas.
-- **Datos personales:** `inquiries` guarda nombre, email y teléfono del interesado, porque el agente los necesita para contactarlo. Al escribir el schema de `InquiryReceived` con `/nuevo-evento`, conviene que lleve solo IDs y el mensaje, sin los datos de contacto.
+- **Datos personales:** `inquiries` guarda nombre, email y teléfono del interesado, porque el agente los necesita para contactarlo. El evento `InquiryReceived` solo lleva identificadores. El mensaje también queda en Visit porque puede contener datos personales.
 - **Duración de la visita:** el dominio fija 60 minutos y guarda la hora de fin en `scheduled_end`. Así la base cumple la regla de cruce de horarios aunque dos visitas del mismo agente se programen al mismo tiempo.

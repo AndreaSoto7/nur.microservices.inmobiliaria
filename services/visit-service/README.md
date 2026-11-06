@@ -18,6 +18,12 @@ npm run start:dev
 | `GET /health` | `200 {"status":"UP"}` si el proceso HTTP responde |
 | `GET /health/ready` | `200 {"status":"UP"}` si PostgreSQL responde y la tabla de visitas está disponible. En caso contrario devuelve `503 {"status":"DOWN"}` |
 
+## Enviar consultas sobre una propiedad
+
+- `POST /api/v1/inquiries` requiere un access token de un cliente, un UUID en `Idempotency-Key` y un cuerpo con `propertyId`, `contactName`, `contactEmail` y `message`. `contactPhone` es opcional. La propiedad debe estar publicada en la copia local.
+- La respuesta `201` incluye el ID y `Location`. Solo el cliente y el agente asignado pueden abrir `GET /api/v1/inquiries/{inquiryId}` y ver el mensaje y los datos de contacto.
+- Si no hay una oportunidad abierta para el cliente y la propiedad, la primera consulta o solicitud de visita la abre. `InquiryReceived` solo lleva identificadores.
+
 ## Solicitar y consultar una visita
 
 Configura `DATABASE_URL` y `JWT_JWKS_URL` en el entorno o en el archivo `.env` del servicio. La URL de JWKS debe apuntar a Identity y ser accesible desde donde corre NestJS. Para una prueba local, la base de Visit debe tener una copia de la propiedad en estado `PUBLISHED`.
@@ -33,7 +39,7 @@ El cliente que solicitó la visita o el agente asignado puede usar `POST /api/v1
 
 El agente asignado puede usar `POST /api/v1/visits/{visitId}/complete` con un UUID en `Idempotency-Key`, sin enviar datos en el cuerpo. La visita debe estar programada y haber llegado a su hora de fin. Los participantes pueden consultar la fecha de registro (`completedAt`) por ID.
 
-Visit guarda `VisitRequested`, `LeadOpened`, `VisitScheduled`, `VisitRejected`, `VisitCancelled` y `VisitCompleted` en `outbox`. Si `KAFKA_BROKERS` está configurado, un publicador dentro de Visit envía los pendientes y actualiza `published_at` al recibir la confirmación de Kafka. Si el proceso se interrumpe entre el envío y el guardado de la confirmación, el mismo `eventId` puede llegar de nuevo. Queda pendiente aplicar las políticas que modifican visitas existentes.
+Visit guarda `InquiryReceived`, `VisitRequested`, `LeadOpened`, `VisitScheduled`, `VisitRejected`, `VisitCancelled` y `VisitCompleted` en `outbox`. Si `KAFKA_BROKERS` está configurado, un publicador dentro de Visit envía los pendientes y actualiza `published_at` al recibir la confirmación de Kafka. Si el proceso se interrumpe entre el envío y el guardado de la confirmación, el mismo `eventId` puede llegar de nuevo. Queda pendiente aplicar las políticas que modifican visitas existentes.
 
 ## Recibir propiedades de Listing
 

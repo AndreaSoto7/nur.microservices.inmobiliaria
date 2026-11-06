@@ -19,6 +19,8 @@ const postgres = databaseUrl ? describe : describe.skip;
 postgres('Solicitudes de visita en PostgreSQL', () => {
   const propertyId = randomUUID();
   const pausedPropertyId = randomUUID();
+  const inquiryPropertyId = randomUUID();
+  const propertyIds = [propertyId, pausedPropertyId, inquiryPropertyId];
   const clientId = randomUUID();
   const agentId = randomUUID();
   const path = '/api/v1/visits';
@@ -44,8 +46,9 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
       `INSERT INTO property_snapshots
         (property_id, agent_id, title, zone, operation_type, status, last_event_at, updated_at)
        VALUES ($1,$2,'Casa','Centro','SALE','PUBLISHED',now(),now()),
-              ($3,$2,'Casa','Centro','SALE','PAUSED',now(),now())`,
-      [propertyId, agentId, pausedPropertyId],
+              ($3,$2,'Casa','Centro','SALE','PAUSED',now(),now()),
+              ($4,$2,'Casa','Centro','SALE','PUBLISHED',now(),now())`,
+      [propertyId, agentId, pausedPropertyId, inquiryPropertyId],
     );
 
     const { publicKey, privateKey } = await generateKeyPair('RS256');
@@ -92,23 +95,28 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     if (database?.isInitialized) {
       await database.transaction(async (manager) => {
         await manager.query(
-          "DELETE FROM outbox WHERE envelope->'payload'->>'propertyId' IN ($1,$2)",
-          [propertyId, pausedPropertyId],
+          "DELETE FROM outbox WHERE envelope->'payload'->>'propertyId' = ANY($1::text[])",
+          [propertyIds],
         );
         await manager.query(
           'DELETE FROM idempotency_records WHERE client_id IN ($1,$2)',
           [clientId, agentId],
         );
-        await manager.query('DELETE FROM visits WHERE property_id IN ($1,$2)', [
-          propertyId,
-          pausedPropertyId,
-        ]);
-        await manager.query('DELETE FROM leads WHERE property_id = $1', [
-          propertyId,
-        ]);
         await manager.query(
-          'DELETE FROM property_snapshots WHERE property_id IN ($1,$2)',
-          [propertyId, pausedPropertyId],
+          'DELETE FROM inquiries WHERE property_id = ANY($1::uuid[])',
+          [propertyIds],
+        );
+        await manager.query(
+          'DELETE FROM visits WHERE property_id = ANY($1::uuid[])',
+          [propertyIds],
+        );
+        await manager.query(
+          'DELETE FROM leads WHERE property_id = ANY($1::uuid[])',
+          [propertyIds],
+        );
+        await manager.query(
+          'DELETE FROM property_snapshots WHERE property_id = ANY($1::uuid[])',
+          [propertyIds],
         );
       });
       await database.destroy();
@@ -615,6 +623,142 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
         .default(new Ajv2020())
         .validate(schema, events[0].envelope.payload),
     ).toBe(true);
+  });
+
+  it('registra consultas y una sola oportunidad; solo los participantes pueden leer el contacto', async () => {
+    const http = request(app.getHttpServer());
+    const inquiryPath = '/api/v1/inquiries';
+    const payload = {
+      propertyId: inquiryPropertyId,
+      contactName: 'María Pérez',
+      contactEmail: 'maria@example.com',
+      message: '¿Aceptan mascotas?',
+    };
+    const send = (
+      input: object,
+      key: string = randomUUID(),
+      token: string | null = clientToken,
+    ) => {
+      const action = http.post(inquiryPath).set('Idempotency-Key', key);
+      if (token) action.auth(token, { type: 'bearer' });
+      return action.send(input);
+    };
+    await send(payload, randomUUID(), null).expect(401);
+    await send(payload, randomUUID(), agentToken).expect(403);
+    await send(payload, 'no-uuid').expect(400);
+    await send({ ...payload, agentId }).expect(400);
+    await send({ ...payload, contactName: '  ' }).expect(400);
+    await send({ ...payload, contactEmail: 'no-es-correo' }).expect(400);
+    await send({ ...payload, contactPhone: null }).expect(400);
+    await send({ ...payload, message: 'Consulta\0' }).expect(400);
+    await send({ ...payload, propertyId: pausedPropertyId })
+      .expect(409)
+      .expect(/PROPERTY_UNAVAILABLE/);
+    await send({ ...payload, propertyId: randomUUID() })
+      .expect(404)
+      .expect(/PROPERTY_NOT_FOUND/);
+
+    const key = randomUUID();
+    const contactPhone = '+591 70000000';
+    const [first, replay, second] = await Promise.all([
+      send(payload, key).expect(201),
+      send({ ...payload }, key).expect(201),
+      send({ ...payload, contactPhone }).expect(201),
+    ]);
+    expect(replay.body).toEqual(first.body);
+    expect(second.body).not.toEqual(first.body);
+    await send({ ...payload, message: 'Otra consulta' }, key).expect(422);
+
+    const { id } = first.body as { id: string };
+    const location = inquiryPath + '/' + id;
+    expect(first.headers.location).toBe(location);
+    expect(replay.headers.location).toBe(location);
+    for (const token of [clientToken, agentToken]) {
+      const response = await http
+        .get(location)
+        .auth(token, { type: 'bearer' })
+        .expect(200);
+      expect(response.body).toEqual({
+        id,
+        ...payload,
+        createdAt: expect.any(String),
+      });
+    }
+    const secondLocation =
+      inquiryPath + '/' + (second.body as { id: string }).id;
+    const secondDetail = await http
+      .get(secondLocation)
+      .auth(agentToken, { type: 'bearer' })
+      .expect(200);
+    expect(secondDetail.body).toMatchObject({ contactPhone });
+    await http.get(location).auth(otherToken, { type: 'bearer' }).expect(404);
+    await http
+      .get(location)
+      .auth(otherAgentToken, { type: 'bearer' })
+      .expect(404);
+    await http.get(location).expect(401);
+
+    await http
+      .post(path)
+      .auth(clientToken, { type: 'bearer' })
+      .set('Idempotency-Key', key)
+      .send({ ...body, propertyId: inquiryPropertyId })
+      .expect(201);
+    const leads = await database.query<{ id: string }[]>(
+      "SELECT id FROM leads WHERE client_id = $1 AND property_id = $2 AND status = 'OPEN'",
+      [clientId, inquiryPropertyId],
+    );
+    expect(leads).toHaveLength(1);
+    const events = await database.query<
+      {
+        topic: string;
+        envelope: {
+          eventType: string;
+          eventId: string;
+          aggregateId: string;
+          causationId?: string;
+          payload: unknown;
+        };
+      }[]
+    >(
+      "SELECT topic, envelope FROM outbox WHERE envelope->'payload'->>'propertyId' = $1",
+      [inquiryPropertyId],
+    );
+    const inquiries = events.filter(
+      ({ envelope }) => envelope.eventType === 'InquiryReceived',
+    );
+    expect(inquiries).toHaveLength(2);
+    expect(events.map(({ envelope }) => envelope.eventType).sort()).toEqual([
+      'InquiryReceived',
+      'InquiryReceived',
+      'LeadOpened',
+      'VisitRequested',
+    ]);
+    const schemaPath = new URL(
+      '../../../contracts/events/visit/inquiry-received.v1.schema.json',
+      import.meta.url,
+    );
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as object;
+    const validate = addFormats.default(new Ajv2020()).compile(schema);
+    for (const { topic, envelope } of inquiries) {
+      expect(topic).toBe('visit.inquiry.events');
+      expect(validate(envelope.payload)).toBe(true);
+      expect(envelope.payload).toEqual({
+        inquiryId: envelope.aggregateId,
+        propertyId: inquiryPropertyId,
+        clientId,
+        agentId,
+      });
+    }
+    expect(
+      events.find(({ envelope }) => envelope.eventType === 'LeadOpened')
+        ?.envelope,
+    ).toMatchObject({
+      aggregateId: leads[0].id,
+      causationId: expect.stringMatching(
+        new RegExp(inquiries.map(({ envelope }) => envelope.eventId).join('|')),
+      ),
+    });
   });
 
   it('valida credenciales, rol, formato, fecha y estado de la propiedad', async () => {

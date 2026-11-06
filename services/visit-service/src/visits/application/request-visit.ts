@@ -1,6 +1,7 @@
 import { Inject } from '@nestjs/common';
 import { Command, CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { createHash, randomUUID } from 'node:crypto';
+import { openLeadOnContact } from '../../leads/application/open-lead-on-contact.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import {
   VISIT_REPOSITORY,
@@ -88,17 +89,12 @@ export class RequestVisitHandler implements ICommandHandler<RequestVisitCommand>
           proposedAt: visit.proposedAt.toISOString(),
         },
       });
-      const leadId = await transaction.openLead(visit);
-      if (leadId) {
-        await transaction.enqueue({
-          type: 'LeadOpened',
-          aggregateId: leadId,
-          occurredAt: requestedAt,
-          correlationId: command.correlationId,
-          causationId: visitEventId,
-          payload: { ...participants, leadId },
-        });
-      }
+      await openLeadOnContact(
+        transaction,
+        { ...participants, openedAt: requestedAt },
+        command.correlationId,
+        visitEventId,
+      );
       const response = { id };
       await transaction.saveRequest(key, hash, response, 201);
       return response;

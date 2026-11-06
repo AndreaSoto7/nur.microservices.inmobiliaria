@@ -2,8 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { QueryFailedError, type EntityManager } from 'typeorm';
 import { VisitDatabase } from '../../database/visit-database.js';
+import type {
+  Inquiry,
+  InquiryDetails,
+} from '../../inquiries/domain/inquiry.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import type {
+  LeadContact,
   RequestKey,
   VisitCancellationActor,
   VisitCreation,
@@ -48,6 +53,31 @@ export class PostgresVisits implements VisitRepository {
       }
       throw error;
     }
+  }
+
+  async findVisibleInquiry(
+    id: string,
+    principal: VisitPrincipal,
+  ): Promise<InquiryDetails | undefined> {
+    const database = await this.database.connect();
+    const [inquiry] = await database.query<
+      (Omit<InquiryDetails, 'contactPhone'> & { contactPhone: string | null })[]
+    >(
+      `SELECT id, property_id AS "propertyId", contact_name AS "contactName",
+              contact_email AS "contactEmail", contact_phone AS "contactPhone", message,
+              created_at AS "createdAt"
+         FROM inquiries WHERE id = $1
+           AND (($3 AND client_id = $2) OR ($4 AND agent_id = $2))`,
+      [
+        id,
+        principal.id,
+        principal.roles.includes('CLIENT'),
+        principal.roles.includes('AGENT'),
+      ],
+    );
+    if (!inquiry) return;
+    const { contactPhone, ...details } = inquiry;
+    return contactPhone === null ? details : { ...details, contactPhone };
   }
 
   async findVisible(
@@ -149,7 +179,26 @@ class PostgresVisitTransaction implements VisitTransaction {
     );
   }
 
-  async openLead(visit: Visit): Promise<string | undefined> {
+  async saveInquiry(inquiry: Inquiry): Promise<void> {
+    await this.manager.query(
+      `INSERT INTO inquiries
+        (id, property_id, client_id, agent_id, contact_name, contact_email, contact_phone, message, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [
+        inquiry.id,
+        inquiry.propertyId,
+        inquiry.clientId,
+        inquiry.agentId,
+        inquiry.contactName,
+        inquiry.contactEmail,
+        inquiry.contactPhone ?? null,
+        inquiry.message,
+        inquiry.createdAt,
+      ],
+    );
+  }
+
+  async openLead(contact: LeadContact): Promise<string | undefined> {
     const [lead] = await this.manager.query<{ id: string }[]>(
       `INSERT INTO leads (id, property_id, client_id, agent_id, status, opened_at)
        VALUES ($1,$2,$3,$4,'OPEN',$5)
@@ -157,10 +206,10 @@ class PostgresVisitTransaction implements VisitTransaction {
        RETURNING id`,
       [
         randomUUID(),
-        visit.propertyId,
-        visit.clientId,
-        visit.agentId,
-        visit.requestedAt,
+        contact.propertyId,
+        contact.clientId,
+        contact.agentId,
+        contact.openedAt,
       ],
     );
     return lead?.id;
@@ -168,14 +217,20 @@ class PostgresVisitTransaction implements VisitTransaction {
 
   async enqueue(event: VisitEvent): Promise<string> {
     const eventId = randomUUID();
-    const isVisit = event.type !== 'LeadOpened';
+    const aggregateType =
+      event.type === 'LeadOpened'
+        ? 'Lead'
+        : event.type === 'InquiryReceived'
+          ? 'Inquiry'
+          : 'Visit';
+    const topic = 'visit.' + aggregateType.toLowerCase() + '.events';
     const envelope = {
       eventId,
       eventType: event.type,
       eventVersion: 1,
       occurredAt: event.occurredAt.toISOString(),
       producer: 'visit-service',
-      aggregateType: isVisit ? 'Visit' : 'Lead',
+      aggregateType,
       aggregateId: event.aggregateId,
       correlationId: event.correlationId,
       causationId: event.causationId,
@@ -183,12 +238,7 @@ class PostgresVisitTransaction implements VisitTransaction {
     };
     await this.manager.query(
       'INSERT INTO outbox (id, topic, aggregate_id, envelope) VALUES ($1,$2,$3,$4)',
-      [
-        eventId,
-        isVisit ? 'visit.visit.events' : 'visit.lead.events',
-        event.aggregateId,
-        envelope,
-      ],
+      [eventId, topic, event.aggregateId, envelope],
     );
     return eventId;
   }
@@ -283,7 +333,14 @@ class PostgresVisitTransaction implements VisitTransaction {
         hash,
         status,
         response,
-        status === 201 ? { Location: '/api/v1/visits/' + response.id } : {},
+        status === 201
+          ? {
+              Location:
+                '/api/v1/' +
+                (key.operation === 'send-inquiry' ? 'inquiries/' : 'visits/') +
+                response.id,
+            }
+          : {},
       ],
     );
   }
