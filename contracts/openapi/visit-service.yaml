@@ -237,6 +237,64 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/visits/{visitId}/reject:
+    post:
+      tags: [visits]
+      operationId: rejectVisit
+      summary: Rechazar una solicitud pendiente
+      description: |
+        Solo el AGENT asignado puede rechazar una visita REQUESTED.
+        Un reintento con la misma clave, visita y motivo devuelve el resultado
+        original durante 24 horas. Reutilizar la clave con otros datos devuelve 422.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: visitId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RejectVisit'}
+      responses:
+        '200':
+          description: Solicitud rechazada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RejectedVisit'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: VISIT_NOT_FOUND si la visita no existe o pertenece a otro agente.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: VISIT_NOT_REQUESTED si la visita ya no está pendiente.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
   /health:
     get:
       tags: [health]
@@ -389,6 +447,29 @@ components:
         requestedAt: {$ref: '#/components/schemas/UtcDateTime'}
         scheduledStart: {$ref: '#/components/schemas/UtcDateTime'}
         scheduledEnd: {$ref: '#/components/schemas/UtcDateTime'}
+        resolutionReason:
+          $ref: '#/components/schemas/VisitRejectionReason'
+          description: Motivo visible al consultar una visita rechazada.
+    VisitRejectionReason:
+      type: string
+      minLength: 1
+      maxLength: 500
+      pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'
+    RejectVisit:
+      type: object
+      required: [reason]
+      additionalProperties: false
+      properties:
+        reason: {$ref: '#/components/schemas/VisitRejectionReason'}
+      example: {reason: 'El horario propuesto no está disponible.'}
+    RejectedVisit:
+      type: object
+      required: [id, status]
+      additionalProperties: false
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, const: REJECTED}
+      example: {id: '05de258b-be6c-4f61-b6ac-ac67cc961b03', status: REJECTED}
     ScheduleVisit:
       type: object
       required: [scheduledStart]

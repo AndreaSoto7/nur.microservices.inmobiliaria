@@ -76,4 +76,5 @@ Cuando visit defina los schemas de `InquiryReceived`, `VisitScheduled`, `VisitRe
 - [x] `listing/property-published.v1.schema.json` (ejemplo de referencia; el responsable de listing puede ajustarlo antes de la primera implementación)
 - [x] [`visit/visit-requested.v1.schema.json`](visit/visit-requested.v1.schema.json)
 - [x] [`visit/lead-opened.v1.schema.json`](visit/lead-opened.v1.schema.json)
+- [x] [`visit/visit-rejected.v1.schema.json`](visit/visit-rejected.v1.schema.json)
 - [ ] El resto se crea con `/nuevo-evento` cuando el servicio productor lo implemente.
