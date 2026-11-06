@@ -20,6 +20,7 @@
 | feat | Eslabón de auth en la cadena: 401 con `WWW-Authenticate`, 503 si no hay JWKS, y discovery y balanceador cableados en `main` | #59 |
 | feat | Núcleo del reverse proxy: reenvío a la réplica elegida, timeouts, errores 502, 503 y 504, y marcado de réplicas solo ante errores de red | #61 |
 | feat | Límite de body por ruta (413), deadline de lectura en auth y body ilegible (400), sin marcar la réplica. `MAX_BODY_BYTES` sube a 26 MiB, lo que acepta listing | #62 |
+| feat | Proxy cableado en `main`: el gateway ya reenvía a las réplicas sanas, con la cadena completa | #63 |
 
 ## Pendientes
 
@@ -29,7 +30,7 @@
 
 **Funcionalidad (ADR 0002)**
 
-- [ ] Reverse proxy y ruteo por prefijo hacia los nombres de servicio en Consul (tabla de rutas de `gateway/CLAUDE.md`, con `/api/v1/catalog/**` público y `/api/v1/audit/**`; ADR 0005)
+- [x] Reverse proxy y ruteo por prefijo hacia los nombres de servicio en Consul (tabla de rutas de `gateway/CLAUDE.md`, con `/api/v1/catalog/**` público y `/api/v1/audit/**`; ADR 0005)
 - [x] Discovery: consulta periódica de las réplicas sanas en Consul
 - [x] Balanceador round robin (Strategy) con marcado de réplicas caídas (Circuit Breaker)
 - [x] Validar el JWT con el JWKS de identity (`typ=at+jwt`, `aud=inmobiliaria`) y borrar los `X-User-*`
@@ -37,6 +38,6 @@
 - [x] Rate limit de login y registro (**requisito antes de exponer identity**)
 - [ ] Comprobar en Docker qué IP ve el gateway: si todos llegan con la misma, el límite pasa a ser global
 - [ ] Evaluar un tope de entradas en el rate limit (hoy expiran a los 60 s y cada una exige una IP o un /64 distinto)
-- [ ] Correlation-id, logs JSON, timeouts y errores problem+json propios
+- [x] Correlation-id, logs JSON, timeouts y errores problem+json propios
 - [ ] Refrescar el JWKS cada cierto tiempo: hoy una clave retirada sigue valiendo en el gateway hasta que llegue un `kid` desconocido (los servicios sí la rechazan)
 - [ ] Demo: `listing-service` escalado a 3 réplicas
