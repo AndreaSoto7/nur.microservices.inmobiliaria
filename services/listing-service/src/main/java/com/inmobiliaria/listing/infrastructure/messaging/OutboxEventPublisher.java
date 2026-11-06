@@ -26,12 +26,12 @@ public class OutboxEventPublisher implements EventPublisher {
 
     @Override
     public void publish(Property property, List<? extends PropertyEvent> domainEvents, CommandMetadata metadata) {
-        for (PropertyEvent event : domainEvents) {
-            mapper.toOutbox(property, event, metadata).ifPresent(message -> jdbc.update("""
+        for (OutboxMessage message : mapper.toOutbox(property, domainEvents, metadata)) {
+            jdbc.update("""
                     INSERT INTO outbox (id, topic, aggregate_id, envelope)
                     VALUES (:id, :topic, :aggregateId, CAST(:envelope AS jsonb))
                     """, Map.of("id", message.id(), "topic", message.topic(),
-                    "aggregateId", message.aggregateId(), "envelope", message.envelope())));
+                    "aggregateId", message.aggregateId(), "envelope", message.envelope()));
         }
     }
 }
