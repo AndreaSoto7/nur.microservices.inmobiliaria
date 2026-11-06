@@ -79,7 +79,7 @@ Cada middleware es `func(http.Handler) http.Handler` y puede cortar la cadena. E
 6. **Ruteo:** valida el path (400) y resuelve la ruta (404). Va antes del rate limit y de la auth, para que todos decidan con el mismo path. También rechaza `;`, `\`, `%` restante (doble codificación) y caracteres de control.
 7. **Rate limit:** token bucket por IP y ruta en login y registro (`golang.org/x/time/rate`).
    - IP desde `r.RemoteAddr` con `net.SplitHostPort` (sin puerto), nunca de un `X-Forwarded-For` del cliente.
-   - Las entradas viejas expiran. Comprobado en Docker: los clientes de la misma máquina y los de otra red de Docker pasan por `docker-proxy`, llegan como el gateway de la red (`172.x.0.1`) y comparten el límite. Los contenedores de la misma red llegan con su IP. Sin verificar desde otra máquina. Si hace falta, el límite se sube con `RATE_LIMIT_AUTH_PER_MINUTE`. No loguear la IP de forma permanente.
+   - Las entradas viejas expiran. Comprobado en Docker: los clientes de la misma máquina y los de otra red de Docker pasan por `docker-proxy`, llegan como el gateway de la red (`172.x.0.1`) y comparten el límite. Los contenedores de la misma red llegan con su IP. Otra máquina en la misma red, con Docker en Linux, llega con su IP real y tiene su propio límite. Sin verificar en Docker Desktop. Si hace falta, el límite se sube con `RATE_LIMIT_AUTH_PER_MINUTE`. No loguear la IP de forma permanente.
 8. **Auth** en rutas protegidas: `jwt.WithValidMethods(["RS256"])`, `WithExpirationRequired()`, `WithIssuer`, `WithAudience`; exige `typ=at+jwt` (un refresh token con `typ=rt+jwt` nunca pasa). Si es válido, **reenvía `Authorization` intacto**.
 9. **Proxy.**
 
