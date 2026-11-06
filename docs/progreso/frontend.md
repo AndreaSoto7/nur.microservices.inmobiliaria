@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Mejora visual, parte 2: buscador con "Más filtros", orden junto a los resultados, esqueleto de carga, estado vacío sin filtros y convenciones en `docs/convenciones-frontend.md` | este PR |
+| feat | Mejora visual, parte 2: buscador con "Más filtros", orden junto a los resultados, esqueleto de carga, estado vacío sin filtros y convenciones en `docs/convenciones-frontend.md` | #89 |
 | feat | Mejora visual, parte 1: paleta y tokens, cabecera, detalle de propiedad, ingreso, registro, mi cuenta y favicon propio | #88 |
 | feat | Catálogo público con filtros en la URL (zona, tipo, operación, precio, dormitorios, características), orden y paginación, y detalle de propiedad con galería | #49 |
 | feat | Imagen Docker con nginx sin root, CSP y cabeceras de seguridad, SPA con caché correcta y servicio `frontend` en el compose | #48 |
