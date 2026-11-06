@@ -22,7 +22,7 @@
 | feat | Límite de body por ruta (413), deadline de lectura en auth y body ilegible (400), sin marcar la réplica. `MAX_BODY_BYTES` sube a 26 MiB, lo que acepta listing | #62 |
 | feat | Proxy cableado en `main`: el gateway ya reenvía a las réplicas sanas, con la cadena completa | #63 |
 | feat | Gateway en el compose, probado de punta a punta con identity y listing reales: 3 réplicas repartidas en orden, y al matar una falla 1 request de 15 | #69 |
-| feat | Ruta `/api/v1/notifications/**` hacia `notification-service`, con JWT. Responde 503 hasta que el servicio exista | este PR |
+| feat | Ruta `/api/v1/notifications/**` hacia `notification-service`, con JWT. Responde 503 hasta que el servicio exista | #71 |
 
 ## Pendientes
 
