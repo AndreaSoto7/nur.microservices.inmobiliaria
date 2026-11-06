@@ -23,6 +23,7 @@
 | feat | Proxy cableado en `main`: el gateway ya reenvía a las réplicas sanas, con la cadena completa | #63 |
 | feat | Gateway en el compose, probado de punta a punta con identity y listing reales: 3 réplicas repartidas en orden, y al matar una falla 1 request de 15 | #69 |
 | feat | Ruta `/api/v1/notifications/**` hacia `notification-service`, con JWT. Responde 503 hasta que el servicio exista | #71 |
+| feat | Renovar el JWKS cada 5 minutos: una clave retirada deja de valer sin esperar a un `kid` desconocido | este PR |
 
 ## Pendientes
 
@@ -38,9 +39,9 @@
 - [x] Validar el JWT con el JWKS de identity (`typ=at+jwt`, `aud=inmobiliaria`) y borrar los `X-User-*`
 - [x] CORS para el frontend (`http://localhost:5173`)
 - [x] Rate limit de login y registro (**requisito antes de exponer identity**)
-- [x] Comprobar en Docker qué IP ve el gateway desde la misma máquina: los clientes llegan como el gateway de la red de Docker (`172.x.0.1`) y comparten el límite; los contenedores llegan con su IP
-- [ ] Comprobar el rate limit desde otra máquina, y en Docker Desktop (Windows): si todos llegan con la misma IP, una sola persona agota el límite y bloquea el login de los demás
+- [x] Comprobar en Docker qué IP ve el gateway: desde la misma máquina y desde otra red de Docker, los clientes pasan por `docker-proxy`, llegan como `172.x.0.1` y comparten el límite (probado con dos contenedores: el segundo recibe 429)
+- [ ] Comprobar el rate limit desde otra máquina real, y en Docker Desktop (Windows): no se puede simular sin un segundo equipo. Si comparten el límite, subir `RATE_LIMIT_AUTH_PER_MINUTE` para la demo
 - [x] Evaluar un tope de entradas en el rate limit: no hace falta. Medido: 1 millón de IP distintas ocupan unos 190 MB y la limpieza tarda 245 ms, y las entradas expiran en 2 minutos como máximo
 - [x] Correlation-id, logs JSON, timeouts y errores problem+json propios
-- [ ] Baja prioridad: refrescar el JWKS cada cierto tiempo. Hoy una clave retirada sigue valiendo en el gateway hasta que llegue un `kid` desconocido. Importa solo si identity empieza a rotar claves; hoy tiene una sola
+- [x] Refrescar el JWKS cada 5 minutos
 - [x] Demo: `listing-service` escalado a 3 réplicas

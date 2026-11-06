@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -456,5 +457,72 @@ func TestUnusableKeysAreIgnored(t *testing.T) {
 				t.Error("aceptó un token verificado con una clave inutilizable")
 			}
 		})
+	}
+}
+
+func newTestKeySet(fake *fakeIdentity) (*KeySet, *Validator, *clock) {
+	c := newClock()
+	keySet := NewKeySet(fake, c.Now)
+	return keySet, NewValidator(keySet, testIssuer, testAudience, c.Now), c
+}
+
+// Sin el refresco, una clave retirada seguiría valiendo hasta que llegara un kid desconocido.
+func TestRefreshDropsRetiredKey(t *testing.T) {
+	fake := newFakeIdentity(t, jwkFor(testKid, &signingKey.PublicKey))
+	keySet, validator, _ := newTestKeySet(fake)
+	token := sign(t, validClaims(), nil, signingKey)
+	if err := validator.Validate(context.Background(), token); err != nil {
+		t.Fatal(err)
+	}
+	fake.setKeys(jwkFor("clave-2", &otherKey.PublicKey))
+
+	keySet.refresh(context.Background(), slog.New(slog.DiscardHandler))
+
+	if err := validator.Validate(context.Background(), token); !errors.Is(err, ErrInvalidToken) {
+		t.Errorf("Validate() error = %v, want ErrInvalidToken: la clave retirada sigue valiendo", err)
+	}
+}
+
+// Si identity está caído no se sabe qué claves valen: es preferible seguir con las conocidas.
+func TestFailedRefreshKeepsKnownKeys(t *testing.T) {
+	fake := newFakeIdentity(t, jwkFor(testKid, &signingKey.PublicKey))
+	keySet, validator, _ := newTestKeySet(fake)
+	token := sign(t, validClaims(), nil, signingKey)
+	if err := validator.Validate(context.Background(), token); err != nil {
+		t.Fatal(err)
+	}
+	fake.status.Store(http.StatusInternalServerError)
+
+	keySet.refresh(context.Background(), slog.New(slog.DiscardHandler))
+
+	if err := validator.Validate(context.Background(), token); err != nil {
+		t.Errorf("Validate() error = %v: perdió las claves conocidas", err)
+	}
+}
+
+func TestRunRefreshesPeriodicallyAndStopsWithContext(t *testing.T) {
+	fake := newFakeIdentity(t, jwkFor(testKid, &signingKey.PublicKey))
+	keySet, _, _ := newTestKeySet(fake)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		keySet.Run(ctx, 5*time.Millisecond, slog.New(slog.DiscardHandler))
+		close(done)
+	}()
+
+	deadline := time.After(5 * time.Second)
+	for fake.hits.Load() < 3 {
+		select {
+		case <-deadline:
+			t.Fatal("Run no repitió la descarga")
+		case <-time.After(time.Millisecond):
+		}
+	}
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run no terminó al cancelar el contexto")
 	}
 }

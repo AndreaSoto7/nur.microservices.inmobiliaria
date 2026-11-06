@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"sync/atomic"
@@ -25,6 +26,9 @@ const (
 	// ReloadInterval es el mínimo entre descargas: sin él, cada request con un kid inventado sería una
 	// llamada a identity.
 	ReloadInterval = 30 * time.Second
+	// RefreshInterval renueva la lista aunque nadie mande un kid desconocido: si no, una clave retirada
+	// seguiría valiendo. Son los 5 minutos que el contrato de identity permite cachear el JWKS.
+	RefreshInterval = 5 * time.Minute
 	// ColdStartRetryInterval se usa mientras no haya ninguna clave: el gateway suele arrancar antes que
 	// identity, y esperar 30 s lo dejaría inservible sin motivo.
 	ColdStartRetryInterval = 5 * time.Second
@@ -101,8 +105,11 @@ func (k *KeySet) reloadIfAllowed(ctx context.Context) error {
 	if !k.lastAttempt.IsZero() && now.Sub(k.lastAttempt) < k.reloadInterval() {
 		return k.lastErr
 	}
-	k.lastAttempt = now
+	return k.reload(ctx)
+}
 
+func (k *KeySet) reload(ctx context.Context) error {
+	k.lastAttempt = k.now()
 	keys, err := k.download(ctx)
 	k.lastErr = err
 	if err != nil {
@@ -110,6 +117,32 @@ func (k *KeySet) reloadIfAllowed(ctx context.Context) error {
 	}
 	k.keys.Store(&keys)
 	return nil
+}
+
+// Run renueva las claves cada interval, hasta que se cancele ctx.
+func (k *KeySet) Run(ctx context.Context, interval time.Duration, logger *slog.Logger) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			k.refresh(ctx, logger)
+		}
+	}
+}
+
+// refresh comparte la descarga con las recargas por kid desconocido, pero no respeta su freno: es una
+// sola por intervalo. Si falla conserva las claves conocidas: sin identity no se sabe cuáles valen, y
+// dejar de validar tumbaría todas las rutas protegidas.
+func (k *KeySet) refresh(ctx context.Context, logger *slog.Logger) {
+	_, err, _ := k.group.Do("jwks", func() (any, error) {
+		return nil, k.reload(ctx)
+	})
+	if err != nil && ctx.Err() == nil {
+		logger.Warn("no se pudo renovar el JWKS; se conservan las claves conocidas", "error", err)
+	}
 }
 
 func (k *KeySet) reloadInterval() time.Duration {

@@ -60,7 +60,9 @@ func run(logger *slog.Logger) error {
 	replicas := discovery.NewClient(cfg.ConsulAddr, config.Services(), logger)
 	go replicas.Run(ctx, cfg.DiscoveryInterval)
 	picker := balancer.New(replicas, &balancer.RoundRobin{}, cfg.ReplicaDownDuration, time.Now)
-	validator := auth.NewValidator(auth.NewKeySet(picker, time.Now), cfg.JWTIssuer, cfg.JWTAudience, time.Now)
+	keys := auth.NewKeySet(picker, time.Now)
+	go keys.Run(ctx, auth.RefreshInterval, logger)
+	validator := auth.NewValidator(keys, cfg.JWTIssuer, cfg.JWTAudience, time.Now)
 
 	upstream := proxy.New(picker, proxy.Options{
 		UpstreamTimeout:   cfg.UpstreamTimeout,

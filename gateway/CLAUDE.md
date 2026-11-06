@@ -79,7 +79,7 @@ Cada middleware es `func(http.Handler) http.Handler` y puede cortar la cadena. E
 6. **Ruteo:** valida el path (400) y resuelve la ruta (404). Va antes del rate limit y de la auth, para que todos decidan con el mismo path. También rechaza `;`, `\`, `%` restante (doble codificación) y caracteres de control.
 7. **Rate limit:** token bucket por IP y ruta en login y registro (`golang.org/x/time/rate`).
    - IP desde `r.RemoteAddr` con `net.SplitHostPort` (sin puerto), nunca de un `X-Forwarded-For` del cliente.
-   - Las entradas viejas expiran. Comprobado en Docker: los clientes de la misma máquina llegan como el gateway de la red (`172.x.0.1`) y comparten el límite; los contenedores llegan con su IP. Sin verificar desde otra máquina. No loguear la IP de forma permanente.
+   - Las entradas viejas expiran. Comprobado en Docker: los clientes de la misma máquina y los de otra red de Docker pasan por `docker-proxy`, llegan como el gateway de la red (`172.x.0.1`) y comparten el límite. Los contenedores de la misma red llegan con su IP. Sin verificar desde otra máquina. Si hace falta, el límite se sube con `RATE_LIMIT_AUTH_PER_MINUTE`. No loguear la IP de forma permanente.
 8. **Auth** en rutas protegidas: `jwt.WithValidMethods(["RS256"])`, `WithExpirationRequired()`, `WithIssuer`, `WithAudience`; exige `typ=at+jwt` (un refresh token con `typ=rt+jwt` nunca pasa). Si es válido, **reenvía `Authorization` intacto**.
 9. **Proxy.**
 
@@ -103,7 +103,7 @@ Cada middleware es `func(http.Handler) http.Handler` y puede cortar la cadena. E
 - **Strategy:** una interfaz "elegir la próxima réplica" con la implementación `RoundRobin` (contador por servicio con `sync/atomic`).
 - **Circuit Breaker por réplica:** una réplica que falla queda fuera `REPLICA_DOWN_DURATION` y luego se vuelve a probar. Es un respaldo de los health checks de Consul. Sin réplicas → 503.
 - **Discovery:** cada `DISCOVERY_REFRESH_INTERVAL`, `GET {CONSUL_HTTP_ADDR}/v1/health/service/<nombre>?passing=true` por cada servicio de la tabla (sin SDK). Snapshot en memoria con `sync.RWMutex` o `atomic.Pointer`. Si Consul no responde, se conserva el último y se loguea un warning.
-- **JWKS** de identity también por discovery, cacheado. Ante un `kid` desconocido se recarga **como máximo una vez cada 30 s y con una sola recarga en curso** (`singleflight`); si sigue sin aparecer, 401. Si no se pudo descargar el JWKS no se sabe si el token es válido, así que responde 503; mientras no haya ninguna clave, el freno baja a 5 s, porque el gateway suele arrancar antes que identity.
+- **JWKS** de identity también por discovery, cacheado. Ante un `kid` desconocido se recarga **como máximo una vez cada 30 s y con una sola recarga en curso** (`singleflight`); si sigue sin aparecer, 401. Además se renueva cada 5 minutos, para que una clave retirada deje de valer; si esa descarga falla, conserva las claves conocidas. Si no se pudo descargar el JWKS no se sabe si el token es válido, así que responde 503; mientras no haya ninguna clave, el freno baja a 5 s, porque el gateway suele arrancar antes que identity.
 
 ## Errores propios
 
