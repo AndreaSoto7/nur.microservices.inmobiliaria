@@ -1,0 +1,291 @@
+openapi: 3.1.0
+info:
+  title: notification-service
+  version: 1.0.0
+  description: |
+    Avisos dentro de la app para agentes y clientes (ADR 0007). Se crean a partir de eventos de Kafka: la API solo los lee y los marca como leídos.
+    Cada usuario ve solo los suyos: el destinatario es el `sub` del access token.
+    El servicio valida la firma con el JWKS, `kid`, `alg=RS256`, `exp`, `iss=identity-service`, `aud=inmobiliaria` y `typ=at+jwt`.
+    Además de los errores documentados, el gateway responde 400, 413, 429, 502, 503 y 504 (`GATEWAY_*`).
+servers:
+  - url: http://localhost:8080
+    description: API Gateway (desarrollo)
+security:
+  - bearerAuth: []
+tags:
+  - name: notifications
+    description: Avisos del usuario autenticado
+  - name: health
+    description: Liveness y readiness (no se exponen por el gateway)
+
+paths:
+  /api/v1/notifications:
+    get:
+      tags: [notifications]
+      operationId: listNotifications
+      summary: Listar mis avisos
+      description: Devuelve los avisos del dueño del token, los más nuevos primero.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: page
+          in: query
+          description: Empieza en 1.
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: size
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: unread
+          in: query
+          description: Con `true`, solo los avisos sin leer.
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Página de avisos.
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPage'
+              example:
+                data:
+                  - id: 7b1e4c2a-9d3f-4a6b-8c21-0f5e6d7c8b9a
+                    type: VISIT_REQUESTED
+                    message: Recibiste una nueva solicitud de visita.
+                    propertyId: 3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
+                    visitId: 9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d
+                    createdAt: '2026-10-16T14:30:00Z'
+                    readAt: null
+                page: { number: 1, size: 20, totalElements: 1, totalPages: 1 }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/notifications/{notificationId}:
+    patch:
+      tags: [notifications]
+      operationId: markNotificationRead
+      summary: Marcar un aviso como leído
+      description: |
+        Es idempotente: marcar un aviso ya leído responde 204 y conserva la primera fecha.
+        Un aviso no se puede volver a marcar como no leído. Si es de otro usuario, responde 404: no se revela que existe.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: notificationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MarkNotificationReadRequest'
+            example: { read: true }
+      responses:
+        '204':
+          description: Aviso marcado como leído.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: El aviso no existe o es de otro usuario.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              example:
+                type: https://inmobiliaria.local/problems/notification-not-found
+                title: Aviso no encontrado
+                status: 404
+                detail: El aviso no existe.
+                instance: /api/v1/notifications/7b1e4c2a-9d3f-4a6b-8c21-0f5e6d7c8b9a
+                code: NOTIFICATION_NOT_FOUND
+                correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+
+  /health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Liveness
+      description: Lo usa Consul cada 10 s. No revisa dependencias.
+      security: []
+      servers:
+        - url: http://notification-service:8005
+          description: Red interna de Docker (no pasa por el gateway)
+      responses:
+        '200':
+          description: El proceso está vivo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example: { status: UP }
+
+  /health/ready:
+    get:
+      tags: [health]
+      operationId: getReadiness
+      summary: Readiness
+      description: Revisa la conexión a la base de datos.
+      security: []
+      servers:
+        - url: http://notification-service:8005
+          description: Red interna de Docker (no pasa por el gateway)
+      responses:
+        '200':
+          description: Listo para atender.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example: { status: UP }
+        '503':
+          description: La base de datos no responde.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example: { status: DOWN }
+
+components:
+  parameters:
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: Si no llega o no cumple el formato, lo genera el gateway (o el servicio). Se devuelve en la respuesta.
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9._-]{1,128}$'
+
+  headers:
+    CorrelationId:
+      description: El mismo valor recibido, o uno generado.
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9._-]{1,128}$'
+
+  responses:
+    Unauthorized:
+      description: |
+        Falta el access token, es inválido o venció.
+        Por el gateway, se corta antes de llegar al servicio, con `code` `GATEWAY_UNAUTHORIZED`. El cliente trata igual los dos.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://inmobiliaria.local/problems/auth-invalid-token
+            title: Token inválido
+            status: 401
+            detail: El token de acceso no es válido.
+            instance: /api/v1/notifications
+            code: AUTH_INVALID_TOKEN
+            correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+    ValidationError:
+      description: Request mal formado o con parámetros inválidos.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://inmobiliaria.local/problems/validation-error
+            title: Datos inválidos
+            status: 400
+            detail: Uno o más campos no son válidos.
+            instance: /api/v1/notifications
+            code: VALIDATION_ERROR
+            correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+            errors:
+              - field: size
+                message: Debe estar entre 1 y 100.
+
+  schemas:
+    NotificationType:
+      type: string
+      description: Puede crecer con nuevos avisos; el cliente debe tolerar valores desconocidos.
+      enum: [WELCOME, VISIT_REQUESTED, PROPERTY_RESERVED]
+
+    Notification:
+      type: object
+      required: [id, type, message, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/NotificationType' }
+        message: { type: string }
+        propertyId: { type: [string, 'null'], format: uuid }
+        visitId: { type: [string, 'null'], format: uuid }
+        createdAt: { type: string, format: date-time }
+        readAt:
+          type: [string, 'null']
+          format: date-time
+          description: '`null` mientras no se lea.'
+
+    PageMeta:
+      type: object
+      required: [number, size, totalElements, totalPages]
+      properties:
+        number: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+
+    NotificationPage:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Notification' }
+        page: { $ref: '#/components/schemas/PageMeta' }
+
+    MarkNotificationReadRequest:
+      type: object
+      required: [read]
+      properties:
+        read:
+          type: boolean
+          const: true
+
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN]
+
+    Problem:
+      type: object
+      description: RFC 9457 con las extensiones del proyecto (`code`, `correlationId`, `errors`).
+      required: [type, title, status, code, correlationId]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        code:
+          type: string
+          description: Estable, en UPPER_SNAKE_CASE.
+          examples: [VALIDATION_ERROR, NOTIFICATION_NOT_FOUND, AUTH_INVALID_TOKEN]
+        correlationId: { type: string, pattern: '^[A-Za-z0-9._-]{1,128}$' }
+        errors:
+          type: array
+          description: Solo en errores de validación.
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field: { type: string }
+              message: { type: string }
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
