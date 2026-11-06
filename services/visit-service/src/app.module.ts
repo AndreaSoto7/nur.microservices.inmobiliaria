@@ -8,6 +8,7 @@ import { HealthController } from './shared/health/health.controller.js';
 import { IdentityGuard } from './shared/identity.guard.js';
 import { OutboxRelay } from './shared/messaging/outbox-relay.js';
 import { ProblemFilter } from './shared/problem.filter.js';
+import { CancelVisitHandler } from './visits/application/cancel-visit.js';
 import { GetVisitByIdHandler } from './visits/application/get-visit-by-id.js';
 import { RejectVisitHandler } from './visits/application/reject-visit.js';
 import { RequestVisitHandler } from './visits/application/request-visit.js';
@@ -27,6 +28,7 @@ import { VisitsController } from './visits/presentation/visits.controller.js';
     RequestVisitHandler,
     ScheduleVisitHandler,
     RejectVisitHandler,
+    CancelVisitHandler,
     GetVisitByIdHandler,
     { provide: VISIT_REPOSITORY, useClass: PostgresVisits },
     { provide: APP_FILTER, useClass: ProblemFilter },

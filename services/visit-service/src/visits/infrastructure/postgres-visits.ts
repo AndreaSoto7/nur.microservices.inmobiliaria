@@ -5,6 +5,7 @@ import { VisitDatabase } from '../../database/visit-database.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import type {
   RequestKey,
+  VisitCancellationActor,
   VisitCreation,
   VisitDetails,
   VisitEvent,
@@ -67,7 +68,7 @@ export class PostgresVisits implements VisitRepository {
       `SELECT id, property_id AS "propertyId", status,
               proposed_at AS "proposedAt", requested_at AS "requestedAt",
               scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd",
-              CASE WHEN status = 'REJECTED' THEN resolution_reason END AS "resolutionReason"
+              CASE WHEN status IN ('REJECTED', 'CANCELLED') THEN resolution_reason END AS "resolutionReason"
          FROM visits WHERE id = $1
            AND (($3 AND client_id = $2) OR ($4 AND agent_id = $2))`,
       [
@@ -191,15 +192,26 @@ class PostgresVisitTransaction implements VisitTransaction {
     );
   }
 
-  async findAssignedVisit(
+  findAssignedVisit(id: string, agentId: string): Promise<Visit | undefined> {
+    return this.findParticipantVisit(id, { id: agentId, roles: ['AGENT'] });
+  }
+
+  async findParticipantVisit(
     id: string,
-    agentId: string,
+    principal: VisitPrincipal,
   ): Promise<Visit | undefined> {
     const [row] = await this.manager.query<VisitState[]>(
       `SELECT id, property_id AS "propertyId", client_id AS "clientId", agent_id AS "agentId",
-              status, proposed_at AS "proposedAt", requested_at AS "requestedAt"
-         FROM visits WHERE id = $1 AND agent_id = $2 FOR UPDATE`,
-      [id, agentId],
+              status, proposed_at AS "proposedAt", requested_at AS "requestedAt",
+              scheduled_start AS "scheduledStart"
+         FROM visits WHERE id = $1
+           AND (($3 AND client_id = $2) OR ($4 AND agent_id = $2)) FOR UPDATE`,
+      [
+        id,
+        principal.id,
+        principal.roles.includes('CLIENT'),
+        principal.roles.includes('AGENT'),
+      ],
     );
     return row ? Visit.restore(row) : undefined;
   }
@@ -217,6 +229,19 @@ class PostgresVisitTransaction implements VisitTransaction {
       `UPDATE visits SET status = 'REJECTED', resolution_reason = $2, resolved_by = 'AGENT',
           resolved_at = $3, updated_at = $3, version = version + 1 WHERE id = $1`,
       [id, reason, now],
+    );
+  }
+
+  async saveCancellation(
+    id: string,
+    actor: VisitCancellationActor,
+    reason: string | null,
+    now: Date,
+  ): Promise<void> {
+    await this.manager.query(
+      `UPDATE visits SET status = 'CANCELLED', resolution_reason = $2, resolved_by = $3,
+          resolved_at = $4, updated_at = $4, version = version + 1 WHERE id = $1`,
+      [id, reason, actor, now],
     );
   }
 

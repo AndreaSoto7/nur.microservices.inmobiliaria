@@ -15,9 +15,22 @@ const visitDurationMs = 60 * 60 * 1000;
 
 export class VisitNotRequestedError extends Error {}
 export class InvalidVisitScheduleError extends Error {}
-export class InvalidVisitRejectionReasonError extends Error {}
+export class InvalidVisitResolutionReasonError extends Error {}
+export class VisitNotScheduledError extends Error {}
+export class VisitCancellationTooLateError extends Error {}
 
-export type VisitState = VisitRequest & { status: VisitStatus };
+function normalizeResolutionReason(reason: string): string {
+  const normalized = reason.trim();
+  if (!normalized || reason.includes('\0') || [...reason].length > 500) {
+    throw new InvalidVisitResolutionReasonError();
+  }
+  return normalized;
+}
+
+export type VisitState = VisitRequest & {
+  status: VisitStatus;
+  scheduledStart?: Date | null;
+};
 
 export class InvalidProposedVisitDateError extends Error {
   constructor() {
@@ -34,6 +47,7 @@ export class Visit {
     private readonly proposedAtMs: number,
     private readonly requestedAtMs: number,
     private state: VisitStatus,
+    private scheduledStartMs?: number,
   ) {}
 
   static request(input: VisitRequest): Visit {
@@ -55,7 +69,7 @@ export class Visit {
     );
   }
 
-  static restore(input: VisitRequest & { status: VisitStatus }): Visit {
+  static restore(input: VisitState): Visit {
     return new Visit(
       input.id,
       input.propertyId,
@@ -64,6 +78,7 @@ export class Visit {
       input.proposedAt.getTime(),
       input.requestedAt.getTime(),
       input.status,
+      input.scheduledStart?.getTime(),
     );
   }
 
@@ -78,20 +93,28 @@ export class Visit {
       throw new InvalidVisitScheduleError();
     }
     this.state = 'SCHEDULED';
+    this.scheduledStartMs = start.getTime();
     return { start: new Date(start.getTime()), end };
   }
 
   reject(reason: string): string {
     if (this.state !== 'REQUESTED') throw new VisitNotRequestedError();
-    const normalizedReason = reason.trim();
-    if (
-      !normalizedReason ||
-      reason.includes('\0') ||
-      [...reason].length > 500
-    ) {
-      throw new InvalidVisitRejectionReasonError();
-    }
+    const normalizedReason = normalizeResolutionReason(reason);
     this.state = 'REJECTED';
+    return normalizedReason;
+  }
+
+  cancel(now: Date, reason?: string): string | null {
+    if (this.state !== 'SCHEDULED') throw new VisitNotScheduledError();
+    if (
+      this.scheduledStartMs === undefined ||
+      !(now.getTime() < this.scheduledStartMs)
+    ) {
+      throw new VisitCancellationTooLateError();
+    }
+    const normalizedReason =
+      reason === undefined ? null : normalizeResolutionReason(reason);
+    this.state = 'CANCELLED';
     return normalizedReason;
   }
 

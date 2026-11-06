@@ -31,6 +31,7 @@ import {
   type AuthenticatedRequest,
 } from '../../shared/identity.guard.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
+import { CancelVisitCommand } from '../application/cancel-visit.js';
 import { GetVisitByIdQuery } from '../application/get-visit-by-id.js';
 import { RejectVisitCommand } from '../application/reject-visit.js';
 import { RequestVisitCommand } from '../application/request-visit.js';
@@ -61,6 +62,14 @@ class RejectVisitDto {
   @Matches(/\S/u)
   @MaxLength(500)
   reason!: string;
+}
+
+class CancelVisitDto {
+  @ValidateIf((_, value: unknown) => value !== undefined)
+  @IsString()
+  @Matches(/\S/u)
+  @MaxLength(500)
+  reason?: string;
 }
 
 @Controller('api/v1/visits')
@@ -159,6 +168,35 @@ export class VisitsController {
         request.principal.id,
         key.toLowerCase(),
         body.reason,
+        ensureCorrelationId(request, response),
+      ),
+    );
+  }
+
+  @Post(':visitId/cancel')
+  @HttpCode(200)
+  @VisitRoles(['CLIENT', 'AGENT'])
+  async cancelVisit(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+    @Param('visitId') visitId: string,
+    @Headers('idempotency-key') key: string | undefined,
+    @Body() body: CancelVisitDto,
+  ) {
+    if (
+      !uuidPattern.test(visitId) ||
+      !key ||
+      !uuidPattern.test(key) ||
+      Array.isArray(request.body)
+    ) {
+      throw new VisitProblem('VALIDATION_ERROR');
+    }
+    return this.commands.execute(
+      new CancelVisitCommand(
+        visitId.toLowerCase(),
+        request.principal,
+        key.toLowerCase(),
+        body?.reason,
         ensureCorrelationId(request, response),
       ),
     );

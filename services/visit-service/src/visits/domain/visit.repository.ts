@@ -23,19 +23,27 @@ export type ScheduledVisit = {
   scheduledEnd: string;
 };
 export type RejectedVisit = { id: string; status: 'REJECTED' };
+export type CancelledVisit = { id: string; status: 'CANCELLED' };
+export type VisitCancellationActor = 'CLIENT' | 'AGENT';
 export type RequestKey = {
   actorId: string;
   key: string;
-  operation: 'request-visit' | 'schedule-visit' | 'reject-visit';
+  operation:
+    'request-visit' | 'schedule-visit' | 'reject-visit' | 'cancel-visit';
 };
 
 export type VisitEvent = {
-  type: 'VisitRequested' | 'VisitScheduled' | 'VisitRejected' | 'LeadOpened';
+  type:
+    | 'VisitRequested'
+    | 'VisitScheduled'
+    | 'VisitRejected'
+    | 'VisitCancelled'
+    | 'LeadOpened';
   aggregateId: string;
   occurredAt: Date;
   correlationId: string;
   causationId?: string;
-  payload: Record<string, string>;
+  payload: Record<string, string | null>;
 };
 
 export interface VisitTransaction {
@@ -51,6 +59,16 @@ export interface VisitTransaction {
   enqueue(event: VisitEvent): Promise<string>;
   lockAgentSchedule(agentId: string): Promise<void>;
   findAssignedVisit(id: string, agentId: string): Promise<Visit | undefined>;
+  findParticipantVisit(
+    id: string,
+    principal: VisitPrincipal,
+  ): Promise<Visit | undefined>;
+  saveCancellation(
+    id: string,
+    actor: VisitCancellationActor,
+    reason: string | null,
+    now: Date,
+  ): Promise<void>;
   saveSchedule(id: string, slot: VisitSlot, now: Date): Promise<void>;
   saveRejection(id: string, reason: string, now: Date): Promise<void>;
   saveRequest(

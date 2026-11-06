@@ -378,6 +378,143 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     expect(validator.validate(schema, events[0].envelope.payload)).toBe(true);
   });
 
+  it('permite cancelar a los participantes, libera el horario y registra un evento por visita', async () => {
+    const start = new Date(Date.now() + 96 * 3600_000);
+    const otherStart = new Date(start.getTime() + 3 * 3600_000);
+    const past = new Date(Date.now() - 1000);
+    const insertScheduled = async (date: Date) => {
+      const id = randomUUID();
+      await database.query(
+        `INSERT INTO visits
+          (id, property_id, client_id, agent_id, status, proposed_at, requested_at,
+           updated_at, scheduled_start, scheduled_end)
+         VALUES ($1,$2,$3,$4,'SCHEDULED',$5,now(),now(),$6,$7)`,
+        [
+          id,
+          propertyId,
+          clientId,
+          agentId,
+          body.proposedAt,
+          date,
+          new Date(date.getTime() + 3600_000),
+        ],
+      );
+      return id;
+    };
+    const clientVisit = await insertScheduled(start);
+    const agentVisit = await insertScheduled(otherStart);
+    const pastVisit = await insertScheduled(past);
+    const pendingVisit = randomUUID();
+    await database.query(
+      `INSERT INTO visits (id, property_id, client_id, agent_id, status, proposed_at, requested_at, updated_at)
+       VALUES ($1,$2,$3,$4,'REQUESTED',$5,now(),now())`,
+      [pendingVisit, propertyId, randomUUID(), agentId, body.proposedAt],
+    );
+
+    const http = request(app.getHttpServer());
+    const cancel = (id: string, token: string | null, key = randomUUID()) => {
+      const action = http
+        .post(path + '/' + id + '/cancel')
+        .set('Idempotency-Key', key)
+        .set('X-Correlation-Id', 'cancel-test');
+      return token ? action.auth(token, { type: 'bearer' }) : action;
+    };
+    await cancel(clientVisit, null).expect(401);
+    await cancel(clientVisit, otherToken).expect(404);
+    await cancel(clientVisit, otherAgentToken).expect(404);
+    await cancel(clientVisit, clientToken).send([]).expect(400);
+    await cancel(clientVisit, clientToken).send({ reason: null }).expect(400);
+    await cancel(clientVisit, clientToken).send({ reason: '  ' }).expect(400);
+    await cancel(clientVisit, clientToken)
+      .send({ actor: 'SYSTEM' })
+      .expect(400);
+    await cancel(pendingVisit, agentToken)
+      .expect(409)
+      .expect(/VISIT_NOT_SCHEDULED/);
+    await cancel(pastVisit, clientToken)
+      .expect(409)
+      .expect(/VISIT_CANCELLATION_TOO_LATE/);
+
+    const key = randomUUID();
+    const expected = { id: clientVisit, status: 'CANCELLED' };
+    await Promise.all([
+      cancel(clientVisit, clientToken, key).expect(200, expected),
+      cancel(clientVisit, clientToken, key).send({}).expect(200, expected),
+    ]);
+    await cancel(clientVisit, clientToken, key)
+      .send({ reason: 'Cambio' })
+      .expect(422);
+    await cancel(clientVisit, agentToken)
+      .expect(409)
+      .expect(/VISIT_NOT_SCHEDULED/);
+    const reason = 'No puedo atender la visita.';
+    await cancel(agentVisit, agentToken)
+      .send({ reason: '  ' + reason + ' ' })
+      .expect(200, { id: agentVisit, status: 'CANCELLED' });
+
+    const detail = await http
+      .get(path + '/' + agentVisit)
+      .auth(clientToken, { type: 'bearer' })
+      .expect(200);
+    expect(detail.body).toMatchObject({
+      status: 'CANCELLED',
+      scheduledStart: otherStart.toISOString(),
+      resolutionReason: reason,
+    });
+    await http
+      .post(path + '/' + pendingVisit + '/schedule')
+      .auth(agentToken, { type: 'bearer' })
+      .set('Idempotency-Key', randomUUID())
+      .send({ scheduledStart: start.toISOString() })
+      .expect(200);
+
+    const events = await database.query<
+      { topic: string; envelope: { payload: unknown } }[]
+    >(
+      "SELECT topic, envelope FROM outbox WHERE aggregate_id IN ($1,$2) AND envelope->>'eventType' = 'VisitCancelled' ORDER BY envelope->'payload'->>'actor'",
+      [clientVisit, agentVisit],
+    );
+    expect(events).toEqual([
+      {
+        topic: 'visit.visit.events',
+        envelope: expect.objectContaining({
+          correlationId: 'cancel-test',
+          payload: {
+            visitId: agentVisit,
+            propertyId,
+            clientId,
+            agentId,
+            actor: 'AGENT',
+            reason,
+          },
+        }),
+      },
+      {
+        topic: 'visit.visit.events',
+        envelope: expect.objectContaining({
+          correlationId: 'cancel-test',
+          payload: {
+            visitId: clientVisit,
+            propertyId,
+            clientId,
+            agentId,
+            actor: 'CLIENT',
+            reason: null,
+          },
+        }),
+      },
+    ]);
+    const schemaPath = new URL(
+      '../../../contracts/events/visit/visit-cancelled.v1.schema.json',
+      import.meta.url,
+    );
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as object;
+    const validate = addFormats.default(new Ajv2020()).compile(schema);
+    expect(events.every(({ envelope }) => validate(envelope.payload))).toBe(
+      true,
+    );
+  });
+
   it('valida credenciales, rol, formato, fecha y estado de la propiedad', async () => {
     const http = request(app.getHttpServer());
     await http.get('/health/ready').expect(200, { status: 'UP' });

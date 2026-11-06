@@ -1,8 +1,10 @@
 import {
   InvalidProposedVisitDateError,
-  InvalidVisitRejectionReasonError,
+  InvalidVisitResolutionReasonError,
   Visit,
   VisitNotRequestedError,
+  VisitCancellationTooLateError,
+  VisitNotScheduledError,
 } from './visit.js';
 
 describe('Visit', () => {
@@ -56,7 +58,7 @@ describe('Visit', () => {
       const visit = Visit.request(buildRequest());
 
       expect(() => visit.reject(reason)).toThrow(
-        InvalidVisitRejectionReasonError,
+        InvalidVisitResolutionReasonError,
       );
       expect(visit.status).toBe('REQUESTED');
     },
@@ -70,6 +72,40 @@ describe('Visit', () => {
       VisitNotRequestedError,
     );
     expect(visit.status).toBe('SCHEDULED');
+  });
+
+  it('permite cancelar justo antes de la hora acordada', () => {
+    const input = buildRequest();
+    const visit = Visit.request(input);
+    visit.schedule(input.proposedAt, input.requestedAt);
+
+    expect(visit.cancel(new Date(input.proposedAt.getTime() - 1))).toBeNull();
+    expect(visit.status).toBe('CANCELLED');
+  });
+
+  it.each([0, 1])(
+    'bloquea la cancelación al inicio o después (desfase %i)',
+    (offset) => {
+      const input = buildRequest();
+      const scheduledStart = input.proposedAt;
+      const visit = Visit.restore({
+        ...input,
+        status: 'SCHEDULED',
+        scheduledStart,
+      });
+
+      expect(() =>
+        visit.cancel(new Date(scheduledStart.getTime() + offset)),
+      ).toThrow(VisitCancellationTooLateError);
+      expect(visit.status).toBe('SCHEDULED');
+    },
+  );
+
+  it('no cancela una solicitud pendiente', () => {
+    const visit = Visit.request(buildRequest());
+
+    expect(() => visit.cancel(new Date())).toThrow(VisitNotScheduledError);
+    expect(visit.status).toBe('REQUESTED');
   });
 
   it('preserva la fecha propuesta aunque se muten las fechas expuestas', () => {

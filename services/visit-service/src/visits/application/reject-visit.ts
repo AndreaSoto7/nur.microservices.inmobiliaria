@@ -9,7 +9,7 @@ import {
   type VisitRepository,
 } from '../domain/visit.repository.js';
 import {
-  InvalidVisitRejectionReasonError,
+  InvalidVisitResolutionReasonError,
   VisitNotRequestedError,
 } from '../domain/visit.js';
 
@@ -63,7 +63,7 @@ export class RejectVisitHandler implements ICommandHandler<RejectVisitCommand> {
       } catch (error) {
         if (error instanceof VisitNotRequestedError)
           throw new VisitProblem('VISIT_NOT_REQUESTED');
-        if (error instanceof InvalidVisitRejectionReasonError)
+        if (error instanceof InvalidVisitResolutionReasonError)
           throw new VisitProblem('VALIDATION_ERROR');
         throw error;
       }
