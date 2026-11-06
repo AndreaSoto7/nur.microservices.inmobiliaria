@@ -39,6 +39,29 @@ docker compose -f infra/docker-compose.yml -f infra/docker-compose.debug.yml up 
 
 Publica, **solo en `127.0.0.1`**: identity en 8001, su PostgreSQL en 5433 y Kafka en 9092. No se combina con `--scale`.
 
+## Datos de ejemplo y demo de las cadenas de eventos
+
+Con el stack levantado, `infra/scripts/demo.py` trabaja solo contra el gateway, como el frontend. Usa únicamente la biblioteca estándar de Python 3.10 o más nuevo.
+
+```bash
+python infra/scripts/demo.py seed     # carga datos para mostrar la UI
+python infra/scripts/demo.py chains   # recorre las políticas del ADR 0005 en vivo
+```
+
+- **`seed`** crea a la agente `agente@demo.test` y al interesado `cliente@demo.test`, con la contraseña `demo-inmobiliaria`, que se cambia con `DEMO_PASSWORD`.
+  - Carga seis propiedades publicadas, con características y fotos. Las fotos son PNG generados por el script, así que no hay binarios en el repo.
+  - Guarda dos favoritos, envía una consulta y deja una visita pendiente y otra programada.
+  - Si la agente ya tiene propiedades, no vuelve a cargarlas.
+- **`chains`** crea cuentas nuevas en cada corrida y muestra cuánto tarda cada reacción asíncrona:
+  1. `PropertyPublished` llega a la copia local de visit, que recién entonces acepta solicitudes.
+  2. `LeadClosed` (`WON`) hace que listing reserve la propiedad.
+  3. `PropertyReserved` hace que visit rechace la solicitud pendiente y mantenga la programada.
+  4. `PropertySold` hace que visit cancele la visita programada.
+  5. notification crea los avisos de cada usuario.
+
+  Si una reacción no llega en 45 s, el script termina con código 1 y dice cuál falló. Cada request lleva un `X-Correlation-Id` que empieza con `demo-`, para buscarlo en los logs. Los eventos se ven en la UI de Kafka.
+- El gateway limita login y registro por minuto (`RATE_LIMIT_AUTH_PER_MINUTE`). Si responde 429, el script espera lo que indica `Retry-After` y reintenta.
+
 ## Agregar tu servicio
 
 En tu propio PR:
