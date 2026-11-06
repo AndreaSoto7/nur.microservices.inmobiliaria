@@ -24,7 +24,7 @@ public class JpaFavoriteRepository implements FavoriteRepository {
 
     @Override
     public Optional<Favorite> find(UUID userId, PropertyId propertyId) {
-        return jpa.findByUserIdAndPropertyId(userId, propertyId.value()).map(e -> Favorite.rehydrate(
+        return jpa.findByUserIdAndPropertyId(userId, propertyId.value()).map(e -> Favorite.reconstitute(
                 new FavoriteId(e.id), e.userId, new PropertyId(e.propertyId), e.createdAt));
     }
 

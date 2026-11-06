@@ -1,7 +1,7 @@
 package com.inmobiliaria.listing.infrastructure.persistence;
 
 import com.inmobiliaria.listing.domain.model.Area;
-import com.inmobiliaria.listing.domain.model.Feature;
+import com.inmobiliaria.listing.domain.model.Amenity;
 import com.inmobiliaria.listing.domain.model.Location;
 import com.inmobiliaria.listing.domain.model.Money;
 import com.inmobiliaria.listing.domain.model.OperationType;
@@ -22,9 +22,9 @@ final class PropertyMapper {
     }
 
     static Property toDomain(PropertyJpaEntity e) {
-        Set<Feature> features = e.features.isEmpty() ? EnumSet.noneOf(Feature.class)
-                : e.features.stream().map(Feature::valueOf).collect(Collectors.toCollection(
-                        () -> EnumSet.noneOf(Feature.class)));
+        Set<Amenity> features = e.features.isEmpty() ? EnumSet.noneOf(Amenity.class)
+                : e.features.stream().map(Amenity::valueOf).collect(Collectors.toCollection(
+                        () -> EnumSet.noneOf(Amenity.class)));
         return Property.reconstitute(
                 new PropertyId(e.id), e.agentId, e.title, e.description,
                 PropertyType.valueOf(e.propertyType), OperationType.valueOf(e.operationType),
@@ -60,7 +60,7 @@ final class PropertyMapper {
         e.createdAt = p.createdAt();
         e.updatedAt = p.updatedAt();
 
-        Set<String> features = p.features().stream().map(Feature::name).collect(Collectors.toSet());
+        Set<String> features = p.amenities().stream().map(Amenity::name).collect(Collectors.toSet());
         e.features.retainAll(features);
         e.features.addAll(features);
 

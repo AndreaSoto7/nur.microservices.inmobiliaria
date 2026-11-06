@@ -6,7 +6,7 @@ import com.inmobiliaria.listing.application.query.GetCatalogPropertyHandler;
 import com.inmobiliaria.listing.application.query.GetCatalogPropertyQuery;
 import com.inmobiliaria.listing.application.query.SearchCatalogHandler;
 import com.inmobiliaria.listing.application.query.SearchCatalogQuery;
-import com.inmobiliaria.listing.domain.model.Feature;
+import com.inmobiliaria.listing.domain.model.Amenity;
 import com.inmobiliaria.listing.domain.model.OperationType;
 import com.inmobiliaria.listing.domain.model.PropertyId;
 import com.inmobiliaria.listing.domain.model.PropertyType;
@@ -49,10 +49,10 @@ public class CatalogController {
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) List<String> sort) {
-        Set<Feature> wanted = EnumSet.noneOf(Feature.class);
+        Set<Amenity> wanted = EnumSet.noneOf(Amenity.class);
         if (features != null) {
             features.stream().flatMap(f -> List.of(f.split(",")).stream()).map(String::trim)
-                    .filter(f -> !f.isEmpty()).forEach(f -> wanted.add(Features.parse(f)));
+                    .filter(f -> !f.isEmpty()).forEach(f -> wanted.add(Amenities.parse(f)));
         }
         CatalogCriteria criteria = CatalogCriteria.builder()
                 .zone(zone)
@@ -60,7 +60,7 @@ public class CatalogController {
                 .operationType(operation)
                 .priceBetween(minPrice, maxPrice)
                 .minBedrooms(bedrooms)
-                .withFeatures(wanted)
+                .withAmenities(wanted)
                 .build();
         var result = search.handle(new SearchCatalogQuery(criteria,
                 PageParams.of(page, size, sort, CatalogReadModel.SORTABLE_FIELDS)));

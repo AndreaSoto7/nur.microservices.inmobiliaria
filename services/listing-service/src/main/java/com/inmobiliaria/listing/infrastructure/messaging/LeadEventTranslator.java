@@ -1,6 +1,6 @@
 package com.inmobiliaria.listing.infrastructure.messaging;
 
-import com.inmobiliaria.listing.application.policy.LeadClosedNotification;
+import com.inmobiliaria.listing.application.policy.LeadClosed;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -27,7 +27,7 @@ public class LeadEventTranslator {
      * @return la notificación, o vacío si el evento no le interesa a listing.
      * @throws MalformedEventException si el mensaje no se puede leer (va a la DLQ sin reintentos).
      */
-    public Optional<LeadClosedNotification> translate(String message) {
+    public Optional<LeadClosed> translate(String message) {
         JsonNode envelope;
         try {
             envelope = json.readTree(message);
@@ -42,12 +42,12 @@ public class LeadEventTranslator {
         try {
             JsonNode payload = envelope.required("payload");
             String correlationId = envelope.path("correlationId").asString("");
-            return Optional.of(new LeadClosedNotification(
+            return Optional.of(new LeadClosed(
                     UUID.fromString(envelope.required("eventId").asString()),
                     uuidOrNull(payload.path("leadId")),
                     UUID.fromString(payload.required("propertyId").asString()),
                     UUID.fromString(payload.required("agentId").asString()),
-                    LeadClosedNotification.Outcome.valueOf(payload.required("outcome").asString()),
+                    LeadClosed.Outcome.valueOf(payload.required("outcome").asString()),
                     correlationId.isBlank() ? UUID.randomUUID().toString() : correlationId));
         } catch (IllegalArgumentException | JacksonException e) {
             throw new MalformedEventException("LeadClosed con datos inválidos: " + e.getMessage(), e);

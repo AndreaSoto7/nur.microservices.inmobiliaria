@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import com.inmobiliaria.listing.application.command.RebuildCatalogHandler;
-import com.inmobiliaria.listing.application.policy.LeadClosedNotification;
+import com.inmobiliaria.listing.application.policy.LeadClosed;
 import com.inmobiliaria.listing.application.policy.ReserveOnLeadWonPolicy;
 import java.nio.file.Path;
 import java.util.List;
@@ -160,8 +160,8 @@ class ListingApiIntegrationTest {
                 .andExpect(jsonPath("$.code").value("FAVORITE_ALREADY_EXISTS"));
 
         // Política: LeadClosed WON reserva la propiedad (y un duplicado no hace nada).
-        LeadClosedNotification won = new LeadClosedNotification(UUID.randomUUID(), UUID.randomUUID(), id, agent,
-                LeadClosedNotification.Outcome.WON, "corr-lead");
+        LeadClosed won = new LeadClosed(UUID.randomUUID(), UUID.randomUUID(), id, agent,
+                LeadClosed.Outcome.WON, "corr-lead");
         policy.handle(won);
         policy.handle(won);
 

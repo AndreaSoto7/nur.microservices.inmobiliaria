@@ -19,7 +19,7 @@ class FavoriteTest {
         UUID user = UUID.randomUUID();
         PropertyId property = PropertyId.newId();
 
-        Favorite favorite = Favorite.save(user, property, PropertyStatus.PUBLISHED, NOW);
+        Favorite favorite = Favorite.add(user, property, PropertyStatus.PUBLISHED, NOW);
 
         assertThat(favorite.userId()).isEqualTo(user);
         assertThat(favorite.propertyId()).isEqualTo(property);
@@ -28,7 +28,7 @@ class FavoriteTest {
     @ParameterizedTest
     @EnumSource(value = PropertyStatus.class, names = "PUBLISHED", mode = EnumSource.Mode.EXCLUDE)
     void should_reject_a_property_that_is_not_published(PropertyStatus status) {
-        assertThatThrownBy(() -> Favorite.save(UUID.randomUUID(), PropertyId.newId(), status, NOW))
+        assertThatThrownBy(() -> Favorite.add(UUID.randomUUID(), PropertyId.newId(), status, NOW))
                 .isInstanceOf(DomainException.class)
                 .extracting("code").isEqualTo("FAVORITE_PROPERTY_NOT_PUBLISHED");
     }

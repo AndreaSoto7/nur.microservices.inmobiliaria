@@ -1,6 +1,6 @@
 package com.inmobiliaria.listing.application.query;
 
-import com.inmobiliaria.listing.domain.model.Feature;
+import com.inmobiliaria.listing.domain.model.Amenity;
 import com.inmobiliaria.listing.domain.model.OperationType;
 import com.inmobiliaria.listing.domain.model.PropertyType;
 import java.math.BigDecimal;
@@ -21,7 +21,7 @@ public final class CatalogCriteria {
     private final BigDecimal minPrice;
     private final BigDecimal maxPrice;
     private final Integer minBedrooms;
-    private final Set<Feature> features;
+    private final Set<Amenity> amenities;
 
     private CatalogCriteria(Builder builder) {
         this.zone = builder.zone;
@@ -30,7 +30,7 @@ public final class CatalogCriteria {
         this.minPrice = builder.minPrice;
         this.maxPrice = builder.maxPrice;
         this.minBedrooms = builder.minBedrooms;
-        this.features = builder.features.isEmpty() ? Set.of() : Set.copyOf(builder.features);
+        this.amenities = builder.amenities.isEmpty() ? Set.of() : Set.copyOf(builder.amenities);
     }
 
     public static Builder builder() {
@@ -64,8 +64,8 @@ public final class CatalogCriteria {
     }
 
     /** La propiedad debe tener todas estas características. */
-    public Set<Feature> features() {
-        return features;
+    public Set<Amenity> amenities() {
+        return amenities;
     }
 
     public static final class Builder {
@@ -76,7 +76,7 @@ public final class CatalogCriteria {
         private BigDecimal minPrice;
         private BigDecimal maxPrice;
         private Integer minBedrooms;
-        private final Set<Feature> features = EnumSet.noneOf(Feature.class);
+        private final Set<Amenity> amenities = EnumSet.noneOf(Amenity.class);
 
         private Builder() {
         }
@@ -116,9 +116,9 @@ public final class CatalogCriteria {
             return this;
         }
 
-        public Builder withFeatures(Set<Feature> features) {
-            if (features != null) {
-                this.features.addAll(features);
+        public Builder withAmenities(Set<Amenity> amenities) {
+            if (amenities != null) {
+                this.amenities.addAll(amenities);
             }
             return this;
         }

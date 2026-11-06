@@ -1,7 +1,7 @@
 package com.inmobiliaria.listing.infrastructure.persistence;
 
 import com.inmobiliaria.listing.application.port.CatalogProjection;
-import com.inmobiliaria.listing.domain.model.Feature;
+import com.inmobiliaria.listing.domain.model.Amenity;
 import com.inmobiliaria.listing.domain.model.Area;
 import com.inmobiliaria.listing.domain.model.Property;
 import java.sql.Timestamp;
@@ -43,7 +43,7 @@ public class JdbcCatalogProjection implements CatalogProjection {
 
     @Override
     public void sync(Property p) {
-        if (!p.status().isListed()) {
+        if (!p.status().isVisibleInCatalog()) {
             jdbc.update("DELETE FROM property_catalog WHERE property_id = :id", Map.of("id", p.id().value()));
             return;
         }
@@ -60,7 +60,7 @@ public class JdbcCatalogProjection implements CatalogProjection {
         params.put("bedrooms", p.bedrooms().orElse(null));
         params.put("bathrooms", p.bathrooms().orElse(null));
         params.put("area", p.area().map(Area::squareMeters).orElse(null));
-        params.put("features", p.features().stream().map(Feature::name).sorted().toArray(String[]::new));
+        params.put("features", p.amenities().stream().map(Amenity::name).sorted().toArray(String[]::new));
         params.put("coverImageId", p.images().isEmpty() ? null : p.images().getFirst().id());
         params.put("publishedAt", Timestamp.from(p.publishedAt().orElseThrow()));
         params.put("updatedAt", Timestamp.from(p.updatedAt()));

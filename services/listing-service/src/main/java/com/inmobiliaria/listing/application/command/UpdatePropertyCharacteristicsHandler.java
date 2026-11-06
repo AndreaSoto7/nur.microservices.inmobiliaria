@@ -4,18 +4,18 @@ import com.inmobiliaria.listing.domain.model.Property;
 import org.springframework.transaction.annotation.Transactional;
 
 /** registerPropertiesCommand: dormitorios, baños, superficie y extras. */
-public class UpdatePropertyFeaturesHandler {
+public class UpdatePropertyCharacteristicsHandler {
 
     private final PropertyCommandSupport support;
 
-    public UpdatePropertyFeaturesHandler(PropertyCommandSupport support) {
+    public UpdatePropertyCharacteristicsHandler(PropertyCommandSupport support) {
         this.support = support;
     }
 
     @Transactional
-    public void handle(UpdatePropertyFeaturesCommand command) {
+    public void handle(UpdatePropertyCharacteristicsCommand command) {
         Property property = support.loadForChange(command.propertyId(), command.metadata());
-        property.updateFeatures(command.bedrooms(), command.bathrooms(), command.area(), command.features(),
+        property.updateCharacteristics(command.bedrooms(), command.bathrooms(), command.area(), command.amenities(),
                 support.now());
         support.commit(property, command.metadata());
     }

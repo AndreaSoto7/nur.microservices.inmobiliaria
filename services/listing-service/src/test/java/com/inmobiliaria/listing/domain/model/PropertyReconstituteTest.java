@@ -16,7 +16,7 @@ class PropertyReconstituteTest {
         Property copy = Property.reconstitute(original.id(), original.agentId(), original.title(),
                 original.description(), original.type(), original.operation(), original.status(), original.price(),
                 original.location(), original.bedrooms().orElse(null), original.bathrooms().orElse(null),
-                original.area().orElse(null), original.features(), original.images(),
+                original.area().orElse(null), original.amenities(), original.images(),
                 original.publishedAt().orElse(null), original.createdAt(), original.updatedAt());
 
         assertThat(copy).usingRecursiveComparison().ignoringFields("pendingEvents").isEqualTo(original);
@@ -29,7 +29,7 @@ class PropertyReconstituteTest {
         Property copy = Property.reconstitute(original.id(), original.agentId(), original.title(),
                 original.description(), original.type(), original.operation(), original.status(), original.price(),
                 original.location(), original.bedrooms().orElse(null), original.bathrooms().orElse(null),
-                original.area().orElse(null), original.features(), original.images(),
+                original.area().orElse(null), original.amenities(), original.images(),
                 original.publishedAt().orElse(null), original.createdAt(), original.updatedAt());
 
         copy.pause(PropertyMother.T0.plusSeconds(60));

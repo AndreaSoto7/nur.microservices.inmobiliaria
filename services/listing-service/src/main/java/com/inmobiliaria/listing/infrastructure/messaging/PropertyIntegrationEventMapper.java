@@ -12,7 +12,7 @@ import com.inmobiliaria.listing.domain.event.PropertyEvent.PropertyReserved;
 import com.inmobiliaria.listing.domain.event.PropertyEvent.PropertySold;
 import com.inmobiliaria.listing.domain.event.PropertyEvent.PropertyUpdated;
 import com.inmobiliaria.listing.domain.model.Area;
-import com.inmobiliaria.listing.domain.model.Feature;
+import com.inmobiliaria.listing.domain.model.Amenity;
 import com.inmobiliaria.listing.domain.model.Property;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -97,7 +97,7 @@ public class PropertyIntegrationEventMapper {
     }
 
     private Optional<OutboxMessage> updated(Property property, PropertyEvent event, CommandMetadata metadata) {
-        return property.status().isListed()
+        return property.status().isVisibleInCatalog()
                 ? Optional.of(envelope("PropertyUpdated", property, event, fullPayload(property), metadata))
                 : Optional.empty();
     }
@@ -118,7 +118,7 @@ public class PropertyIntegrationEventMapper {
         payload.put("bedrooms", p.bedrooms().orElse(null));
         payload.put("bathrooms", p.bathrooms().orElse(null));
         payload.put("areaM2", p.area().map(Area::squareMeters).orElse(null));
-        payload.put("features", p.features().stream().map(Feature::name).sorted().toList());
+        payload.put("features", p.amenities().stream().map(Amenity::name).sorted().toList());
         payload.put("coverImageUrl", imageUrls.isEmpty() ? null : imageUrls.getFirst());
         payload.put("imageUrls", imageUrls);
         payload.put("status", p.status().name());

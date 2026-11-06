@@ -38,12 +38,12 @@ public class ReserveOnLeadWonPolicy {
     }
 
     @Transactional
-    public void handle(LeadClosedNotification event) {
+    public void handle(LeadClosed event) {
         if (!processedEvents.markProcessed(event.eventId(), EVENT_TYPE)) {
             log.debug("LeadClosed {} ya procesado: se descarta el duplicado", event.eventId());
             return;
         }
-        if (event.outcome() != LeadClosedNotification.Outcome.WON) {
+        if (event.outcome() != LeadClosed.Outcome.WON) {
             return;
         }
         PropertyId propertyId = new PropertyId(event.propertyId());

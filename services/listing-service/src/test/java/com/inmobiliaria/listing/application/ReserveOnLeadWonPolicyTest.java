@@ -6,8 +6,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.inmobiliaria.listing.application.command.PropertyCommandSupport;
 import com.inmobiliaria.listing.application.command.ReservePropertyHandler;
-import com.inmobiliaria.listing.application.policy.LeadClosedNotification;
-import com.inmobiliaria.listing.application.policy.LeadClosedNotification.Outcome;
+import com.inmobiliaria.listing.application.policy.LeadClosed;
+import com.inmobiliaria.listing.application.policy.LeadClosed.Outcome;
 import com.inmobiliaria.listing.application.policy.ReserveOnLeadWonPolicy;
 import com.inmobiliaria.listing.domain.event.PropertyEvent;
 import com.inmobiliaria.listing.domain.model.Actor;
@@ -48,15 +48,15 @@ class ReserveOnLeadWonPolicyTest {
         return property;
     }
 
-    private static LeadClosedNotification leadClosed(Property property, UUID agentId, Outcome outcome) {
-        return new LeadClosedNotification(UUID.randomUUID(), UUID.randomUUID(), property.id().value(), agentId,
+    private static LeadClosed leadClosed(Property property, UUID agentId, Outcome outcome) {
+        return new LeadClosed(UUID.randomUUID(), UUID.randomUUID(), property.id().value(), agentId,
                 outcome, "corr-lead");
     }
 
     @Test
     void should_reserve_when_lead_is_won_and_property_is_published() {
         Property property = stored(PropertyStatus.PUBLISHED);
-        LeadClosedNotification event = leadClosed(property, AGENT, Outcome.WON);
+        LeadClosed event = leadClosed(property, AGENT, Outcome.WON);
 
         policy.handle(event);
 
@@ -71,7 +71,7 @@ class ReserveOnLeadWonPolicyTest {
     @Test
     void should_ignore_lost_leads_but_mark_them_processed() {
         Property property = stored(PropertyStatus.PUBLISHED);
-        LeadClosedNotification event = leadClosed(property, AGENT, Outcome.LOST);
+        LeadClosed event = leadClosed(property, AGENT, Outcome.LOST);
 
         policy.handle(event);
 
@@ -83,7 +83,7 @@ class ReserveOnLeadWonPolicyTest {
     @Test
     void should_not_reserve_and_not_fail_when_property_is_not_published() {
         Property property = stored(PropertyStatus.PAUSED);
-        LeadClosedNotification event = leadClosed(property, AGENT, Outcome.WON);
+        LeadClosed event = leadClosed(property, AGENT, Outcome.WON);
 
         policy.handle(event);
 
@@ -105,7 +105,7 @@ class ReserveOnLeadWonPolicyTest {
     @Test
     void should_process_a_duplicate_only_once() {
         Property property = stored(PropertyStatus.PUBLISHED);
-        LeadClosedNotification event = leadClosed(property, AGENT, Outcome.WON);
+        LeadClosed event = leadClosed(property, AGENT, Outcome.WON);
 
         policy.handle(event);
         policy.handle(event);
@@ -116,7 +116,7 @@ class ReserveOnLeadWonPolicyTest {
 
     @Test
     void should_not_fail_when_property_is_unknown() {
-        LeadClosedNotification event = new LeadClosedNotification(UUID.randomUUID(), null, UUID.randomUUID(), AGENT,
+        LeadClosed event = new LeadClosed(UUID.randomUUID(), null, UUID.randomUUID(), AGENT,
                 Outcome.WON, "corr");
 
         policy.handle(event);

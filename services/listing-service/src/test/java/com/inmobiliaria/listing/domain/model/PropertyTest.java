@@ -69,7 +69,7 @@ class PropertyTest {
         @Test
         void should_reject_publish_without_images() {
             Property property = draft(OperationType.SALE);
-            property.updateFeatures(3, 2, area(), Set.of(), T0);
+            property.updateCharacteristics(3, 2, area(), Set.of(), T0);
 
             assertThatThrownBy(() -> property.publish(T1))
                     .isInstanceOf(DomainException.class)
@@ -289,9 +289,9 @@ class PropertyTest {
             }
             property.pullEvents();
 
-            property.updateFeatures(4, 3, area(), Set.of(Feature.POOL), T2);
+            property.updateCharacteristics(4, 3, area(), Set.of(Amenity.POOL), T2);
 
-            assertThat(property.features()).containsExactly(Feature.POOL);
+            assertThat(property.amenities()).containsExactly(Amenity.POOL);
             assertThat(property.pullEvents()).singleElement()
                     .isEqualTo(new PropertyEvent.PropertyUpdated(property.id(), T2));
         }
@@ -300,7 +300,7 @@ class PropertyTest {
         void should_reject_negative_bedrooms() {
             Property property = draft(OperationType.SALE);
 
-            assertThatThrownBy(() -> property.updateFeatures(-1, 1, area(), Set.of(), T1))
+            assertThatThrownBy(() -> property.updateCharacteristics(-1, 1, area(), Set.of(), T1))
                     .isInstanceOf(DomainException.class)
                     .hasFieldOrPropertyWithValue("code", "PROPERTY_INVALID_FEATURES");
         }
@@ -342,7 +342,7 @@ class PropertyTest {
 
     private static Property readyToPublish(OperationType operation) {
         Property property = draft(operation);
-        property.updateFeatures(3, 2, area(), Set.of(Feature.GARAGE, Feature.GARDEN), T0);
+        property.updateCharacteristics(3, 2, area(), Set.of(Amenity.GARAGE, Amenity.GARDEN), T0);
         property.addImage(image(), T0);
         return property;
     }
