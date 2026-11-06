@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| docs | ADR 0007: se retoma el servicio, con avisos solo dentro de la app. Diseño, base y progreso | este PR |
+| docs | ADR 0007: se retoma el servicio, con avisos solo dentro de la app. Diseño, base y progreso | #73 |
 
 ## Pendientes
 
