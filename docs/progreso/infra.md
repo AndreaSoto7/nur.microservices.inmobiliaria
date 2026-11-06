@@ -9,7 +9,7 @@
 | Tipo | Qué se hizo | PR |
 |---|---|---|
 | feat | Compose base y de depuración con Kafka KRaft, Kafka UI, Consul, topics e identity | #26 |
-| feat | Gateway en el compose (8080). Healthcheck de las bases por TCP: con un volumen nuevo, `pg_isready` por socket daba listo durante la inicialización, y identity moría con `Connection refused` | este PR |
+| feat | Gateway en el compose (8080). Healthcheck de las bases por TCP: con un volumen nuevo, `pg_isready` por socket daba listo durante la inicialización, y identity moría con `Connection refused` | #69 |
 
 ## Pendientes
 
