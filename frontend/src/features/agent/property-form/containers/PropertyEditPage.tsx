@@ -1,13 +1,13 @@
 import { Link, useParams } from 'react-router'
-import type { PropertyDetail, PropertyTransition } from '../../../../core/models/listing'
 import { Button } from '../../../../shared/ui/Button'
 import { EmptyState } from '../../../../shared/ui/EmptyState'
 import { ErrorMessage } from '../../../../shared/ui/ErrorMessage'
 import { LoadingState } from '../../../../shared/ui/LoadingState'
-import { PropertyActions } from '../../properties-admin/components/PropertyActions'
 import { PropertyStatusBadge } from '../../properties-admin/components/PropertyStatusBadge'
-import { usePropertyTransition } from '../../properties-admin/usePropertyTransition'
 import { PropertyDataForm } from '../components/PropertyDataForm'
+import { PropertyFeaturesSection } from './PropertyFeaturesSection'
+import { PropertyImagesSection } from './PropertyImagesSection'
+import { PropertyStatusSection } from './PropertyStatusSection'
 import { toEditRequest, valuesFromDetail, type PropertyFormValues } from '../propertyFormValues'
 import { useEditProperty } from '../usePropertyForm'
 
@@ -73,7 +73,7 @@ export function PropertyEditPage() {
           </p>
         ) : (
           <>
-            <StatusSection property={property} />
+            <PropertyStatusSection property={property} />
             <div className="card editor__section">
               <h2>Datos</h2>
               <PropertyDataForm
@@ -89,30 +89,11 @@ export function PropertyEditPage() {
                 onSubmit={handleSave}
               />
             </div>
+            <PropertyFeaturesSection key={`features-${property.id}`} property={property} />
+            <PropertyImagesSection property={property} />
           </>
         )}
       </div>
     </section>
-  )
-}
-
-function StatusSection({ property }: { property: PropertyDetail }) {
-  const { runTransition, pendingPropertyId, error } = usePropertyTransition()
-
-  return (
-    <div className="card editor__section">
-      <h2>Estado</h2>
-      <PropertyActions
-        title={property.title}
-        status={property.status}
-        operationType={property.operationType}
-        busy={pendingPropertyId === property.id}
-        primary="publish"
-        onRun={(transition: PropertyTransition) =>
-          runTransition({ propertyId: property.id, transition })
-        }
-      />
-      {error && <ErrorMessage message={error} />}
-    </div>
   )
 }

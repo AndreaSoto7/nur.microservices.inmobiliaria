@@ -73,8 +73,10 @@ frontend/src/
         useAgentProperties.ts (facade; estado y página en la URL) · usePropertyTransition.ts (facade)
         propertyActions.ts    qué transiciones ofrecer según el estado (función pura, con tests)
       property-form/
-        containers/  PropertyCreatePage.tsx  PropertyEditPage.tsx   (smart) · components/ PropertyDataForm (dumb)
+        containers/  PropertyCreatePage  PropertyEditPage  PropertyStatusSection  PropertyFeaturesSection  PropertyImagesSection   (smart)
+        components/  PropertyDataForm  PropertyFeaturesForm  PropertyImagesForm  PublishChecklist   (dumb)
         usePropertyForm.ts (facade) · propertyFormValues.ts (formulario ↔ request del contrato)
+        propertyRequirements.ts   qué falta para publicar y validación de fotos (funciones puras, con tests)
       visit-requests/  lead-follow-up/
     favorites/   my-visits/
 ```
@@ -84,7 +86,7 @@ frontend/src/
 | `CatalogPage`: filtros en la URL, catálogo de listing vía `useCatalog` | `PropertyFilters` (`onFiltersChange`), `SortSelect` (`onSortChange`), `PropertyCardList`, `PropertyGridSkeleton`, `Pagination` |
 | `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `VisitRequestForm` (`onSubmitRequest`), `FavoriteToggle` |
 | `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `StatusFilter` (`onStatusChange`) |
-| `PropertyCreatePage`, `PropertyEditPage` | `PropertyDataForm` (`onSubmit`), `PropertyActions` |
+| `PropertyCreatePage`, `PropertyEditPage` | `PropertyDataForm` (`onSubmit`), `PropertyFeaturesForm` (`onSubmit`), `PropertyImagesForm` (`onUpload`), `PublishChecklist`, `PropertyActions` |
 | `VisitRequestsPage` | `VisitRequestList`, `ScheduleVisitDialog` |
 | `LeadFollowUpPage` | `LeadTimeline`, `FollowUpForm`, `CloseLeadDialog` (`onClose(outcome)`) |
 
@@ -101,6 +103,9 @@ frontend/src/
 - Rutas `/agente/propiedades`, `/agente/propiedades/nueva` y `/agente/propiedades/:propertyId`, solo con rol `AGENT`. El filtro de estado y la página viven en la URL.
 - `availableActions` solo evita ofrecer acciones imposibles: las reglas las hace cumplir listing, y sus 409 se muestran con su `detail`. Vender y alquilar son irreversibles, por eso piden confirmación.
 - El tipo y la operación no se editan (contrato). El `PUT` reemplaza la ubicación completa: al guardar se conservan la latitud y la longitud, aunque el formulario no las muestre.
+- Publicar exige dormitorios, baños, superficie y al menos una foto: `PublishChecklist` lo explica y el botón queda desactivado hasta completarlo.
+- **Fotos:** `GET .../images/{id}` es público y responde 404 si la propiedad está en `DRAFT` o `PAUSED`, así que ahí solo se muestra la cantidad, sin miniaturas. La vista previa local tampoco se usa: la CSP bloquea `blob:`. El front revisa formato, tamaño y cantidad antes de subir, pero la firma real la valida listing.
+- `POST /properties` no es idempotente: ante un 504 se avisa que el borrador pudo crearse, para que no se duplique al reintentar.
 
 ## Sesión y tokens
 

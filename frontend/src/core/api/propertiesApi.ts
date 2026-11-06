@@ -7,6 +7,7 @@ import type {
   PropertyStatus,
   PropertySummary,
   PropertyTransition,
+  UpdateFeaturesRequest,
 } from '../models/listing'
 import { apiRequest } from './httpClient'
 
@@ -28,6 +29,23 @@ export const propertiesApi = {
 
   update: (propertyId: string, request: EditPropertyRequest) =>
     apiRequest<void>(propertyPath(propertyId), { method: 'PUT', body: request, auth: true }),
+
+  updateFeatures: (propertyId: string, request: UpdateFeaturesRequest) =>
+    apiRequest<void>(`${propertyPath(propertyId)}/features`, {
+      method: 'PUT',
+      body: request,
+      auth: true,
+    }),
+
+  uploadImages: (propertyId: string, files: File[]) => {
+    const form = new FormData()
+    for (const file of files) form.append('files', file)
+    return apiRequest<{ imageIds: string[] }>(`${propertyPath(propertyId)}/images`, {
+      method: 'POST',
+      body: form,
+      auth: true,
+    })
+  },
 
   transition: (propertyId: string, transition: PropertyTransition) =>
     apiRequest<void>(`${propertyPath(propertyId)}/${transition}`, { method: 'POST', auth: true }),
