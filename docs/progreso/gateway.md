@@ -37,7 +37,8 @@
 - [x] Validar el JWT con el JWKS de identity (`typ=at+jwt`, `aud=inmobiliaria`) y borrar los `X-User-*`
 - [x] CORS para el frontend (`http://localhost:5173`)
 - [x] Rate limit de login y registro (**requisito antes de exponer identity**)
-- [x] Comprobar en Docker qué IP ve el gateway: los clientes de la misma máquina llegan como el gateway de la red de Docker (`172.x.0.1`) y comparten el límite; los contenedores llegan con su IP. Falta verificarlo desde otra máquina
+- [x] Comprobar en Docker qué IP ve el gateway desde la misma máquina: los clientes llegan como el gateway de la red de Docker (`172.x.0.1`) y comparten el límite; los contenedores llegan con su IP
+- [ ] Comprobar el rate limit desde otra máquina, y en Docker Desktop (Windows): si todos llegan con la misma IP, una sola persona agota el límite y bloquea el login de los demás
 - [ ] Evaluar un tope de entradas en el rate limit (hoy expiran a los 60 s y cada una exige una IP o un /64 distinto)
 - [x] Correlation-id, logs JSON, timeouts y errores problem+json propios
 - [ ] Refrescar el JWKS cada cierto tiempo: hoy una clave retirada sigue valiendo en el gateway hasta que llegue un `kid` desconocido (los servicios sí la rechazan)

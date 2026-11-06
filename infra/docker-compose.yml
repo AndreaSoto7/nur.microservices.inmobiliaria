@@ -98,6 +98,10 @@ services:
       CORS_ALLOWED_ORIGINS: http://localhost:5173
     ports:
       - "8080:8080"
+    # Es lo único de la API expuesto hacia afuera: no necesita privilegios ni escribir en disco.
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
 
   # UI (nginx sin root, con CSP). Se publica en 5173: es el origen que permite el CORS del gateway.
   # VITE_API_BASE_URL (build) y API_ORIGIN (CSP) deben ser la misma URL del gateway vista desde el navegador.
