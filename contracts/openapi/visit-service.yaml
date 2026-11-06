@@ -13,10 +13,135 @@ servers:
 security:
   - bearerAuth: []
 tags:
+  - name: leads
   - name: inquiries
   - name: visits
   - name: health
 paths:
+  /api/v1/leads:
+    get:
+      tags: [leads]
+      operationId: listAgentLeads
+      summary: Listar oportunidades asignadas
+      description: Solo AGENT. El agente se toma del JWT.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/FilterPropertyId'
+        - name: sort
+          in: query
+          description: Orden por fecha; los empates se resuelven por ID.
+          schema:
+            type: string
+            enum: ['openedAt,desc', 'openedAt,asc']
+            default: 'openedAt,desc'
+        - name: status
+          in: query
+          schema: {$ref: '#/components/schemas/LeadStatus'}
+      responses:
+        '200':
+          description: Página de resultados. Una página fuera del rango devuelve data vacío.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LeadPage'}
+              example: {data: [], page: {number: 1, size: 20, totalElements: 0, totalPages: 0}}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/leads/{leadId}/follow-ups:
+    post:
+      tags: [leads]
+      operationId: registerLeadFollowUp
+      summary: Registrar una nota de seguimiento
+      description: |
+        Solo el AGENT asignado puede registrar una nota en un Lead OPEN.
+        Repetir la misma clave con los mismos datos devuelve el resultado original durante 24 horas.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/LeadId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/RegisterLeadFollowUp'}
+      responses:
+        '201':
+          description: Seguimiento registrado.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+            Location:
+              required: true
+              schema: {type: string}
+              example: /api/v1/leads/05de258b-be6c-4f61-b6ac-ac67cc961b03/follow-ups/5142a8be-97ea-479b-9a40-02162994fb36
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CreatedFollowUp'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: LEAD_NOT_FOUND si la oportunidad no existe o pertenece a otro agente.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: LEAD_NOT_OPEN si la oportunidad está cerrada.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/leads/{leadId}/follow-ups/{followUpId}:
+    get:
+      tags: [leads]
+      operationId: getLeadFollowUp
+      summary: Consultar una nota de seguimiento
+      description: Solo el agente asignado a la oportunidad puede leer su nota.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/LeadId'
+        - name: followUpId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      responses:
+        '200':
+          description: Nota registrada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LeadFollowUp'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: LEAD_FOLLOW_UP_NOT_FOUND si la nota no existe o no está en una oportunidad del agente.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
   /api/v1/inquiries:
     get:
       tags: [inquiries]
@@ -617,6 +742,11 @@ components:
   securitySchemes:
     bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
   parameters:
+    LeadId:
+      name: leadId
+      in: path
+      required: true
+      schema: {$ref: '#/components/schemas/Uuid'}
     Page:
       name: page
       in: query
@@ -762,6 +892,53 @@ components:
       additionalProperties: false
       properties:
         id: {$ref: '#/components/schemas/Uuid'}
+    LeadStatus:
+      type: string
+      enum: [OPEN, CLOSED]
+    Lead:
+      type: object
+      additionalProperties: false
+      required: [id, propertyId, clientId, status, openedAt]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        propertyId: {$ref: '#/components/schemas/Uuid'}
+        clientId: {$ref: '#/components/schemas/Uuid'}
+        status: {$ref: '#/components/schemas/LeadStatus'}
+        openedAt: {$ref: '#/components/schemas/UtcDateTime'}
+        closedAt: {$ref: '#/components/schemas/UtcDateTime'}
+        outcome: {type: string, enum: [WON, LOST]}
+    LeadPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Lead'}
+        page: {$ref: '#/components/schemas/PageMetadata'}
+    RegisterLeadFollowUp:
+      type: object
+      additionalProperties: false
+      required: [note]
+      properties:
+        note: {type: string, minLength: 1, maxLength: 2000, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+      example: {note: El cliente pidió más detalles sobre la propiedad.}
+    CreatedFollowUp:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+      example: {id: 5142a8be-97ea-479b-9a40-02162994fb36}
+    LeadFollowUp:
+      type: object
+      additionalProperties: false
+      required: [id, leadId, note, createdAt]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        leadId: {$ref: '#/components/schemas/Uuid'}
+        note: {type: string}
+        createdAt: {$ref: '#/components/schemas/UtcDateTime'}
     PageMetadata:
       type: object
       additionalProperties: false
