@@ -20,6 +20,31 @@ export function mockFetch(...responses: Response[]) {
   return fn
 }
 
+type RouteHandler = (init?: RequestInit) => Response
+
+/**
+ * Reemplaza fetch por un mock que responde según `MÉTODO /ruta`, sin importar el orden: sirve cuando
+ * una pantalla vuelve a consultar después de una acción. Una ruta sin mock responde 501.
+ */
+export function routeFetch(routes: Record<string, RouteHandler>) {
+  const fn = vi.fn<typeof fetch>(async (input, init) => {
+    const key = `${init?.method ?? 'GET'} ${new URL(String(input)).pathname}`
+    const handler = routes[key]
+    return handler ? handler(init) : jsonResponse(501, problem(501, 'NO_MOCK', key))
+  })
+  vi.stubGlobal('fetch', fn)
+  return fn
+}
+
+/** Deja la sesión lista para recuperarse al montar la app, con el usuario indicado. */
+export function sessionRoutes(user: CurrentUser): Record<string, RouteHandler> {
+  localStorage.setItem('inmobiliaria.refreshToken', 'refresh-guardado')
+  return {
+    'POST /api/v1/auth/refresh': () => jsonResponse(200, tokens('nuevo')),
+    'GET /api/v1/users/me': () => jsonResponse(200, user),
+  }
+}
+
 export const tokens = (suffix = '1'): TokenPair => ({
   accessToken: `access-${suffix}`,
   refreshToken: `refresh-${suffix}`,
@@ -34,3 +59,5 @@ export const currentUser: CurrentUser = {
   roles: ['CLIENT'],
   registeredAt: '2026-10-16T14:30:00Z',
 }
+
+export const agentUser: CurrentUser = { ...currentUser, fullName: 'Carla Agente', roles: ['AGENT'] }

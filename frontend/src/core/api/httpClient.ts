@@ -4,7 +4,9 @@ import { ApiError, isProblem } from './problem'
 
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  /** Un FormData se manda tal cual (multipart); cualquier otro valor, como JSON. */
   body?: unknown
+  headers?: Record<string, string>
   /** Manda el access token. Las rutas públicas (login, registro, catálogo) no lo necesitan. */
   auth?: boolean
   signal?: AbortSignal
@@ -35,8 +37,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 }
 
 async function send(path: string, options: RequestOptions): Promise<Response> {
-  const headers: Record<string, string> = { Accept: 'application/json, application/problem+json' }
-  if (options.body !== undefined) headers['Content-Type'] = 'application/json'
+  const headers: Record<string, string> = {
+    Accept: 'application/json, application/problem+json',
+    ...options.headers,
+  }
+  const isMultipart = options.body instanceof FormData
+  if (options.body !== undefined && !isMultipart) headers['Content-Type'] = 'application/json'
   const token = options.auth ? tokenStore.getAccessToken() : null
   if (token) headers.Authorization = `Bearer ${token}`
 
@@ -44,7 +50,7 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
     return await fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? 'GET',
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: serializeBody(options.body),
       signal: options.signal,
     })
   } catch (error) {
@@ -53,10 +59,16 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
   }
 }
 
+function serializeBody(body: unknown): BodyInit | undefined {
+  if (body === undefined) return undefined
+  return body instanceof FormData ? body : JSON.stringify(body)
+}
+
 async function parse<T>(response: Response): Promise<T> {
   if (response.ok) {
-    if (response.status === 204) return undefined as T
-    return (await response.json()) as T
+    // Además del 204, algunas respuestas 201 solo traen el header Location.
+    const text = await response.text()
+    return (text ? JSON.parse(text) : undefined) as T
   }
   let body: unknown = null
   try {

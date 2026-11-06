@@ -87,6 +87,38 @@ describe('apiRequest', () => {
     expect(refresh).not.toHaveBeenCalled()
   })
 
+  it('acepta una respuesta exitosa sin body aunque no sea 204', async () => {
+    mockFetch(new Response(null, { status: 201, headers: { Location: '/api/v1/favorites/1' } }))
+
+    await expect(apiRequest('/api/v1/favorites', { method: 'POST', body: {} })).resolves.toBe(
+      undefined,
+    )
+  })
+
+  it('agrega los headers propios de la llamada', async () => {
+    const fetchMock = mockFetch(jsonResponse(201, { id: 'abc' }))
+
+    await apiRequest('/api/v1/visits', {
+      method: 'POST',
+      body: {},
+      headers: { 'Idempotency-Key': 'clave-1' },
+    })
+
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({ 'Idempotency-Key': 'clave-1' })
+  })
+
+  it('manda un FormData tal cual, para que el navegador ponga el boundary del multipart', async () => {
+    const fetchMock = mockFetch(jsonResponse(201, { imageIds: ['a'] }))
+    const form = new FormData()
+    form.append('files', new File(['x'], 'foto.png', { type: 'image/png' }))
+
+    await apiRequest('/api/v1/properties/1/images', { method: 'POST', body: form })
+
+    const init = fetchMock.mock.calls[0][1]
+    expect(init?.body).toBe(form)
+    expect(init?.headers).not.toHaveProperty('Content-Type')
+  })
+
   it('traduce un fallo de red a ApiError con status 0', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
 

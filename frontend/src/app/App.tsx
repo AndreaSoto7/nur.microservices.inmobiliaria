@@ -1,6 +1,7 @@
 import { Link, Route, Routes } from 'react-router'
 import { RequireAuth } from '../core/auth/RequireAuth'
 import { AccountPage } from '../features/account/containers/AccountPage'
+import { AgentPropertiesPage } from '../features/agent/properties-admin/containers/AgentPropertiesPage'
 import { CatalogPage } from '../features/catalog/containers/CatalogPage'
 import { LoginPage } from '../features/auth/containers/LoginPage'
 import { RegisterPage } from '../features/auth/containers/RegisterPage'
@@ -21,6 +22,14 @@ export function App() {
           element={
             <RequireAuth>
               <AccountPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="agente/propiedades"
+          element={
+            <RequireAuth roles={['AGENT']}>
+              <AgentPropertiesPage />
             </RequireAuth>
           }
         />

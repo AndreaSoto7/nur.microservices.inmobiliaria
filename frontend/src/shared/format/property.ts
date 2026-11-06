@@ -1,4 +1,11 @@
-import type { Feature, Money, OperationType, PropertyType } from '../../core/models/listing'
+import type {
+  Feature,
+  Money,
+  OperationType,
+  PropertyStatus,
+  PropertyType,
+} from '../../core/models/listing'
+import type { StatusTone } from '../ui/StatusBadge'
 
 const money = new Intl.NumberFormat('es-BO', { maximumFractionDigits: 2 })
 
@@ -16,6 +23,24 @@ export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
 export const OPERATION_LABELS: Record<OperationType, string> = {
   SALE: 'Venta',
   RENT: 'Alquiler',
+}
+
+export const PROPERTY_STATUS_LABELS: Record<PropertyStatus, string> = {
+  DRAFT: 'Borrador',
+  PUBLISHED: 'Publicada',
+  PAUSED: 'Pausada',
+  RESERVED: 'Reservada',
+  SOLD: 'Vendida',
+  RENTED: 'Alquilada',
+}
+
+export const PROPERTY_STATUS_TONES: Record<PropertyStatus, StatusTone> = {
+  DRAFT: 'neutral',
+  PUBLISHED: 'success',
+  PAUSED: 'neutral',
+  RESERVED: 'warning',
+  SOLD: 'closed',
+  RENTED: 'closed',
 }
 
 export const FEATURE_LABELS: Record<Feature, string> = {

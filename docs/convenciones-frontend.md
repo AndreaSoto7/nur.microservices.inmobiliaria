@@ -54,6 +54,7 @@ El contraste está medido contra el fondo indicado, según WCAG 2.1 AA: 4.5:1 pa
 | ---------------------------------------- | --------------------- | ------------------- | --------- |
 | `--color-warning` / `--color-warning-bg` | `#8a5a00` / `#fbf3e0` | Propiedad reservada | 5.36      |
 | `--color-error` / `--color-error-bg`     | `#b42318` / `#fef3f2` | Errores             | 6.05      |
+| `--color-success` / `--color-success-bg` | `#1b6e3c` / `#e6f4ea` | Publicada, guardado | 5.53      |
 
 **El naranja es escaso a propósito:** como máximo una acción principal en cada zona de la pantalla (Buscar, Ingresar, Crear cuenta). El resto usa `button--secondary`.
 
@@ -96,12 +97,14 @@ Solo hay tema claro: `color-scheme: light`.
 
 ## Componentes
 
-Antes de crear uno, revisa `shared/ui/`: `Button`, `TextField`, `EmptyState`, `ErrorMessage`, `LoadingState`, `Pagination` e iconos en `icons.tsx`.
+Antes de crear uno, revisa `shared/ui/`: `Button`, `TextField`, `StatusBadge`, `RowListSkeleton`, `EmptyState`, `ErrorMessage`, `LoadingState`, `Pagination` e iconos en `icons.tsx`.
 
 - **Botones:** `<Button>` real, nunca un `div` con `onClick`. Variantes `primary` y `secondary`.
 - **Tarjeta de propiedad:** en este orden, foto, precio, título, tipo y zona, y datos. El precio es lo primero que se lee.
 - **Filtros:** los tres que más se usan quedan a la vista, y el resto en "Más filtros". Esa sección se abre sola si tiene algo aplicado.
 - **Orden:** va junto a los resultados y aplica al momento, porque no cambia qué propiedades se buscan.
+- **Listas de gestión:** filas `.row-list` y `.row-card`, no tablas: una tabla no entra a 320 px. Los botones de cada fila son `button--secondary`, y su `aria-label` nombra el elemento.
+- **Acciones irreversibles:** piden confirmar en la misma fila (`.confirm-bar`), sin ventanas emergentes.
 - **Iconos:** SVG en línea desde `icons.tsx`, con `aria-hidden`. Si un icono es lo único que tiene un botón, ese botón necesita `aria-label`.
 - **Texto:** en español, directo y real. Nunca prometas algo que la app todavía no hace, ni pongas botones que no funcionan.
 
@@ -111,7 +114,7 @@ Toda pantalla con datos cubre los cuatro:
 
 | Estado        | Cómo se muestra                                                                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| **Cargando**  | Listas: esqueleto con la forma final (`PropertyGridSkeleton`). Lo demás: `LoadingState`.                                |
+| **Cargando**  | Listas: esqueleto con la forma final (`PropertyGridSkeleton`, `RowListSkeleton`). Lo demás: `LoadingState`.             |
 | **Vacío**     | `EmptyState`, que explica por qué y qué hacer. Distingue "no hay nada publicado" de "tus filtros no dieron resultados". |
 | **Error**     | `ErrorMessage` con el `title` o `detail` del problem+json, y "Reintentar" si tiene sentido.                             |
 | **Con datos** | La pantalla normal.                                                                                                     |

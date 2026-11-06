@@ -6,7 +6,19 @@ export type PropertyType = (typeof PROPERTY_TYPES)[number]
 export const OPERATION_TYPES = ['SALE', 'RENT'] as const
 export type OperationType = (typeof OPERATION_TYPES)[number]
 
-export type PropertyStatus = 'DRAFT' | 'PUBLISHED' | 'PAUSED' | 'RESERVED' | 'SOLD' | 'RENTED'
+export const PROPERTY_STATUSES = [
+  'DRAFT',
+  'PUBLISHED',
+  'PAUSED',
+  'RESERVED',
+  'SOLD',
+  'RENTED',
+] as const
+export type PropertyStatus = (typeof PROPERTY_STATUSES)[number]
+
+/** Última parte de la ruta de cada transición: POST /api/v1/properties/{id}/{transition}. */
+export type PropertyTransition =
+  'publish' | 'pause' | 'reserve' | 'release-reservation' | 'mark-sold' | 'mark-rented'
 
 export const FEATURES = [
   'GARAGE',

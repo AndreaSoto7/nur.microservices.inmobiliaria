@@ -6,7 +6,7 @@ import { AppHeader } from './components/AppHeader'
 
 /** Smart: arma la cabecera según la sesión y maneja el cierre de sesión. */
 export function AppLayout() {
-  const { status, user, logout } = useAuth()
+  const { status, user, logout, hasRole } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = useCallback(async () => {
@@ -16,7 +16,10 @@ export function AppLayout() {
 
   const links =
     status === 'authenticated' ? (
-      <NavLink to="/cuenta">Mi cuenta</NavLink>
+      <>
+        {hasRole('AGENT') && <NavLink to="/agente/propiedades">Mis propiedades</NavLink>}
+        <NavLink to="/cuenta">Mi cuenta</NavLink>
+      </>
     ) : status === 'anonymous' ? (
       <>
         <NavLink to="/login">Ingresar</NavLink>

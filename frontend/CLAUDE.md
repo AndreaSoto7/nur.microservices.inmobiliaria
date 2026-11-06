@@ -1,6 +1,6 @@
 # frontend — React + Vite + TypeScript
 
-Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están la base, el cliente HTTP, la sesión, registro, login, "Mi cuenta", el catálogo público y el detalle de propiedad; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están la base, el cliente HTTP, la sesión, registro, login, "Mi cuenta", el catálogo público, el detalle de propiedad y "Mis propiedades" del agente; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
@@ -49,11 +49,11 @@ Paleta, tokens, tipografía, estados de pantalla y accesibilidad: [`docs/convenc
 frontend/src/
   app/             raíz de composición: App.tsx (rutas), AppLayout (smart), components/AppHeader (dumb)
   core/            cliente HTTP (vía gateway), auth (token, refresh), rutas protegidas, modelos de la API
-    api/           httpClient.ts (apiRequest), problem.ts (ApiError a partir del problem+json), catalogApi.ts
+    api/           httpClient.ts (apiRequest; admite headers propios y FormData), problem.ts (ApiError a partir del problem+json), catalogApi.ts, propertiesApi.ts
     auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
     models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts)
-  shared/format/   formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones y extras
-  shared/ui/       dumbs genéricos: Button, TextField, ErrorMessage, LoadingState, Pagination, EmptyState, icons
+  shared/format/   formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones, estados y extras
+  shared/ui/       dumbs genéricos: Button, TextField, StatusBadge, RowListSkeleton, ErrorMessage, LoadingState, Pagination, EmptyState, icons
   test/            setup de Vitest, mocks de fetch y renderApp
   features/
     auth/          LoginPage, RegisterPage (smart) · LoginForm, RegisterForm (dumb) · useAuthActions (facade)
@@ -66,15 +66,21 @@ frontend/src/
     property-detail/
       containers/  PropertyDetailPage.tsx (smart) · components/ ImageGallery, PropertySpecs (dumb)
       usePropertyDetail.ts (facade; un 404 es "ya no está disponible", no un error)
+    agent/
+      properties-admin/
+        containers/  AgentPropertiesPage.tsx (smart)
+        components/  PropertyAdminList  PropertyActions  PropertyStatusBadge  StatusFilter   (dumb)
+        useAgentProperties.ts (facade; estado y página en la URL) · usePropertyTransition.ts (facade)
+        propertyActions.ts    qué transiciones ofrecer según el estado (función pura, con tests)
+      property-form/  visit-requests/  lead-follow-up/
     favorites/   my-visits/
-    agent/  properties-admin/  property-form/  visit-requests/  lead-follow-up/
 ```
 
 | Smart (container) | Dumbs que usa |
 |---|---|
 | `CatalogPage`: filtros en la URL, catálogo de listing vía `useCatalog` | `PropertyFilters` (`onFiltersChange`), `SortSelect` (`onSortChange`), `PropertyCardList`, `PropertyGridSkeleton`, `Pagination` |
 | `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `VisitRequestForm` (`onSubmitRequest`), `FavoriteToggle` |
-| `AgentPropertiesPage` | `PropertyTable` (`onPublish`, `onPause`, `onEdit`), `StatusBadge` |
+| `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `StatusFilter` (`onStatusChange`) |
 | `VisitRequestsPage` | `VisitRequestList`, `ScheduleVisitDialog` |
 | `LeadFollowUpPage` | `LeadTimeline`, `FollowUpForm`, `CloseLeadDialog` (`onClose(outcome)`) |
 
@@ -85,6 +91,11 @@ frontend/src/
 - `keepPreviousData`: al cambiar de página se sigue viendo la anterior hasta que llega la nueva.
 - Las rutas de imágenes vienen relativas al gateway: `gatewayUrl()` de `core/config.ts` las vuelve absolutas. Si una foto no carga, la tarjeta muestra "Sin foto".
 - Detalle en `/propiedades/:propertyId` (`GET /api/v1/catalog/properties/{id}`): solo `PUBLISHED` o `RESERVED`; un 404 se muestra como "no disponible" y no se reintenta.
+
+## Mis propiedades (agente)
+
+- Ruta `/agente/propiedades`, solo con rol `AGENT`. El filtro de estado y la página viven en la URL.
+- `availableActions` solo evita ofrecer acciones imposibles: las reglas las hace cumplir listing, y sus 409 se muestran con su `detail`. Vender y alquilar son irreversibles, por eso piden confirmación.
 
 ## Sesión y tokens
 
