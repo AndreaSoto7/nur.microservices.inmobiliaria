@@ -6,6 +6,12 @@ import { GetInquiryByIdHandler } from './inquiries/application/get-inquiry-by-id
 import { ListAgentInquiriesHandler } from './inquiries/application/list-agent-inquiries.js';
 import { SendInquiryHandler } from './inquiries/application/send-inquiry.js';
 import { InquiriesController } from './inquiries/presentation/inquiries.controller.js';
+import {
+  GetLeadFollowUpHandler,
+  ListAgentLeadsHandler,
+} from './leads/application/lead-queries.js';
+import { RegisterLeadFollowUpHandler } from './leads/application/register-lead-follow-up.js';
+import { LeadsController } from './leads/presentation/leads.controller.js';
 import { ListingEventsController } from './properties/listing-events.controller.js';
 import { PropertyProjection } from './properties/property-projection.js';
 import { HealthController } from './shared/health/health.controller.js';
@@ -29,6 +35,7 @@ import { VisitsController } from './visits/presentation/visits.controller.js';
     HealthController,
     VisitsController,
     InquiriesController,
+    LeadsController,
     ListingEventsController,
   ],
   providers: [
@@ -45,6 +52,9 @@ import { VisitsController } from './visits/presentation/visits.controller.js';
     GetInquiryByIdHandler,
     SendInquiryHandler,
     ListAgentInquiriesHandler,
+    ListAgentLeadsHandler,
+    RegisterLeadFollowUpHandler,
+    GetLeadFollowUpHandler,
     ListVisitsHandler,
     { provide: VISIT_REPOSITORY, useClass: PostgresVisits },
     { provide: APP_FILTER, useClass: ProblemFilter },

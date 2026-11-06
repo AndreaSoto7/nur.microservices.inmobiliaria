@@ -7,10 +7,18 @@ import type {
   Inquiry,
   InquiryDetails,
 } from '../../inquiries/domain/inquiry.js';
+import {
+  Lead,
+  type LeadFollowUp,
+  type LeadFollowUpDetails,
+  type LeadStatus,
+  type LeadSummary,
+} from '../../leads/domain/lead.js';
 import type { Page, PageFilter } from '../../shared/page.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import type {
   LeadContact,
+  LeadListFilter,
   RequestKey,
   VisitCancellationActor,
   VisitCreation,
@@ -90,6 +98,46 @@ export class PostgresVisits implements VisitRepository {
     }
   }
 
+  async listAgentLeads(
+    agentId: string,
+    filter: LeadListFilter,
+  ): Promise<Page<LeadSummary>> {
+    type LeadRow = Omit<LeadSummary, 'closedAt' | 'outcome'> & {
+      closedAt: Date | null;
+      outcome: 'WON' | 'LOST' | null;
+    };
+    const { data, page } = await this.readPage<LeadRow>(
+      'id, property_id AS "propertyId", client_id AS "clientId", status, opened_at AS "openedAt", closed_at AS "closedAt", outcome',
+      `FROM leads WHERE agent_id = $1 AND ($2::uuid IS NULL OR property_id = $2)
+        AND ($3::varchar IS NULL OR status = $3)`,
+      'opened_at',
+      [agentId, filter.propertyId ?? null, filter.status ?? null],
+      filter,
+    );
+    return {
+      data: data.map(({ closedAt, outcome, ...lead }) => ({
+        ...lead,
+        ...(closedAt && outcome ? { closedAt, outcome } : {}),
+      })),
+      page,
+    };
+  }
+
+  async findLeadFollowUp(
+    leadId: string,
+    followUpId: string,
+    agentId: string,
+  ): Promise<LeadFollowUpDetails | undefined> {
+    const database = await this.database.connect();
+    const [followUp] = await database.query<LeadFollowUpDetails[]>(
+      `SELECT f.id, f.lead_id AS "leadId", f.note, f.created_at AS "createdAt"
+        FROM lead_follow_ups f JOIN leads l ON l.id = f.lead_id
+        WHERE f.lead_id = $1 AND f.id = $2 AND l.agent_id = $3`,
+      [leadId, followUpId, agentId],
+    );
+    return followUp;
+  }
+
   listAgentInquiries(
     agentId: string,
     filter: PageFilter,
@@ -123,7 +171,7 @@ export class PostgresVisits implements VisitRepository {
   private async readPage<T>(
     columns: string,
     from: string,
-    orderColumn: 'created_at' | 'requested_at',
+    orderColumn: 'created_at' | 'requested_at' | 'opened_at',
     parameters: (string | null)[],
     filter: PageFilter,
   ): Promise<Page<T>> {
@@ -271,6 +319,39 @@ class PostgresVisitTransaction implements VisitTransaction {
     );
   }
 
+  async findAssignedLead(
+    id: string,
+    agentId: string,
+  ): Promise<Lead | undefined> {
+    const [row] = await this.manager.query<
+      { id: string; propertyId: string; clientId: string; status: LeadStatus }[]
+    >(
+      `SELECT id, property_id AS "propertyId", client_id AS "clientId", status
+        FROM leads WHERE id = $1 AND agent_id = $2 FOR UPDATE`,
+      [id, agentId],
+    );
+    return row
+      ? new Lead(row.id, row.propertyId, row.clientId, agentId, row.status)
+      : undefined;
+  }
+
+  async saveLeadFollowUp(followUp: LeadFollowUp): Promise<void> {
+    await this.manager.query(
+      `INSERT INTO lead_follow_ups (id, lead_id, agent_id, note, created_at) VALUES ($1,$2,$3,$4,$5)`,
+      [
+        followUp.id,
+        followUp.leadId,
+        followUp.agentId,
+        followUp.note,
+        followUp.createdAt,
+      ],
+    );
+    await this.manager.query(
+      'UPDATE leads SET version = version + 1 WHERE id = $1',
+      [followUp.leadId],
+    );
+  }
+
   async openLead(contact: LeadContact): Promise<string | undefined> {
     const [lead] = await this.manager.query<{ id: string }[]>(
       `INSERT INTO leads (id, property_id, client_id, agent_id, status, opened_at)
@@ -291,7 +372,7 @@ class PostgresVisitTransaction implements VisitTransaction {
   async enqueue(event: VisitEvent): Promise<string> {
     const eventId = randomUUID();
     const aggregateType =
-      event.type === 'LeadOpened'
+      event.type === 'LeadOpened' || event.type === 'LeadFollowUpRegistered'
         ? 'Lead'
         : event.type === 'InquiryReceived'
           ? 'Inquiry'
@@ -389,6 +470,7 @@ class PostgresVisitTransaction implements VisitTransaction {
     hash: string,
     response: VisitCreation,
     status: 200 | 201,
+    location?: string,
   ): Promise<void> {
     await this.manager.query(
       `INSERT INTO idempotency_records
@@ -409,9 +491,12 @@ class PostgresVisitTransaction implements VisitTransaction {
         status === 201
           ? {
               Location:
+                location ??
                 '/api/v1/' +
-                (key.operation === 'send-inquiry' ? 'inquiries/' : 'visits/') +
-                response.id,
+                  (key.operation === 'send-inquiry'
+                    ? 'inquiries/'
+                    : 'visits/') +
+                  response.id,
             }
           : {},
       ],

@@ -915,6 +915,166 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     }
   });
 
+  it('lista oportunidades propias y registra una sola nota sin publicarla en el evento', async () => {
+    const ids = [randomUUID(), randomUUID(), randomUUID()];
+    const [open, closed, foreign] = ids;
+    const openedAt = new Date(Date.now() - 60_000);
+    const closedAt = new Date(openedAt.getTime() + 1000);
+    await database.query(
+      `INSERT INTO leads (id, property_id, client_id, agent_id, status, opened_at, outcome, closed_at)
+       VALUES ($1,$4,$5,$7,'OPEN',$9,NULL,NULL),
+              ($2,$4,$5,$7,'CLOSED',$9,'LOST',$10),
+              ($3,$4,$6,$8,'OPEN',$9,NULL,NULL)`,
+      [
+        ...ids,
+        inboxPropertyId,
+        clientId,
+        otherClientId,
+        agentId,
+        otherAgentId,
+        openedAt,
+        closedAt,
+      ],
+    );
+
+    const http = request(app.getHttpServer());
+    const endpoint = '/api/v1/leads';
+    const list = (token: string, query: object) =>
+      http.get(endpoint).auth(token, { type: 'bearer' }).query(query);
+    const filter = { propertyId: inboxPropertyId };
+    await list(clientToken, filter).expect(403);
+    const page = await list(agentToken, {
+      ...filter,
+      status: 'CLOSED',
+      size: 1,
+    }).expect(200);
+    expect(page.body).toEqual({
+      data: [
+        {
+          id: closed,
+          propertyId: inboxPropertyId,
+          clientId,
+          status: 'CLOSED',
+          outcome: 'LOST',
+          openedAt: openedAt.toISOString(),
+          closedAt: closedAt.toISOString(),
+        },
+      ],
+      page: { number: 1, size: 1, totalElements: 1, totalPages: 1 },
+    });
+    const own = await list(agentToken, { ...filter, status: 'OPEN' }).expect(
+      200,
+    );
+    expect(own.body).toMatchObject({
+      data: [{ id: open }],
+      page: { totalElements: 1 },
+    });
+    const other = await list(otherAgentToken, filter).expect(200);
+    expect(other.body).toMatchObject({
+      data: [{ id: foreign }],
+      page: { totalElements: 1 },
+    });
+    await list(agentToken, { status: 'WON' }).expect(400);
+    await list(agentToken, { agentId: otherAgentId }).expect(400);
+
+    const note = 'El cliente pidió más información.';
+    const add = (
+      leadId: string,
+      token: string | null,
+      payload: object = { note: '  ' + note + ' ' },
+      key: string = randomUUID(),
+    ) => {
+      const action = http
+        .post(endpoint + '/' + leadId + '/follow-ups')
+        .set('Idempotency-Key', key)
+        .set('X-Correlation-Id', 'follow-up-test');
+      return (token ? action.auth(token, { type: 'bearer' }) : action).send(
+        payload,
+      );
+    };
+    await add(open, null).expect(401);
+    await add(open, clientToken).expect(403);
+    await add(open, otherAgentToken)
+      .expect(404)
+      .expect(/LEAD_NOT_FOUND/);
+    await add(closed, agentToken)
+      .expect(409)
+      .expect(/LEAD_NOT_OPEN/);
+    await add(open, agentToken, { note: '  ' }).expect(400);
+    await add(open, agentToken, { note: 'Texto\0' }).expect(400);
+    await add(open, agentToken, { note, agentId }).expect(400);
+
+    const key = randomUUID();
+    const [created, replay] = await Promise.all([
+      add(open, agentToken, undefined, key).expect(201),
+      add(open, agentToken, undefined, key).expect(201),
+    ]);
+    const { id } = created.body as { id: string };
+    const location = endpoint + '/' + open + '/follow-ups/' + id;
+    expect(replay.body).toEqual({ id });
+    expect(created.headers.location).toBe(location);
+    expect(replay.headers.location).toBe(location);
+    await add(open, agentToken, { note: 'Otra nota.' }, key).expect(422);
+    const detail = await http
+      .get(location)
+      .auth(agentToken, { type: 'bearer' })
+      .expect(200);
+    expect(detail.body).toEqual({
+      id,
+      leadId: open,
+      note,
+      createdAt: expect.any(String),
+    });
+    await http
+      .get(location)
+      .auth(otherAgentToken, { type: 'bearer' })
+      .expect(404);
+    await http.get(location).auth(clientToken, { type: 'bearer' }).expect(403);
+    await http
+      .get(endpoint + '/' + closed + '/follow-ups/' + id)
+      .auth(agentToken, { type: 'bearer' })
+      .expect(404);
+    const [lead] = await database.query<{ version: number; count: number }[]>(
+      `SELECT l.version::integer, (SELECT count(*)::integer FROM lead_follow_ups WHERE lead_id = l.id) AS count
+        FROM leads l WHERE l.id = $1`,
+      [open],
+    );
+    expect(lead).toEqual({ version: 1, count: 1 });
+    const events = await database.query<
+      { topic: string; envelope: { payload: unknown } }[]
+    >(
+      "SELECT topic, envelope FROM outbox WHERE aggregate_id = $1 AND envelope->>'eventType' = 'LeadFollowUpRegistered'",
+      [open],
+    );
+    expect(events).toEqual([
+      {
+        topic: 'visit.lead.events',
+        envelope: expect.objectContaining({
+          aggregateId: open,
+          aggregateType: 'Lead',
+          correlationId: 'follow-up-test',
+          payload: {
+            leadId: open,
+            followUpId: id,
+            propertyId: inboxPropertyId,
+            clientId,
+            agentId,
+          },
+        }),
+      },
+    ]);
+    const schemaPath = new URL(
+      '../../../contracts/events/visit/lead-follow-up-registered.v1.schema.json',
+      import.meta.url,
+    );
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as object;
+    expect(
+      addFormats
+        .default(new Ajv2020())
+        .validate(schema, events[0].envelope.payload),
+    ).toBe(true);
+  });
+
   it('valida credenciales, rol, formato, fecha y estado de la propiedad', async () => {
     const http = request(app.getHttpServer());
     await http.get('/health/ready').expect(200, { status: 'UP' });

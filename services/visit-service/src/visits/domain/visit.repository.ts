@@ -3,6 +3,13 @@ import type {
   Inquiry,
   InquiryDetails,
 } from '../../inquiries/domain/inquiry.js';
+import type {
+  Lead,
+  LeadFollowUp,
+  LeadFollowUpDetails,
+  LeadStatus,
+  LeadSummary,
+} from '../../leads/domain/lead.js';
 import type { Page, PageFilter } from '../../shared/page.js';
 import type { Visit, VisitSlot, VisitStatus } from './visit.js';
 
@@ -22,6 +29,7 @@ export type VisitDetails = {
   completedAt?: Date;
 };
 
+export type LeadListFilter = PageFilter & { status?: LeadStatus };
 export type VisitListFilter = PageFilter & { status?: VisitStatus };
 
 export type VisitCreation = { id: string };
@@ -44,7 +52,8 @@ export type RequestKey = {
     | 'reject-visit'
     | 'cancel-visit'
     | 'complete-visit'
-    | 'send-inquiry';
+    | 'send-inquiry'
+    | 'register-lead-follow-up';
 };
 
 export type VisitEvent = {
@@ -55,7 +64,8 @@ export type VisitEvent = {
     | 'VisitRejected'
     | 'VisitCancelled'
     | 'VisitCompleted'
-    | 'LeadOpened';
+    | 'LeadOpened'
+    | 'LeadFollowUpRegistered';
   aggregateId: string;
   occurredAt: Date;
   correlationId: string;
@@ -80,6 +90,8 @@ export interface VisitTransaction {
   ): Promise<{ id: string; agentId: string; status: string } | undefined>;
   saveVisit(visit: Visit, note: string | undefined): Promise<void>;
   saveInquiry(inquiry: Inquiry): Promise<void>;
+  findAssignedLead(id: string, agentId: string): Promise<Lead | undefined>;
+  saveLeadFollowUp(followUp: LeadFollowUp): Promise<void>;
   openLead(contact: LeadContact): Promise<string | undefined>;
   enqueue(event: VisitEvent): Promise<string>;
   lockAgentSchedule(agentId: string): Promise<void>;
@@ -102,6 +114,7 @@ export interface VisitTransaction {
     hash: string,
     response: VisitCreation,
     status: 200 | 201,
+    location?: string,
   ): Promise<void>;
 }
 
@@ -109,6 +122,15 @@ export interface VisitRepository {
   transaction<T>(
     work: (transaction: VisitTransaction) => Promise<T>,
   ): Promise<T>;
+  listAgentLeads(
+    agentId: string,
+    filter: LeadListFilter,
+  ): Promise<Page<LeadSummary>>;
+  findLeadFollowUp(
+    leadId: string,
+    followUpId: string,
+    agentId: string,
+  ): Promise<LeadFollowUpDetails | undefined>;
   listAgentInquiries(
     agentId: string,
     filter: PageFilter,

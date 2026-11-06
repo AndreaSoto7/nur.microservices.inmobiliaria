@@ -47,6 +47,11 @@ Visit guarda `InquiryReceived`, `VisitRequested`, `LeadOpened`, `VisitScheduled`
 - `GET /api/v1/visits`: visitas asignadas al agente o solicitadas por el cliente autenticado. Si el token tiene ambos roles, se usa el de agente. Admite el filtro `status`, por ejemplo `REQUESTED`.
 - Ambos listados admiten `propertyId`, `page` (por defecto 1) y `size` (por defecto 20, máximo 100). El orden por defecto es del más reciente al más antiguo. Se puede usar `sort=createdAt,asc` en consultas y `sort=requestedAt,asc` en visitas para invertirlo.
 
+## Oportunidades y seguimiento
+
+- `GET /api/v1/leads`: oportunidades del agente autenticado. Admite `propertyId`, `status` (`OPEN` o `CLOSED`), paginación y `sort=openedAt,asc`. Por defecto muestra las más recientes primero.
+- `POST /api/v1/leads/{leadId}/follow-ups`: el agente asignado registra una `note` obligatoria en una oportunidad abierta. Envía un UUID en `Idempotency-Key`. El `Location` de la respuesta apunta a la nota, accesible solo para el agente asignado. `LeadFollowUpRegistered` no contiene el texto.
+
 ## Recibir propiedades de Listing
 
 Desde la raíz del repositorio, puedes levantar Kafka y sus topics:

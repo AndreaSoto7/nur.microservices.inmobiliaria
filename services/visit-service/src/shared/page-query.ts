@@ -16,7 +16,7 @@ function integer(value: unknown, fallback: number, max: number): number {
 
 export function parsePageQuery(
   query: Record<string, unknown>,
-  sortField: 'requestedAt' | 'createdAt',
+  sortField: 'requestedAt' | 'createdAt' | 'openedAt',
   extraFields: readonly string[] = [],
 ): PageFilter {
   const fields = ['page', 'size', 'sort', 'propertyId', ...extraFields];
