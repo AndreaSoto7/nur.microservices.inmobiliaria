@@ -13,10 +13,11 @@ type Route struct {
 }
 
 const (
-	identityService = "identity-service"
-	listingService  = "listing-service"
-	visitService    = "visit-service"
-	auditService    = "audit-service"
+	identityService     = "identity-service"
+	listingService      = "listing-service"
+	visitService        = "visit-service"
+	auditService        = "audit-service"
+	notificationService = "notification-service"
 
 	authPrefix       = "/api/v1/auth"
 	catalogPrefix    = "/api/v1/catalog"
@@ -41,6 +42,7 @@ var routeTable = []struct{ prefix, service string }{
 	{"/api/v1/visits", visitService},
 	{"/api/v1/leads", visitService},
 	{"/api/v1/audit", auditService},
+	{"/api/v1/notifications", notificationService},
 }
 
 // Se comparan de forma exacta: con un prefijo, /api/v1/auth/../users/me pasaría como pública.

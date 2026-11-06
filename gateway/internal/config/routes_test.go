@@ -8,11 +8,12 @@ import (
 
 func TestResolveFindsServiceAndAccess(t *testing.T) {
 	const (
-		identity = "identity-service"
-		listing  = "listing-service"
-		visit    = "visit-service"
-		audit    = "audit-service"
-		imageURL = "/api/v1/properties/3f6c/images/9a1b"
+		identity     = "identity-service"
+		listing      = "listing-service"
+		visit        = "visit-service"
+		audit        = "audit-service"
+		notification = "notification-service"
+		imageURL     = "/api/v1/properties/3f6c/images/9a1b"
 	)
 	tests := []struct {
 		method, path string
@@ -43,6 +44,9 @@ func TestResolveFindsServiceAndAccess(t *testing.T) {
 		{http.MethodGet, "/api/v1/leads", visit, false},
 
 		{http.MethodGet, "/api/v1/audit/events", audit, false},
+
+		{http.MethodGet, "/api/v1/notifications", notification, false},
+		{http.MethodPatch, "/api/v1/notifications/3f6c", notification, false},
 
 		// El acceso público es por método y path exactos: lo demás exige JWT.
 		{http.MethodGet, "/api/v1/auth/login", identity, false},
@@ -85,7 +89,6 @@ func TestResolveRejectsUnknownPrefixes(t *testing.T) {
 		"/API/V1/PROPERTIES",
 		// Fuera de alcance (ADR 0005).
 		"/api/v1/search/properties",
-		"/api/v1/notifications",
 	}
 
 	for _, path := range paths {
@@ -137,7 +140,7 @@ func TestValidPath(t *testing.T) {
 }
 
 func TestServicesListsEachServiceOnce(t *testing.T) {
-	want := []string{"audit-service", "identity-service", "listing-service", "visit-service"}
+	want := []string{"audit-service", "identity-service", "listing-service", "notification-service", "visit-service"}
 
 	if got := Services(); !slices.Equal(got, want) {
 		t.Errorf("Services() = %v, want %v", got, want)

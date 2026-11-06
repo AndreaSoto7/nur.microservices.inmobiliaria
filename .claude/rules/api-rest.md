@@ -31,6 +31,7 @@ El destino es el nombre del servicio en Consul. El gateway elige una réplica sa
 | `/api/v1/catalog/**` | `listing-service` (catálogo público y filtros, lado query; ADR 0005) |
 | `/api/v1/inquiries/**`, `/api/v1/visits/**`, `/api/v1/leads/**` | `visit-service` |
 | `/api/v1/audit/**` | `audit-service` (opcional, solo `ADMIN`) |
+| `/api/v1/notifications/**` | `notification-service` |
 
 ## Métodos HTTP con su semántica real
 
