@@ -35,6 +35,8 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Factory Method | Creacional | notification | `internal/domain/notification.go` (`NewNotification`) | Un aviso debe nacer con UUID del dominio, destinatario válido y el texto fijo de su tipo; un constructor libre permitiría saltarse esas reglas | `Reconstitute` queda aparte: cargar un aviso guardado no debe validar ni generar identidad |
 | Repository | DDD | notification | `internal/domain/notification.go` (`NotificationRepository`) | El aggregate no debe conocer SQL | Usar pgx en los handlers acoplaría los casos de uso a la base y exigiría una base en cada test |
 | Event-driven policy | Integración | notification | `internal/application/policies.go` (`EventPolicies`) | Decidir a quién avisar ante cada evento, sin que esa regla conozca el formato del mensaje de Kafka | Ponerla en el consumidor mezclaría una regla de negocio con infraestructura |
+| Anti-corruption layer | DDD | notification | `internal/infrastructure/kafka/consumer.go` (`handlerFor`) | Los eventos de otros servicios no deben filtrarse al modelo de avisos; de `UserRegistered`, además, no se debe leer el email ni el nombre | Importar sus modelos acoplaría los servicios y traería datos personales que nadie usa |
+| Observer / Pub-Sub | Comportamiento | notification | `internal/infrastructure/kafka/consumer.go` | Avisar ante cambios de otros servicios sin que ellos sepan que este existe | Que visit o listing llamen por HTTP acoplaría a los productores y rompería la regla de oro 2 |
 
 ## Planificados (candidatos, mover a "Aplicados" al implementarlos)
 

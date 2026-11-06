@@ -20,22 +20,24 @@ import (
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/config"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/consul"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/jwks"
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/kafka"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/infrastructure/postgres"
 	httpapi "github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/interfaces/http"
 )
 
 const (
-	readHeaderTimeout = 5 * time.Second
-	readTimeout       = 15 * time.Second
-	writeTimeout      = 30 * time.Second
-	idleTimeout       = 120 * time.Second
-	maxHeaderBytes    = 64 << 10
-	reRegisterEvery   = 60 * time.Second
-	startupRetryLimit = 30 * time.Second
-	startupRetryEvery = 2 * time.Second
-	deregisterTimeout = 2 * time.Second
-	// shutdownTimeout más la baja deben quedar bajo los 10 s de docker stop.
-	shutdownTimeout = 5 * time.Second
+	readHeaderTimeout   = 5 * time.Second
+	readTimeout         = 15 * time.Second
+	writeTimeout        = 30 * time.Second
+	idleTimeout         = 120 * time.Second
+	maxHeaderBytes      = 64 << 10
+	reRegisterEvery     = 60 * time.Second
+	startupRetryLimit   = 30 * time.Second
+	startupRetryEvery   = 2 * time.Second
+	deregisterTimeout   = 2 * time.Second
+	consumerStopTimeout = 2 * time.Second
+	// La baja, el consumidor y el HTTP juntos deben quedar bajo los 10 s de docker stop.
+	shutdownTimeout = 4 * time.Second
 )
 
 func main() {
@@ -84,8 +86,44 @@ func run(logger *slog.Logger) error {
 		MarkRead:  application.NewMarkNotificationRead(repository, time.Now),
 	})
 
+	stopConsumer := startConsumer(ctx, cfg, repository, logger)
+
 	logger.Info("servicio escuchando", "port", cfg.ServicePort)
-	return serve(ctx, listener, router, stopRegistration)
+	return serve(ctx, listener, router, func() {
+		stopRegistration()
+		stopConsumer()
+	})
+}
+
+// startConsumer arranca el consumidor. Devuelve la limpieza, con tope: un Kafka caído no debe consumir los
+// 10 s de docker stop. Lo que quede sin confirmar se vuelve a leer al reiniciar, y es idempotente.
+func startConsumer(ctx context.Context, cfg config.Config, repository *postgres.Repository, logger *slog.Logger) func() {
+	reader := kafka.NewReader(cfg.KafkaBrokers, logger)
+	dlq := kafka.NewDeadLetterWriter(cfg.KafkaBrokers)
+	policies := application.NewEventPolicies(application.NewNotifyOnEvent(repository, time.Now))
+	consumer := kafka.NewConsumer(reader, dlq, policies, logger)
+
+	running := make(chan struct{})
+	go func() {
+		defer close(running)
+		consumer.Run(ctx)
+	}()
+
+	return func() {
+		closed := make(chan struct{})
+		go func() {
+			defer close(closed)
+			<-running
+			if err := errors.Join(reader.Close(), dlq.Close()); err != nil {
+				logger.Warn("no se pudo cerrar el cliente de Kafka", "error", err)
+			}
+		}()
+		select {
+		case <-closed:
+		case <-time.After(consumerStopTimeout):
+			logger.Warn("el consumidor no terminó a tiempo")
+		}
+	}
 }
 
 // retryUntil reintenta mientras la dependencia termina de levantar: el compose espera a que la base esté
