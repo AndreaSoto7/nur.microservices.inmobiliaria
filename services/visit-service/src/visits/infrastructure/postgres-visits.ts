@@ -55,14 +55,19 @@ export class PostgresVisits implements VisitRepository {
   ): Promise<VisitDetails | undefined> {
     const database = await this.database.connect();
     const [visit] = await database.query<
-      (VisitDetails & {
+      (Omit<
+        VisitDetails,
+        'scheduledStart' | 'scheduledEnd' | 'resolutionReason'
+      > & {
         scheduledStart: Date | null;
         scheduledEnd: Date | null;
+        resolutionReason: string | null;
       })[]
     >(
       `SELECT id, property_id AS "propertyId", status,
               proposed_at AS "proposedAt", requested_at AS "requestedAt",
-              scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd"
+              scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd",
+              CASE WHEN status = 'REJECTED' THEN resolution_reason END AS "resolutionReason"
          FROM visits WHERE id = $1
            AND (($3 AND client_id = $2) OR ($4 AND agent_id = $2))`,
       [
@@ -73,10 +78,15 @@ export class PostgresVisits implements VisitRepository {
       ],
     );
     if (!visit) return;
-    const { scheduledStart, scheduledEnd, ...details } = visit;
-    return scheduledStart && scheduledEnd
-      ? { ...details, scheduledStart, scheduledEnd }
-      : details;
+    const { scheduledStart, scheduledEnd, resolutionReason, ...details } =
+      visit;
+    return {
+      ...details,
+      ...(scheduledStart && scheduledEnd
+        ? { scheduledStart, scheduledEnd }
+        : {}),
+      ...(resolutionReason !== null ? { resolutionReason } : {}),
+    };
   }
 }
 
@@ -199,6 +209,14 @@ class PostgresVisitTransaction implements VisitTransaction {
       `UPDATE visits SET status = 'SCHEDULED', scheduled_start = $2, scheduled_end = $3,
           updated_at = $4, version = version + 1 WHERE id = $1`,
       [id, slot.start, slot.end, now],
+    );
+  }
+
+  async saveRejection(id: string, reason: string, now: Date): Promise<void> {
+    await this.manager.query(
+      `UPDATE visits SET status = 'REJECTED', resolution_reason = $2, resolved_by = 'AGENT',
+          resolved_at = $3, updated_at = $3, version = version + 1 WHERE id = $1`,
+      [id, reason, now],
     );
   }
 

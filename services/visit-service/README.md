@@ -27,7 +27,9 @@ Configura `DATABASE_URL` y `JWT_JWKS_URL` en el entorno o en el archivo `.env` d
 
 El agente asignado puede usar `POST /api/v1/visits/{visitId}/schedule` con un UUID en `Idempotency-Key` y `scheduledStart` en UTC. La visita dura 60 minutos y se puede consultar su horario por ID.
 
-Visit guarda `VisitRequested`, `LeadOpened` y `VisitScheduled` en `outbox`. Si `KAFKA_BROKERS` está configurado, un publicador dentro de Visit envía los pendientes y actualiza `published_at` al recibir la confirmación de Kafka. Si el proceso se interrumpe entre el envío y el guardado de la confirmación, el mismo `eventId` puede llegar de nuevo. Queda pendiente aplicar las políticas que modifican visitas existentes.
+El agente asignado puede usar `POST /api/v1/visits/{visitId}/reject` con un UUID en `Idempotency-Key` y un cuerpo como `{"reason":"Horario no disponible"}`. Solo se rechazan solicitudes pendientes; el cliente y el agente pueden consultar el motivo por ID.
+
+Visit guarda `VisitRequested`, `LeadOpened`, `VisitScheduled` y `VisitRejected` en `outbox`. Si `KAFKA_BROKERS` está configurado, un publicador dentro de Visit envía los pendientes y actualiza `published_at` al recibir la confirmación de Kafka. Si el proceso se interrumpe entre el envío y el guardado de la confirmación, el mismo `eventId` puede llegar de nuevo. Queda pendiente aplicar las políticas que modifican visitas existentes.
 
 ## Recibir propiedades de Listing
 

@@ -92,15 +92,16 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     if (database?.isInitialized) {
       await database.transaction(async (manager) => {
         await manager.query(
-          "DELETE FROM outbox WHERE envelope->'payload'->>'propertyId' = $1",
-          [propertyId],
+          "DELETE FROM outbox WHERE envelope->'payload'->>'propertyId' IN ($1,$2)",
+          [propertyId, pausedPropertyId],
         );
         await manager.query(
           'DELETE FROM idempotency_records WHERE client_id IN ($1,$2)',
           [clientId, agentId],
         );
-        await manager.query('DELETE FROM visits WHERE property_id = $1', [
+        await manager.query('DELETE FROM visits WHERE property_id IN ($1,$2)', [
           propertyId,
+          pausedPropertyId,
         ]);
         await manager.query('DELETE FROM leads WHERE property_id = $1', [
           propertyId,
@@ -263,6 +264,113 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     });
     const schemaPath = new URL(
       '../../../contracts/events/visit/visit-scheduled.v1.schema.json',
+      import.meta.url,
+    );
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as object;
+    const validator = addFormats.default(new Ajv2020());
+    expect(validator.validate(schema, events[0].envelope.payload)).toBe(true);
+  });
+
+  it('rechaza una visita pendiente una sola vez y deja el motivo visible al cliente', async () => {
+    const id = randomUUID();
+    const visitPropertyId = pausedPropertyId;
+    await database.query(
+      `INSERT INTO visits (id, property_id, client_id, agent_id, status, proposed_at, requested_at, updated_at)
+       VALUES ($1,$2,$3,$4,'REQUESTED',$5,now(),now())`,
+      [id, visitPropertyId, clientId, agentId, body.proposedAt],
+    );
+
+    const http = request(app.getHttpServer());
+    const location = path + '/' + id;
+    const reason = 'Horario no disponible.';
+    const reject = (
+      key: string,
+      payload: object = { reason: '  ' + reason + ' ' },
+      token: string | null = agentToken,
+    ) => {
+      const action = http
+        .post(location + '/reject')
+        .set('Idempotency-Key', key)
+        .set('X-Correlation-Id', 'reject-test');
+      if (token) action.auth(token, { type: 'bearer' });
+      return action.send(payload);
+    };
+    await reject(randomUUID(), { reason }, null).expect(401);
+    await reject(randomUUID(), { reason }, clientToken).expect(403);
+    await reject(randomUUID(), { reason }, otherAgentToken)
+      .expect(404)
+      .expect(/VISIT_NOT_FOUND/);
+    await reject(randomUUID(), {}).expect(400);
+    await reject(randomUUID(), { reason: '   ' }).expect(400);
+    await reject(randomUUID(), { reason: 'No disponible\0' }).expect(400);
+    await reject(randomUUID(), { reason, actor: 'SYSTEM' }).expect(400);
+    await reject('not-a-uuid').expect(400);
+
+    const key = randomUUID();
+    const [accepted, replay] = await Promise.all([
+      reject(key).expect(200).expect('X-Correlation-Id', 'reject-test'),
+      reject(key).expect(200),
+    ]);
+    expect(accepted.body).toEqual({ id, status: 'REJECTED' });
+    expect(replay.body).toEqual(accepted.body);
+    await reject(key, { reason: 'Otro motivo.' }).expect(422);
+    await reject(randomUUID())
+      .expect(409)
+      .expect(/VISIT_NOT_REQUESTED/);
+
+    const [row] = await database.query<
+      {
+        status: string;
+        resolvedBy: string;
+        resolvedAt: Date;
+        version: number;
+      }[]
+    >(
+      `SELECT status, resolved_by AS "resolvedBy", resolved_at AS "resolvedAt", version::integer
+       FROM visits WHERE id = $1`,
+      [id],
+    );
+    expect(row).toMatchObject({
+      status: 'REJECTED',
+      resolvedBy: 'AGENT',
+      resolvedAt: expect.any(Date),
+      version: 1,
+    });
+    const detail = await http
+      .get(location)
+      .auth(clientToken, { type: 'bearer' })
+      .expect(200);
+    expect(detail.body).toMatchObject({
+      status: 'REJECTED',
+      resolutionReason: reason,
+    });
+    await http.get(location).auth(otherToken, { type: 'bearer' }).expect(404);
+
+    const events = await database.query<
+      { topic: string; envelope: { payload: unknown } }[]
+    >(
+      "SELECT topic, envelope FROM outbox WHERE aggregate_id = $1 AND envelope->>'eventType' = 'VisitRejected'",
+      [id],
+    );
+    expect(events).toEqual([
+      {
+        topic: 'visit.visit.events',
+        envelope: expect.objectContaining({
+          aggregateId: id,
+          correlationId: 'reject-test',
+          payload: {
+            visitId: id,
+            propertyId: visitPropertyId,
+            clientId,
+            agentId,
+            actor: 'AGENT',
+            reason,
+          },
+        }),
+      },
+    ]);
+    const schemaPath = new URL(
+      '../../../contracts/events/visit/visit-rejected.v1.schema.json',
       import.meta.url,
     );
     const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as object;

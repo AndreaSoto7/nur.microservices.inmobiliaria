@@ -1,4 +1,9 @@
-import { InvalidProposedVisitDateError, Visit } from './visit.js';
+import {
+  InvalidProposedVisitDateError,
+  InvalidVisitRejectionReasonError,
+  Visit,
+  VisitNotRequestedError,
+} from './visit.js';
 
 describe('Visit', () => {
   function buildRequest() {
@@ -33,6 +38,38 @@ describe('Visit', () => {
     const input = { ...buildRequest(), requestedAt: new Date(NaN) };
 
     expect(() => Visit.request(input)).toThrow(InvalidProposedVisitDateError);
+  });
+
+  it('rechaza la visita pendiente y normaliza el motivo', () => {
+    const visit = Visit.request(buildRequest());
+
+    expect(visit.reject('  Horario no disponible.  ')).toBe(
+      'Horario no disponible.',
+    );
+    expect(visit.status).toBe('REJECTED');
+    expect(() => visit.reject('Otro motivo.')).toThrow(VisitNotRequestedError);
+  });
+
+  it.each(['', ' \t\n', 'a'.repeat(501)])(
+    'no rechaza una visita si el motivo está vacío o es demasiado largo',
+    (reason) => {
+      const visit = Visit.request(buildRequest());
+
+      expect(() => visit.reject(reason)).toThrow(
+        InvalidVisitRejectionReasonError,
+      );
+      expect(visit.status).toBe('REQUESTED');
+    },
+  );
+
+  it('no rechaza una visita ya programada', () => {
+    const input = buildRequest();
+    const visit = Visit.restore({ ...input, status: 'SCHEDULED' });
+
+    expect(() => visit.reject('Horario no disponible.')).toThrow(
+      VisitNotRequestedError,
+    );
+    expect(visit.status).toBe('SCHEDULED');
   });
 
   it('preserva la fecha propuesta aunque se muten las fechas expuestas', () => {

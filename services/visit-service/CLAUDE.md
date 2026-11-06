@@ -54,7 +54,7 @@ Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es 
 
 ## Eventos y políticas
 
-- **Publica** con outbox, clave = id del aggregate. Catálogo en `contracts/events/README.md`. El primer contrato define [`VisitRequested`](../../contracts/events/visit/visit-requested.v1.schema.json) y [`LeadOpened`](../../contracts/events/visit/lead-opened.v1.schema.json).
+- **Publica** con outbox, clave = id del aggregate. Catálogo en `contracts/events/README.md`. Visit ya genera `VisitRequested`, `LeadOpened`, `VisitScheduled` y `VisitRejected`. El rechazo automático queda pendiente de las políticas de Listing.
 - **Consume** `listing.property.events` (consumer group `visit-service`, desde el principio, idempotente con `processed_events`):
   1. **Copia local:** upsert de `PropertySnapshot` solo si `occurredAt` es más nuevo que el último aplicado.
   2. **Política 3.2 — `PropertyReserved`:** `RejectVisitCommand` por cada visita `REQUESTED` de la propiedad, con `reason: PROPERTY_RESERVED` y `actor: SYSTEM`. Las `SCHEDULED` se mantienen.

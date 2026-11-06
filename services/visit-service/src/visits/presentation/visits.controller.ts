@@ -32,6 +32,7 @@ import {
 } from '../../shared/identity.guard.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import { GetVisitByIdQuery } from '../application/get-visit-by-id.js';
+import { RejectVisitCommand } from '../application/reject-visit.js';
 import { RequestVisitCommand } from '../application/request-visit.js';
 import { ScheduleVisitCommand } from '../application/schedule-visit.js';
 
@@ -53,6 +54,13 @@ class ScheduleVisitDto {
   @Matches(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/)
   @IsISO8601({ strict: true, strictSeparator: true })
   scheduledStart!: string;
+}
+
+class RejectVisitDto {
+  @IsString()
+  @Matches(/\S/u)
+  @MaxLength(500)
+  reason!: string;
 }
 
 @Controller('api/v1/visits')
@@ -122,6 +130,35 @@ export class VisitsController {
         request.principal.id,
         key.toLowerCase(),
         body.scheduledStart,
+        ensureCorrelationId(request, response),
+      ),
+    );
+  }
+
+  @Post(':visitId/reject')
+  @HttpCode(200)
+  @VisitRoles(['AGENT'])
+  async rejectVisit(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+    @Param('visitId') visitId: string,
+    @Headers('idempotency-key') key: string | undefined,
+    @Body() body: RejectVisitDto,
+  ) {
+    if (
+      !uuidPattern.test(visitId) ||
+      !key ||
+      !uuidPattern.test(key) ||
+      typeof body?.reason !== 'string'
+    ) {
+      throw new VisitProblem('VALIDATION_ERROR');
+    }
+    return this.commands.execute(
+      new RejectVisitCommand(
+        visitId.toLowerCase(),
+        request.principal.id,
+        key.toLowerCase(),
+        body.reason,
         ensureCorrelationId(request, response),
       ),
     );

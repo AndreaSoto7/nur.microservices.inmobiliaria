@@ -15,6 +15,7 @@ const visitDurationMs = 60 * 60 * 1000;
 
 export class VisitNotRequestedError extends Error {}
 export class InvalidVisitScheduleError extends Error {}
+export class InvalidVisitRejectionReasonError extends Error {}
 
 export type VisitState = VisitRequest & { status: VisitStatus };
 
@@ -78,6 +79,20 @@ export class Visit {
     }
     this.state = 'SCHEDULED';
     return { start: new Date(start.getTime()), end };
+  }
+
+  reject(reason: string): string {
+    if (this.state !== 'REQUESTED') throw new VisitNotRequestedError();
+    const normalizedReason = reason.trim();
+    if (
+      !normalizedReason ||
+      reason.includes('\0') ||
+      [...reason].length > 500
+    ) {
+      throw new InvalidVisitRejectionReasonError();
+    }
+    this.state = 'REJECTED';
+    return normalizedReason;
   }
 
   get proposedAt(): Date {
