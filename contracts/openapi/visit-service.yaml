@@ -295,6 +295,68 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/visits/{visitId}/cancel:
+    post:
+      tags: [visits]
+      operationId: cancelVisit
+      summary: Cancelar una visita programada
+      description: |
+        El CLIENT que solicitó la visita o el AGENT asignado puede cancelarla.
+        La visita debe estar SCHEDULED y su hora de inicio debe ser futura.
+        El motivo es opcional; si se envía, debe contener texto.
+        Un reintento con la misma clave, visita y motivo devuelve el resultado
+        original durante 24 horas. Reutilizar la clave con otros datos devuelve 422.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: visitId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CancelVisit'}
+      responses:
+        '200':
+          description: Visita cancelada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CancelledVisit'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: VISIT_NOT_FOUND si la visita no existe o no pertenece al cliente ni al agente autenticado.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: |
+            VISIT_NOT_SCHEDULED si la visita no está programada.
+            VISIT_CANCELLATION_TOO_LATE si la hora de inicio ya llegó o pasó.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
   /health:
     get:
       tags: [health]
@@ -448,9 +510,9 @@ components:
         scheduledStart: {$ref: '#/components/schemas/UtcDateTime'}
         scheduledEnd: {$ref: '#/components/schemas/UtcDateTime'}
         resolutionReason:
-          $ref: '#/components/schemas/VisitRejectionReason'
-          description: Motivo visible al consultar una visita rechazada.
-    VisitRejectionReason:
+          $ref: '#/components/schemas/VisitResolutionReason'
+          description: Motivo visible al consultar una visita rechazada o cancelada, si se indicó.
+    VisitResolutionReason:
       type: string
       minLength: 1
       maxLength: 500
@@ -460,7 +522,7 @@ components:
       required: [reason]
       additionalProperties: false
       properties:
-        reason: {$ref: '#/components/schemas/VisitRejectionReason'}
+        reason: {$ref: '#/components/schemas/VisitResolutionReason'}
       example: {reason: 'El horario propuesto no está disponible.'}
     RejectedVisit:
       type: object
@@ -470,6 +532,20 @@ components:
         id: {$ref: '#/components/schemas/Uuid'}
         status: {type: string, const: REJECTED}
       example: {id: '05de258b-be6c-4f61-b6ac-ac67cc961b03', status: REJECTED}
+    CancelVisit:
+      type: object
+      additionalProperties: false
+      properties:
+        reason: {$ref: '#/components/schemas/VisitResolutionReason'}
+      example: {reason: 'Surgió un imprevisto.'}
+    CancelledVisit:
+      type: object
+      required: [id, status]
+      additionalProperties: false
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, const: CANCELLED}
+      example: {id: '05de258b-be6c-4f61-b6ac-ac67cc961b03', status: CANCELLED}
     ScheduleVisit:
       type: object
       required: [scheduledStart]
