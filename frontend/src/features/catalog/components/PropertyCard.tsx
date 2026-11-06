@@ -7,6 +7,7 @@ import {
   OPERATION_LABELS,
   PROPERTY_TYPE_LABELS,
 } from '../../../shared/format/property'
+import { HouseIcon } from '../../../shared/ui/icons'
 
 interface PropertyCardProps {
   property: PropertySummary
@@ -35,7 +36,8 @@ export const PropertyCard = memo(function PropertyCard({ property, href }: Prope
               onError={() => setImageFailed(true)}
             />
           ) : (
-            <div className="property-card__placeholder" aria-hidden="true">
+            <div className="media-placeholder" aria-hidden="true">
+              <HouseIcon className="media-placeholder__icon" />
               Sin foto
             </div>
           )}

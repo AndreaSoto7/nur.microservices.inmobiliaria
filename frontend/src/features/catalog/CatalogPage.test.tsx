@@ -107,6 +107,52 @@ describe('catálogo público', () => {
     expect(await screen.findByText('No hay propiedades con esos filtros')).toBeInTheDocument()
   })
 
+  it('sin filtros, el estado vacío no habla de filtros', async () => {
+    mockFetch(jsonResponse(200, page([])))
+
+    renderApp('/')
+
+    expect(await screen.findByText('Todavía no hay propiedades publicadas')).toBeInTheDocument()
+    expect(screen.queryByText('No hay propiedades con esos filtros')).not.toBeInTheDocument()
+  })
+
+  it('cambiar el orden aplica de inmediato y vuelve a la página 1', async () => {
+    const fetchMock = mockFetch(
+      jsonResponse(200, page([summary()], { number: 2, totalPages: 2 })),
+      jsonResponse(200, page([summary({ title: 'La más barata' })])),
+    )
+    const user = userEvent.setup()
+    renderApp('/?page=2')
+    await screen.findByRole('list', { name: 'Propiedades' })
+
+    await user.selectOptions(screen.getByLabelText('Ordenar por'), 'price,asc')
+
+    expect(await screen.findByText('La más barata')).toBeInTheDocument()
+    const query = requestedQuery(fetchMock, 1)
+    expect(query.get('sort')).toBe('price,asc')
+    expect(query.get('page')).toBe('1')
+  })
+
+  it('abre "Más filtros" y ofrece limpiar solo si hay filtros aplicados', async () => {
+    mockFetch(jsonResponse(200, page([summary()])))
+
+    renderApp('/?minPrice=1000&features=POOL')
+    await screen.findByRole('list', { name: 'Propiedades' })
+
+    expect(screen.getByText('Más filtros (2)').closest('details')).toHaveAttribute('open')
+    expect(screen.getByRole('button', { name: 'Limpiar filtros' })).toBeInTheDocument()
+  })
+
+  it('sin filtros, "Más filtros" queda cerrado y no ofrece limpiar', async () => {
+    mockFetch(jsonResponse(200, page([summary()])))
+
+    renderApp('/')
+    await screen.findByRole('list', { name: 'Propiedades' })
+
+    expect(screen.getByText('Más filtros').closest('details')).not.toHaveAttribute('open')
+    expect(screen.queryByRole('button', { name: 'Limpiar filtros' })).not.toBeInTheDocument()
+  })
+
   it('muestra el error del problem+json y permite reintentar', async () => {
     mockFetch(
       jsonResponse(503, problem(503, 'GATEWAY_UNAVAILABLE', 'El servicio no está disponible.')),

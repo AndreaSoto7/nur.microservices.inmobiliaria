@@ -27,6 +27,21 @@ export interface CatalogFilters {
 
 export const DEFAULT_FILTERS: CatalogFilters = { features: [], sort: 'publishedAt,desc', page: 1 }
 
+/** Cuántos filtros de "Más filtros" están aplicados. El orden y la página no filtran. */
+export function advancedFilterCount(filters: CatalogFilters): number {
+  const applied = [filters.minPrice, filters.maxPrice, filters.bedrooms].filter(
+    (value) => value !== undefined,
+  )
+  return applied.length + filters.features.length
+}
+
+/** Si hay algo filtrado: con cero resultados, decide si la culpa es de los filtros o no hay nada publicado. */
+export function hasActiveFilters(filters: CatalogFilters): boolean {
+  return (
+    Boolean(filters.zone || filters.type || filters.operation) || advancedFilterCount(filters) > 0
+  )
+}
+
 /**
  * Los filtros viven en la URL (frontend/CLAUDE.md): se pueden compartir, recargar y volver atrás.
  * Lo que no se reconoce se descarta en vez de romper la página.

@@ -8,22 +8,15 @@ import {
 } from '../../../shared/format/property'
 import { Button } from '../../../shared/ui/Button'
 import {
-  CATALOG_SORTS,
+  advancedFilterCount,
   DEFAULT_FILTERS,
+  hasActiveFilters,
   type CatalogFilters,
-  type CatalogSort,
 } from '../catalogFilters'
 
 interface PropertyFiltersProps {
   value: CatalogFilters
   onFiltersChange: (filters: CatalogFilters) => void
-}
-
-const SORT_LABELS: Record<CatalogSort, string> = {
-  'publishedAt,desc': 'Más recientes',
-  'price,asc': 'Menor precio',
-  'price,desc': 'Mayor precio',
-  'areaM2,desc': 'Mayor superficie',
 }
 
 /**
@@ -54,10 +47,12 @@ export const PropertyFilters = memo(function PropertyFilters({
     onFiltersChange({ ...draft, zone: draft.zone?.trim() || undefined })
   }
 
+  const advancedCount = advancedFilterCount(value)
+
   return (
     <form className="filters card" onSubmit={handleSubmit} aria-label="Filtros del catálogo">
-      <div className="filters__grid">
-        <label className="field">
+      <div className="filters__primary">
+        <label className="field filters__zone">
           Zona
           <input
             type="search"
@@ -99,73 +94,74 @@ export const PropertyFilters = memo(function PropertyFilters({
             ))}
           </select>
         </label>
-        <label className="field">
-          Precio mínimo (Bs)
-          <input
-            type="number"
-            min={0}
-            inputMode="numeric"
-            value={draft.minPrice ?? ''}
-            onChange={(event) => update('minPrice', numberOrUndefined(event.target.value))}
-          />
-        </label>
-        <label className="field">
-          Precio máximo (Bs)
-          <input
-            type="number"
-            min={0}
-            inputMode="numeric"
-            value={draft.maxPrice ?? ''}
-            onChange={(event) => update('maxPrice', numberOrUndefined(event.target.value))}
-          />
-        </label>
-        <label className="field">
-          Dormitorios
-          <select
-            value={draft.bedrooms ?? ''}
-            onChange={(event) => update('bedrooms', numberOrUndefined(event.target.value))}
-          >
-            <option value="">Cualquiera</option>
-            {[1, 2, 3, 4].map((count) => (
-              <option key={count} value={count}>
-                {count} o más
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          Ordenar por
-          <select
-            value={draft.sort}
-            onChange={(event) => update('sort', event.target.value as CatalogSort)}
-          >
-            {CATALOG_SORTS.map((sort) => (
-              <option key={sort} value={sort}>
-                {SORT_LABELS[sort]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <fieldset className="filters__features">
-        <legend>Características</legend>
-        {FEATURES.map((feature) => (
-          <label key={feature} className="chip">
-            <input
-              type="checkbox"
-              checked={draft.features.includes(feature)}
-              onChange={() => toggleFeature(feature)}
-            />
-            {FEATURE_LABELS[feature]}
-          </label>
-        ))}
-      </fieldset>
-      <div className="filters__actions">
-        <Button type="submit">Buscar</Button>
-        <Button variant="secondary" onClick={() => onFiltersChange(DEFAULT_FILTERS)}>
-          Limpiar filtros
+        <Button type="submit" className="filters__submit">
+          Buscar
         </Button>
       </div>
+      <details className="filters__more" open={advancedCount > 0}>
+        <summary>{advancedCount > 0 ? `Más filtros (${advancedCount})` : 'Más filtros'}</summary>
+        <div className="filters__more-body">
+          <div className="filters__secondary">
+            <label className="field">
+              Precio mínimo (Bs)
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={draft.minPrice ?? ''}
+                onChange={(event) => update('minPrice', numberOrUndefined(event.target.value))}
+              />
+            </label>
+            <label className="field">
+              Precio máximo (Bs)
+              <input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={draft.maxPrice ?? ''}
+                onChange={(event) => update('maxPrice', numberOrUndefined(event.target.value))}
+              />
+            </label>
+            <label className="field">
+              Dormitorios
+              <select
+                value={draft.bedrooms ?? ''}
+                onChange={(event) => update('bedrooms', numberOrUndefined(event.target.value))}
+              >
+                <option value="">Cualquiera</option>
+                {[1, 2, 3, 4].map((count) => (
+                  <option key={count} value={count}>
+                    {count} o más
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <fieldset className="filters__features">
+            <legend>Características</legend>
+            {FEATURES.map((feature) => (
+              <label key={feature} className="chip">
+                <input
+                  type="checkbox"
+                  checked={draft.features.includes(feature)}
+                  onChange={() => toggleFeature(feature)}
+                />
+                {FEATURE_LABELS[feature]}
+              </label>
+            ))}
+          </fieldset>
+        </div>
+      </details>
+      {hasActiveFilters(value) && (
+        <div className="filters__actions">
+          <Button
+            variant="secondary"
+            onClick={() => onFiltersChange({ ...DEFAULT_FILTERS, sort: value.sort })}
+          >
+            Limpiar filtros
+          </Button>
+        </div>
+      )}
     </form>
   )
 })
