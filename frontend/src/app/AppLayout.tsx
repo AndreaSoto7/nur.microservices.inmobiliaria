@@ -18,7 +18,7 @@ export function AppLayout() {
   const links =
     status === 'authenticated' ? (
       <>
-        {hasRole('AGENT') && <NavLink to="/agente/propiedades">Mis propiedades</NavLink>}
+        {hasRole('AGENT') && <NavLink to="/agente">Panel de agente</NavLink>}
         {hasRole('CLIENT') && <NavLink to="/mis-visitas">Mis visitas</NavLink>}
         {(hasRole('CLIENT') || hasRole('AGENT')) && <NavLink to="/favoritos">Favoritos</NavLink>}
         <NotificationsNavLink />

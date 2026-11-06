@@ -168,7 +168,7 @@ describe('AgentPropertiesPage', () => {
     expect(await screen.findByText('Sin permiso')).toBeInTheDocument()
   })
 
-  it('muestra el enlace a sus propiedades solo a un agente', async () => {
+  it('el menú del panel enlaza a sus propiedades', async () => {
     routeFetch({ ...sessionRoutes(agentUser), [LIST]: listWith() })
 
     renderApp('/agente/propiedades')
