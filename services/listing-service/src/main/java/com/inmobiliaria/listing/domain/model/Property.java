@@ -125,7 +125,8 @@ public class Property {
     public void addImage(PropertyImage image, Instant now) {
         requireNotClosed("agregar imágenes a");
         if (images.size() >= MAX_IMAGES) {
-            throw new DomainException("PROPERTY_IMAGE_LIMIT", "Una propiedad tiene como máximo " + MAX_IMAGES + " imágenes");
+            throw new DomainException("PROPERTY_IMAGE_LIMIT",
+                    "Una propiedad tiene como máximo " + MAX_IMAGES + " imágenes");
         }
         images.add(Objects.requireNonNull(image, "image"));
         updatedAt = now;

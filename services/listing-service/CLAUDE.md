@@ -148,9 +148,12 @@ spring.cloud.consul.discovery.health-check-critical-timeout=1m
 
 ```bash
 ./mvnw spring-boot:run        # Windows: mvnw.cmd spring-boot:run
-./mvnw test
+./mvnw test                   # corre antes Checkstyle (fase validate)
 ./mvnw verify
+./mvnw checkstyle:check       # solo el linter
 ```
+
+**Linter:** Checkstyle ([ADR 0006](../../docs/adr/0006-linter-java-listing.md)), reglas en `config/checkstyle/checkstyle.xml`. Revisa sin reformatear: 4 espacios, 120 columnas, sin imports sin usar ni comodines, llaves siempre y errores comunes. Si una violación bloquea `./mvnw test`, se arregla el código, no se baja la regla sin acordarlo.
 
 Usa siempre el wrapper y commitea `.mvn/wrapper/`. Tests: JUnit 5 y AssertJ.
 

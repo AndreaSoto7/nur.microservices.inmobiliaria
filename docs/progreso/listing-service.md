@@ -8,7 +8,8 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| fix | El relay del outbox respeta la interrupción del hilo al apagarse (nota de la revisión de #45) | este PR |
+| chore | Checkstyle como linter de Java, corre en `validate` (ADR 0006) | este PR |
+| fix | El relay del outbox respeta la interrupción del hilo al apagarse (nota de la revisión de #45) | #60 |
 | feat | Servicio completo: casos de uso de propiedades, galería, favoritos y catálogo público (CQRS), persistencia JPA y proyección, outbox con relay a Kafka, política `LeadClosed` → reserva, API REST, Swagger en `/docs` y contrato OpenAPI, con 127 tests (contrato de eventos e integración con Postgres) | #45 |
 | feat | Aggregate `Property` con su máquina de estados, value objects (`Money`, `Location`, `Area`, `PropertyImage`) y eventos de dominio, con 30 tests | #41 |
 | chore | Esqueleto Spring Boot 4.1: capas, `/health` y `/health/ready`, Consul con re-registro, JWT con JWKS, problem+json, `X-Correlation-Id`, logs JSON, outbox y `processed_events`, Dockerfile y compose | #41 |
@@ -21,7 +22,7 @@
 - [x] Contrato `contracts/openapi/listing-service.yaml` con todos los endpoints de negocio
 - [x] Probar el arranque con `docker compose up listing-service`: lo verificó la revisión de #45 (imagen `healthy` y prueba punta a punta con identity, Kafka y Consul)
 - [x] `springdoc-openapi` en `/docs`
-- [ ] Elegir linter de Java (Spotless o Checkstyle)
+- [x] Linter de Java: Checkstyle ([ADR 0006](../adr/0006-linter-java-listing.md))
 - [x] `Property.reconstitute(...)` para que el mapper cargue una propiedad guardada (sin eventos ni validar transiciones), con test de ida y vuelta
 - [x] Puertos `PropertyRepository` (en `domain/repository`) y `Clock`; errores de aplicación `PropertyNotFoundException` (404) y `NotPropertyOwnerException` (403)
 - [x] Persistencia: migración de `properties`, `property_features`, `property_images`, `*JpaEntity`, mapper y adaptador del repositorio

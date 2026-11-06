@@ -93,10 +93,22 @@ class PropertyStateMachineTest {
         switch (status) {
             case DRAFT -> { }
             case PUBLISHED -> property.publish(NOW);
-            case PAUSED -> { property.publish(NOW); property.pause(NOW); }
-            case RESERVED -> { property.publish(NOW); property.reserve(Actor.AGENT, NOW); }
-            case SOLD -> { property.publish(NOW); property.markSold(NOW); }
-            case RENTED -> { property.publish(NOW); property.markRented(NOW); }
+            case PAUSED -> {
+                property.publish(NOW);
+                property.pause(NOW);
+            }
+            case RESERVED -> {
+                property.publish(NOW);
+                property.reserve(Actor.AGENT, NOW);
+            }
+            case SOLD -> {
+                property.publish(NOW);
+                property.markSold(NOW);
+            }
+            case RENTED -> {
+                property.publish(NOW);
+                property.markRented(NOW);
+            }
         }
         return property;
     }

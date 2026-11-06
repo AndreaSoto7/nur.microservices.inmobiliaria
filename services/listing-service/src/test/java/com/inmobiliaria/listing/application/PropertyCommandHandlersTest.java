@@ -71,7 +71,8 @@ class PropertyCommandHandlersTest {
     @Test
     void create_should_store_a_draft_owned_by_the_agent_and_out_of_the_catalog() {
         PropertyId id = new CreatePropertyHandler(support).handle(new CreatePropertyCommand("Depto céntrico", "",
-                PropertyType.APARTMENT, OperationType.RENT, Money.bob(new BigDecimal("3500")), Location.ofZone("Centro"), owner));
+                PropertyType.APARTMENT, OperationType.RENT, Money.bob(new BigDecimal("3500")),
+                Location.ofZone("Centro"), owner));
 
         assertThat(repository.get(id).status()).isEqualTo(PropertyStatus.DRAFT);
         assertThat(repository.get(id).agentId()).isEqualTo(AGENT);
