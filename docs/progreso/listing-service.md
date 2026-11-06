@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| refactor | Nombres alineados con el lenguaje ubicuo: `isSoldOrRented()` (antes `isClosed`, término de `Lead`), `isVisibleInCatalog()`, `Amenity` para los extras y `updateCharacteristics(...)` / `UpdatePropertyCharacteristicsCommand`, `Favorite.add(...)`, `LeadClosed` (antes `LeadClosedNotification`) y `reconstitute` en los dos aggregates. Sin cambios de contrato ni de base | #PR |
+| refactor | Nombres alineados con el lenguaje ubicuo: `isSoldOrRented()` (antes `isClosed`, término de `Lead`), `isVisibleInCatalog()`, `Amenity` para los extras y `updateCharacteristics(...)` / `UpdatePropertyCharacteristicsCommand`, `Favorite.add(...)`, `LeadClosed` (antes `LeadClosedNotification`) y `reconstitute` en los dos aggregates. Sin cambios de contrato ni de base | #90 |
 | feat | Comando de mantenimiento para reconstruir `property_catalog` desde `properties` (`CATALOG_REBUILD_ON_STARTUP=true`) | #70 |
 | feat | Agregar fotos a una propiedad publicada o reservada publica `PropertyUpdated` (un solo evento por comando), así visit tiene la galería al día | #67 |
 | chore | Checkstyle como linter de Java, corre en `validate` (ADR 0006) | #64 |
