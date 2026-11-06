@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Comando de mantenimiento para reconstruir `property_catalog` desde `properties` (`CATALOG_REBUILD_ON_STARTUP=true`) | este PR |
+| feat | Comando de mantenimiento para reconstruir `property_catalog` desde `properties` (`CATALOG_REBUILD_ON_STARTUP=true`) | #70 |
 | feat | Agregar fotos a una propiedad publicada o reservada publica `PropertyUpdated` (un solo evento por comando), así visit tiene la galería al día | #67 |
 | chore | Checkstyle como linter de Java, corre en `validate` (ADR 0006) | #64 |
 | fix | El relay del outbox respeta la interrupción del hilo al apagarse (nota de la revisión de #45) | #60 |
