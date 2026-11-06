@@ -18,6 +18,40 @@ tags:
   - name: health
 paths:
   /api/v1/inquiries:
+    get:
+      tags: [inquiries]
+      operationId: listAgentInquiries
+      summary: Listar consultas asignadas al agente
+      description: Requiere AGENT. El agente se toma del JWT. El mensaje completo, el correo y el teléfono se consultan por ID.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/FilterPropertyId'
+        - name: sort
+          in: query
+          description: Orden por fecha; los empates se resuelven por ID.
+          schema:
+            type: string
+            enum: ['createdAt,desc', 'createdAt,asc']
+            default: 'createdAt,desc'
+      responses:
+        '200':
+          description: Página de resultados. Una página fuera del rango devuelve data vacío.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AgentInquiryPage'}
+              example: {data: [], page: {number: 1, size: 20, totalElements: 0, totalPages: 0}}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [inquiries]
       operationId: sendInquiry
@@ -104,6 +138,43 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/visits:
+    get:
+      tags: [visits]
+      operationId: listVisits
+      summary: Listar visitas propias
+      description: AGENT ve las visitas asignadas y CLIENT las que solicitó. Si el token tiene ambos roles se usa AGENT.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/FilterPropertyId'
+        - name: sort
+          in: query
+          description: Orden por fecha; los empates se resuelven por ID.
+          schema:
+            type: string
+            enum: ['requestedAt,desc', 'requestedAt,asc']
+            default: 'requestedAt,desc'
+        - name: status
+          in: query
+          schema: {$ref: '#/components/schemas/VisitStatus'}
+      responses:
+        '200':
+          description: Página de resultados. Una página fuera del rango devuelve data vacío.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/VisitPage'}
+              example: {data: [], page: {number: 1, size: 20, totalElements: 0, totalPages: 0}}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [visits]
       operationId: requestVisit
@@ -546,6 +617,18 @@ components:
   securitySchemes:
     bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
   parameters:
+    Page:
+      name: page
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 2147483647, default: 1}
+    PageSize:
+      name: size
+      in: query
+      schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+    FilterPropertyId:
+      name: propertyId
+      in: query
+      schema: {$ref: '#/components/schemas/Uuid'}
     CorrelationId:
       name: X-Correlation-Id
       in: header
@@ -679,13 +762,52 @@ components:
       additionalProperties: false
       properties:
         id: {$ref: '#/components/schemas/Uuid'}
+    PageMetadata:
+      type: object
+      additionalProperties: false
+      required: [number, size, totalElements, totalPages]
+      properties:
+        number: {type: integer, minimum: 1}
+        size: {type: integer, minimum: 1, maximum: 100}
+        totalElements: {type: integer, minimum: 0}
+        totalPages: {type: integer, minimum: 0}
+    AgentInquiryPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/AgentInquirySummary'}
+        page: {$ref: '#/components/schemas/PageMetadata'}
+    AgentInquirySummary:
+      type: object
+      additionalProperties: false
+      required: [id, propertyId, contactName, createdAt]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        propertyId: {$ref: '#/components/schemas/Uuid'}
+        contactName: {type: string}
+        createdAt: {$ref: '#/components/schemas/UtcDateTime'}
+    VisitPage:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Visit'}
+        page: {$ref: '#/components/schemas/PageMetadata'}
+    VisitStatus:
+      type: string
+      enum: [REQUESTED, SCHEDULED, COMPLETED, CANCELLED, REJECTED]
     Visit:
       type: object
       required: [id, propertyId, status, proposedAt, requestedAt]
       properties:
         id: {$ref: '#/components/schemas/Uuid'}
         propertyId: {$ref: '#/components/schemas/Uuid'}
-        status: {type: string, enum: [REQUESTED, SCHEDULED, COMPLETED, CANCELLED, REJECTED]}
+        status: {$ref: '#/components/schemas/VisitStatus'}
         proposedAt: {$ref: '#/components/schemas/UtcDateTime'}
         requestedAt: {$ref: '#/components/schemas/UtcDateTime'}
         scheduledStart: {$ref: '#/components/schemas/UtcDateTime'}
