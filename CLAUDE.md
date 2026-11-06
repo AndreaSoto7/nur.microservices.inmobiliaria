@@ -164,7 +164,6 @@ Los términos propios de un solo servicio están en su `CLAUDE.md`.
 
 - Stack y responsable de audit-service, si se construye.
 - Versiones exactas de cada stack (gateway ya usa Go 1.27; identity, Python 3.13 y Django 5.2).
-- Linter y formateador de Java en listing (Spotless o Checkstyle).
 - Librerías de router y de datos del frontend (ADR 0004).
 
 ## Comandos de infraestructura

@@ -41,4 +41,4 @@ Las variables están en [`.env.example`](.env.example). Spring las toma del ento
 ./mvnw test
 ```
 
-Los tests de dominio, aplicación y contrato no necesitan nada. `ListingApiIntegrationTest` levanta PostgreSQL con Testcontainers: necesita Docker y, si no está, se salta. Kafka y Consul nunca hacen falta.
+Antes de los tests corre Checkstyle (`config/checkstyle/checkstyle.xml`); una violación hace fallar el build. Los tests de dominio, aplicación y contrato no necesitan nada. `ListingApiIntegrationTest` levanta PostgreSQL con Testcontainers: necesita Docker y, si no está, se salta. Kafka y Consul nunca hacen falta.

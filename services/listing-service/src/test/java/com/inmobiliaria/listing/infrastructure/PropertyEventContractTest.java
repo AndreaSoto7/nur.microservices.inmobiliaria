@@ -43,7 +43,8 @@ class PropertyEventContractTest {
 
     // El validador de schemas trabaja con Jackson 2; el mapper de producción usa Jackson 3.
     private final ObjectMapper json = new ObjectMapper();
-    private final PropertyIntegrationEventMapper mapper = new PropertyIntegrationEventMapper(JsonMapper.builder().build());
+    private final PropertyIntegrationEventMapper mapper =
+            new PropertyIntegrationEventMapper(JsonMapper.builder().build());
     private final CommandMetadata agent = CommandMetadata.agent(PropertyMother.AGENT, "corr-123");
 
     @Test
