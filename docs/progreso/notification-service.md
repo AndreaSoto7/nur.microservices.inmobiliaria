@@ -12,6 +12,7 @@
 | feat | Contrato OpenAPI (listar y marcar como leído) y consumidores en el catálogo de eventos | #74 |
 | chore | Scaffold: config, `/health` y `/health/ready`, registro en Consul con baja, problem+json, correlation-id, logs JSON, Dockerfile y lint | #75 |
 | feat | Dominio (`Notification`) y casos de uso: políticas ante eventos, marcar como leído y listar | #76 |
+| feat | Persistencia: migraciones con advisory lock y repositorio con pgx, con el aviso y el evento en una sola transacción | este PR |
 
 ## Pendientes
 

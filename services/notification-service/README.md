@@ -18,6 +18,13 @@ gofmt -l .                 # debe devolver vacío
 golangci-lint run
 ```
 
+Los tests del repositorio usan PostgreSQL real, con `TEST_DATABASE_URL`. Sin esa variable, se saltan:
+
+```bash
+docker run -d --rm --name notif-test-db --tmpfs /var/lib/postgresql/data -e POSTGRES_PASSWORD=solo-test -p 127.0.0.1:55432:5432 postgres:17-alpine
+TEST_DATABASE_URL='postgres://postgres:solo-test@127.0.0.1:55432/postgres' go test ./...
+```
+
 ## Variables
 
 Están en [`.env.example`](.env.example). `DATABASE_URL` y `KAFKA_BOOTSTRAP_SERVERS` son obligatorias; el resto tiene valor por defecto.
