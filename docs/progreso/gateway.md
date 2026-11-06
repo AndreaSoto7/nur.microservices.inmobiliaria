@@ -20,7 +20,7 @@
 | feat | Eslabón de auth en la cadena: 401 con `WWW-Authenticate`, 503 si no hay JWKS, y discovery y balanceador cableados en `main` | #59 |
 | feat | Núcleo del reverse proxy: reenvío a la réplica elegida, timeouts, errores 502, 503 y 504, y marcado de réplicas solo ante errores de red | #61 |
 | feat | Límite de body por ruta (413), deadline de lectura en auth y body ilegible (400), sin marcar la réplica. `MAX_BODY_BYTES` sube a 26 MiB, lo que acepta listing | #62 |
-| feat | Proxy cableado en `main`: el gateway ya reenvía a las réplicas sanas, con la cadena completa | este PR |
+| feat | Proxy cableado en `main`: el gateway ya reenvía a las réplicas sanas, con la cadena completa | #63 |
 
 ## Pendientes
 
