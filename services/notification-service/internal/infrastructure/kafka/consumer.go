@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
+	"strings"
 	"time"
 
 	segmentio "github.com/segmentio/kafka-go"
@@ -103,7 +105,10 @@ func (c *Consumer) process(ctx context.Context, message segmentio.Message) bool 
 		case application.IsPermanent(err):
 			return c.deadLetter(ctx, message, err.Error())
 		case attempt >= maxAttempts:
-			return c.deadLetter(ctx, message, fmt.Sprintf("agotó %d intentos: %v", maxAttempts, err))
+			// El error técnico puede citar valores del mensaje: el detalle va al log, y a Kafka un motivo fijo.
+			c.logger.Error("un evento agotó los reintentos",
+				"eventType", event.EventType, "eventId", event.EventID, "correlationId", event.CorrelationID, "error", err)
+			return c.deadLetter(ctx, message, fmt.Sprintf("agotó %d intentos", maxAttempts))
 		}
 		c.logger.Warn("falló el procesamiento de un evento; se reintenta",
 			"eventType", event.EventType, "eventId", event.EventID, "correlationId", event.CorrelationID,
@@ -124,6 +129,8 @@ func (c *Consumer) deadLetter(ctx context.Context, message segmentio.Message, re
 		Headers: []segmentio.Header{
 			{Key: "error", Value: []byte(reason)},
 			{Key: "originalTopic", Value: []byte(message.Topic)},
+			{Key: "originalPartition", Value: []byte(strconv.Itoa(message.Partition))},
+			{Key: "originalOffset", Value: []byte(strconv.FormatInt(message.Offset, 10))},
 		},
 	}
 	c.logger.Error("mensaje enviado a la DLQ",
@@ -172,13 +179,21 @@ func parseEnvelope(value []byte) (envelope, error) {
 	if err := json.Unmarshal(value, &event); err != nil {
 		return envelope{}, fmt.Errorf("leer el envelope: %w", err)
 	}
-	if err := uuid.Validate(event.EventID); err != nil {
-		return envelope{}, fmt.Errorf("eventId inválido: %w", err)
+	// La forma con guiones es la del schema: uuid.Parse admite otras que PostgreSQL rechazaría.
+	parsed, err := uuid.Parse(event.EventID)
+	if err != nil || parsed.String() != strings.ToLower(event.EventID) {
+		return envelope{}, errInvalidEnvelope
+	}
+	if event.EventType == "" || event.EventVersion < 1 {
+		return envelope{}, errInvalidEnvelope
 	}
 	return event, nil
 }
 
-var errInvalidPayload = errors.New("payload ilegible")
+var (
+	errInvalidEnvelope = errors.New("envelope inválido")
+	errInvalidPayload  = errors.New("payload ilegible")
+)
 
 // handlerFor es el anti-corruption layer: traduce cada evento a una llamada a la política. Filtra por tipo y
 // versión, e ignora lo demás. Cada payload lee solo lo que necesita: de UserRegistered, nunca email ni nombre.

@@ -218,6 +218,10 @@ func TestUnreadableMessagesGoToTheDLQWithoutRetrying(t *testing.T) {
 		{"sin eventId", []byte(`{"eventType":"UserRegistered","eventVersion":1,"payload":{}}`)},
 		{"eventId que no es UUID", []byte(`{"eventId":"abc","eventType":"UserRegistered","eventVersion":1,"payload":{}}`)},
 		{"payload de otro tipo", eventValue("UserRegistered", 1, `"texto"`)},
+		{"sin eventType", []byte(fmt.Sprintf(`{"eventId":%q,"eventVersion":1,"payload":{}}`, eventID))},
+		{"sin eventVersion", []byte(fmt.Sprintf(`{"eventId":%q,"eventType":"UserRegistered","payload":{}}`, eventID))},
+		{"eventId con prefijo urn", []byte(fmt.Sprintf(`{"eventId":"urn:uuid:%s","eventType":"UserRegistered","eventVersion":1,"payload":{}}`, eventID))},
+		{"eventId sin guiones", []byte(`{"eventId":"1b2c3d4e5f604a1b9c2d3e4f5a6b7c8d","eventType":"UserRegistered","eventVersion":1,"payload":{}}`)},
 	}
 
 	for _, tt := range tests {
@@ -262,6 +266,37 @@ func TestInvalidDataFromThePolicyGoesToTheDLQWithoutRetrying(t *testing.T) {
 		t.Errorf("intentos = %d, want 1: reintentar no lo arregla", len(h.policies.calls))
 	}
 	assertDeadLettered(t, h, "identity.user.events.dlq", message.Value)
+}
+
+// El error técnico puede citar valores del mensaje: el motivo que queda en Kafka es fijo, y el detalle va al log.
+func TestDeadLetterHeadersAreFixedAndTraceable(t *testing.T) {
+	message := userRegistered()
+	message.Partition, message.Offset = 2, 41
+	h := newHarness(message)
+	failure := errors.New(`invalid input syntax for type uuid: "valor-del-mensaje"`)
+	h.policies.errs = []error{failure, failure, failure}
+
+	run(t, h)
+
+	if len(h.dlq.written) != 1 {
+		t.Fatalf("DLQ = %d", len(h.dlq.written))
+	}
+	headers := map[string]string{}
+	for _, header := range h.dlq.written[0].Headers {
+		headers[header.Key] = string(header.Value)
+	}
+	if strings.Contains(headers["error"], "valor-del-mensaje") {
+		t.Errorf("error = %q: expone el error técnico", headers["error"])
+	}
+	want := map[string]string{"originalTopic": "identity.user.events", "originalPartition": "2", "originalOffset": "41"}
+	for key, value := range want {
+		if headers[key] != value {
+			t.Errorf("%s = %q, want %q", key, headers[key], value)
+		}
+	}
+	if !strings.Contains(h.log.String(), "valor-del-mensaje") {
+		t.Error("el detalle del error debe quedar en el log, para diagnosticar")
+	}
 }
 
 func TestTechnicalErrorIsRetriedAndThenSucceeds(t *testing.T) {

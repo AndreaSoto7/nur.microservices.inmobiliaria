@@ -54,6 +54,7 @@ Consumer group `notification-service`, desde el principio de cada topic.
 - **Anti-corruption layer:** `infrastructure/kafka` traduce el evento a un comando propio. Del payload de `UserRegistered` solo lee `userId`: nunca el email ni el nombre.
 - **Se ignoran,** sin fallar, los `eventType` y las versiones desconocidas.
 - **Errores técnicos:** 3 reintentos con backoff, después `<topic>.dlq`, y sigue. Un mensaje ilegible, o con datos inválidos (`application.IsPermanent`), va directo a la DLQ.
+- **DLQ:** copia el mensaje entero, con el motivo, el topic, la partición y el offset en los headers. Por eso `identity.user.events.dlq` también lleva email y nombre, con la misma retención por defecto que su topic. El motivo es fijo: el detalle del error va solo al log.
 - **Pendientes:** los eventos que esperan el schema de visit están en el ADR 0007.
 
 ## Estructura
