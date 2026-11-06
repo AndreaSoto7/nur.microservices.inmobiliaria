@@ -10,7 +10,7 @@ Hay un archivo por componente. Lo que el componente **es** (dominio, eventos, es
 | [identity-service.md](identity-service.md) | @Tiesol |
 | [listing-service.md](listing-service.md) | @AndreaSoto7 |
 | [visit-service.md](visit-service.md) | _(completar)_ |
-| [notification-service.md](notification-service.md) | _(completar)_ |
+| [notification-service.md](notification-service.md) | @Tiesol |
 | [audit-service.md](audit-service.md) | _(completar)_ · opcional (ADR 0005) |
 | [gateway.md](gateway.md) | @Tiesol |
 | [frontend.md](frontend.md) | _(completar)_ |

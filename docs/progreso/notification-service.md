@@ -1,6 +1,6 @@
 # Progreso — notification-service
 
-- **Responsable:** _(completar)_
+- **Responsable:** @Tiesol
 - **Stack:** Go
 - **Instrucciones:** [`services/notification-service/CLAUDE.md`](../../services/notification-service/CLAUDE.md)
 
@@ -17,6 +17,7 @@
 | feat | Validación del access token con el JWKS de identity, con caché, recarga limitada y renovación cada 5 minutos | #80 |
 | feat | API: listar mis avisos (paginado, con filtro `unread`) y marcarlos como leídos, con JWT | #82 |
 | feat | Consumidor de Kafka: `UserRegistered`, `VisitRequested` y `PropertyReserved` crean avisos. Idempotente, con 3 reintentos y DLQ | #84 |
+| feat | Servicio y base en el compose | #85 |
 
 ## Pendientes
 
@@ -24,7 +25,7 @@
 
 - [x] Contrato `contracts/openapi/notification-service.yaml` y consumidores en `contracts/events/README.md`
 - [x] Scaffold: capas, health, Consul, problem+json, correlation-id, Dockerfile y lint
-- [ ] Servicio y base en el compose
+- [x] Servicio y base en el compose
 
 **Avisos (enunciado: solicitudes, visitas y cambios relevantes)**
 

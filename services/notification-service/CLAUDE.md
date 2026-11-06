@@ -6,7 +6,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 
 | | |
 |---|---|
-| Responsable | _(completar)_ |
+| Responsable | @Tiesol |
 | Stack | Go 1.27, `net/http`, `log/slog`, `pgx`, `segmentio/kafka-go`, `golang-jwt/jwt/v5` |
 | Puerto | 8005 |
 | Base | `notification` (PostgreSQL 17) → [`docs/base-de-datos/notification-service.md`](../../docs/base-de-datos/notification-service.md) |

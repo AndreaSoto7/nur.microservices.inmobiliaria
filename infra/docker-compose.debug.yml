@@ -24,3 +24,11 @@ services:
   listing-service:
     ports:
       - "127.0.0.1:8002:8002"
+
+  notification-db:
+    ports:
+      - "127.0.0.1:5436:5432"
+
+  notification-service:
+    ports:
+      - "127.0.0.1:8005:8005"

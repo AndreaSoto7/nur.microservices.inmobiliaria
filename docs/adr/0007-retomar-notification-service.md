@@ -80,7 +80,7 @@
 - **Hay que hacer ahora:**
   - [x] `CLAUDE.md`, `docs/enunciado.md`, `docs/progreso/` y `docs/base-de-datos/` (este PR).
   - [x] Ruta del gateway (`/api/v1/notifications/**`, #71).
-  - [ ] Contrato `contracts/openapi/notification-service.yaml` y consumidores en `contracts/events/README.md`.
-  - [ ] El servicio, su base y su lugar en el compose.
+  - [x] Contrato `contracts/openapi/notification-service.yaml` y consumidores en `contracts/events/README.md`.
+  - [x] El servicio, su base y su lugar en el compose.
   - [ ] Pantalla de avisos en el frontend (su responsable).
-  - [ ] Asignar responsable.
+  - [x] Asignar responsable: @Tiesol.
