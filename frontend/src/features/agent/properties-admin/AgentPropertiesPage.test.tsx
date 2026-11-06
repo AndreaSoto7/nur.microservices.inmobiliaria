@@ -26,19 +26,23 @@ describe('AgentPropertiesPage', () => {
 
     const row = await screen.findByRole('listitem')
     expect(
-      within(row).getByRole('heading', { name: 'Casa con jardín en Equipetrol' }),
-    ).toBeVisible()
+      within(row).getByRole('link', { name: 'Casa con jardín en Equipetrol' }),
+    ).toHaveAttribute('href', `/agente/propiedades/${PROPERTY_ID}`)
     expect(within(row).getByText('Borrador')).toBeInTheDocument()
     expect(within(row).getByText('Bs 1.285.000')).toBeInTheDocument()
     expect(screen.getByText('1 propiedad')).toBeInTheDocument()
   })
 
-  it('avisa si el agente no tiene propiedades', async () => {
+  it('explica cómo empezar si el agente no tiene propiedades', async () => {
     routeFetch({ ...sessionRoutes(agentUser), [LIST]: listWith() })
 
     renderApp('/agente/propiedades')
 
     expect(await screen.findByText('Todavía no tienes propiedades')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Nueva propiedad' })).toHaveAttribute(
+      'href',
+      '/agente/propiedades/nueva',
+    )
   })
 
   it('distingue "sin propiedades" de "ninguna en ese estado"', async () => {

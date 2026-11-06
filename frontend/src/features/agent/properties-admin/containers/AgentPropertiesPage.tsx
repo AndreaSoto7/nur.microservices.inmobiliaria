@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
-import type { PropertyTransition } from '../../../../core/models/listing'
+import { Link } from 'react-router'
+import type { PropertySummary, PropertyTransition } from '../../../../core/models/listing'
 import { PROPERTY_STATUS_LABELS } from '../../../../shared/format/property'
 import { Button } from '../../../../shared/ui/Button'
 import { EmptyState } from '../../../../shared/ui/EmptyState'
@@ -10,6 +11,8 @@ import { PropertyAdminList } from '../components/PropertyAdminList'
 import { StatusFilter } from '../components/StatusFilter'
 import { useAgentProperties } from '../useAgentProperties'
 import { usePropertyTransition } from '../usePropertyTransition'
+
+const editHref = (property: PropertySummary) => `/agente/propiedades/${property.id}`
 
 export function AgentPropertiesPage() {
   const { status, changeStatus, goToPage, page, loading, error, retry } = useAgentProperties()
@@ -25,7 +28,12 @@ export function AgentPropertiesPage() {
 
   return (
     <section className="page">
-      <h1 className="account__title">Mis propiedades</h1>
+      <div className="page-header">
+        <h1>Mis propiedades</h1>
+        <Link to="/agente/propiedades/nueva" className="button button--primary">
+          Nueva propiedad
+        </Link>
+      </div>
       {loading ? (
         <RowListSkeleton label="Cargando tus propiedades…" />
       ) : error ? (
@@ -48,6 +56,7 @@ export function AgentPropertiesPage() {
             <>
               <PropertyAdminList
                 properties={page.data}
+                hrefFor={editHref}
                 pendingPropertyId={pendingPropertyId}
                 onTransition={handleTransition}
               />
@@ -63,7 +72,7 @@ export function AgentPropertiesPage() {
             </EmptyState>
           ) : (
             <EmptyState title="Todavía no tienes propiedades">
-              Cuando crees una, aparecerá aquí con su estado.
+              Crea un borrador, agrégale fotos y publícalo cuando esté listo.
             </EmptyState>
           )}
         </>

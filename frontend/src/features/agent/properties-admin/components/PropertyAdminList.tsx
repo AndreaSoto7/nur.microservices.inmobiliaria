@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { Link } from 'react-router'
 import type { PropertySummary, PropertyTransition } from '../../../../core/models/listing'
 import {
   formatPrice,
@@ -10,12 +11,15 @@ import { PropertyStatusBadge } from './PropertyStatusBadge'
 
 interface PropertyAdminListProps {
   properties: PropertySummary[]
+  /** A dónde lleva cada fila: lo decide el container. */
+  hrefFor: (property: PropertySummary) => string
   pendingPropertyId: string | null
   onTransition: (propertyId: string, transition: PropertyTransition) => void
 }
 
 export const PropertyAdminList = memo(function PropertyAdminList({
   properties,
+  hrefFor,
   pendingPropertyId,
   onTransition,
 }: PropertyAdminListProps) {
@@ -25,7 +29,9 @@ export const PropertyAdminList = memo(function PropertyAdminList({
         <li key={property.id} className="card row-card">
           <div className="row-card__head">
             <div>
-              <h2 className="row-card__title">{property.title}</h2>
+              <h2 className="row-card__title">
+                <Link to={hrefFor(property)}>{property.title}</Link>
+              </h2>
               <p className="row-card__meta">
                 {PROPERTY_TYPE_LABELS[property.propertyType]} en{' '}
                 {OPERATION_LABELS[property.operationType].toLowerCase()} · {property.zone}
