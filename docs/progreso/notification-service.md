@@ -13,7 +13,7 @@
 | chore | Scaffold: config, `/health` y `/health/ready`, registro en Consul con baja, problem+json, correlation-id, logs JSON, Dockerfile y lint | #75 |
 | feat | Dominio (`Notification`) y casos de uso: políticas ante eventos, marcar como leído y listar | #76 |
 | feat | Persistencia: migraciones con advisory lock y repositorio con pgx, con el aviso y el evento en una sola transacción | #77 |
-| fix | Test inestable de paginación: el repositorio falso no desempataba el orden, a diferencia del real | este PR |
+| fix | Test inestable de paginación: el repositorio falso no desempataba el orden, a diferencia del real | #78 |
 
 ## Pendientes
 
