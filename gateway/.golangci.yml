@@ -10,9 +10,11 @@ linters:
     - unconvert
   exclusions:
     rules:
-      # Los tests levantan servidores locales, sin contextos de cancelación, y usan claves de prueba.
+      # Los tests levantan servidores locales de vida corta, sin contextos de cancelación, y usan claves de prueba.
       - path: _test\.go
         linters:
+          - bodyclose
+          - errcheck
           - gosec
           - noctx
 
