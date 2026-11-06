@@ -41,6 +41,12 @@ El agente asignado puede usar `POST /api/v1/visits/{visitId}/complete` con un UU
 
 Visit guarda `InquiryReceived`, `VisitRequested`, `LeadOpened`, `VisitScheduled`, `VisitRejected`, `VisitCancelled` y `VisitCompleted` en `outbox`. Si `KAFKA_BROKERS` está configurado, un publicador dentro de Visit envía los pendientes y actualiza `published_at` al recibir la confirmación de Kafka. Si el proceso se interrumpe entre el envío y el guardado de la confirmación, el mismo `eventId` puede llegar de nuevo. Queda pendiente aplicar las políticas que modifican visitas existentes.
 
+## Bandeja y listados
+
+- `GET /api/v1/inquiries`: consultas asignadas al agente autenticado. El listado muestra el nombre y la fecha; el correo, teléfono y mensaje quedan en el detalle por ID.
+- `GET /api/v1/visits`: visitas asignadas al agente o solicitadas por el cliente autenticado. Si el token tiene ambos roles, se usa el de agente. Admite el filtro `status`, por ejemplo `REQUESTED`.
+- Ambos listados admiten `propertyId`, `page` (por defecto 1) y `size` (por defecto 20, máximo 100). El orden por defecto es del más reciente al más antiguo. Se puede usar `sort=createdAt,asc` en consultas y `sort=requestedAt,asc` en visitas para invertirlo.
+
 ## Recibir propiedades de Listing
 
 Desde la raíz del repositorio, puedes levantar Kafka y sus topics:

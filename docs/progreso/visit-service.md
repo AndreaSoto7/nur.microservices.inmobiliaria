@@ -14,6 +14,7 @@
 | feat | Cancelar visitas programadas antes del inicio y liberar el horario | Pendiente |
 | feat | Marcar visitas realizadas al llegar la hora de fin y emitir VisitCompleted | Pendiente |
 | feat | Enviar consultas sobre propiedades publicadas y abrir una oportunidad con el primer contacto | Pendiente |
+| feat | Listar las consultas del agente y las visitas de cada participante, con filtros y paginación | Pendiente |
 
 ## Pendientes
 
@@ -30,7 +31,7 @@
 - [x] Enviar una consulta sobre una propiedad (`Inquiry`)
 - [x] Solicitar una visita (`Visit` en `REQUESTED`, solo si la propiedad está `PUBLISHED`)
 - [x] El cliente consulta el detalle y estado de una solicitud propia
-- [ ] El agente revisa las consultas y solicitudes recibidas
+- [x] El agente lista sus consultas y visitas asignadas; el cliente lista sus propias visitas
 - [x] Programar una visita pendiente con el agente asignado
 - [x] Rechazar una visita pendiente con motivo obligatorio, por el agente asignado
 - [x] Cancelar una visita programada antes del inicio, por el cliente o agente asignado

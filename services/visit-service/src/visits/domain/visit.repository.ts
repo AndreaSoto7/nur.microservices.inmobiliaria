@@ -1,7 +1,9 @@
 import type {
+  AgentInquirySummary,
   Inquiry,
   InquiryDetails,
 } from '../../inquiries/domain/inquiry.js';
+import type { Page, PageFilter } from '../../shared/page.js';
 import type { Visit, VisitSlot, VisitStatus } from './visit.js';
 
 export const VISIT_REPOSITORY = Symbol('VISIT_REPOSITORY');
@@ -19,6 +21,8 @@ export type VisitDetails = {
   resolutionReason?: string;
   completedAt?: Date;
 };
+
+export type VisitListFilter = PageFilter & { status?: VisitStatus };
 
 export type VisitCreation = { id: string };
 export type ScheduledVisit = {
@@ -105,6 +109,14 @@ export interface VisitRepository {
   transaction<T>(
     work: (transaction: VisitTransaction) => Promise<T>,
   ): Promise<T>;
+  listAgentInquiries(
+    agentId: string,
+    filter: PageFilter,
+  ): Promise<Page<AgentInquirySummary>>;
+  listVisits(
+    owner: { id: string; role: 'AGENT' | 'CLIENT' },
+    filter: VisitListFilter,
+  ): Promise<Page<VisitDetails>>;
   findVisibleInquiry(
     id: string,
     principal: VisitPrincipal,

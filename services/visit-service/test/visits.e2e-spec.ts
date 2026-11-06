@@ -20,9 +20,17 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
   const propertyId = randomUUID();
   const pausedPropertyId = randomUUID();
   const inquiryPropertyId = randomUUID();
-  const propertyIds = [propertyId, pausedPropertyId, inquiryPropertyId];
+  const inboxPropertyId = randomUUID();
+  const propertyIds = [
+    propertyId,
+    pausedPropertyId,
+    inquiryPropertyId,
+    inboxPropertyId,
+  ];
   const clientId = randomUUID();
   const agentId = randomUUID();
+  const otherAgentId = randomUUID();
+  const otherClientId = randomUUID();
   const path = '/api/v1/visits';
   const previousDatabaseUrl = process.env.DATABASE_URL;
   const previousJwksUrl = process.env.JWT_JWKS_URL;
@@ -79,8 +87,8 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     [clientToken, agentToken, otherToken, otherAgentToken] = await Promise.all([
       token(clientId, 'CLIENT'),
       token(agentId, 'AGENT'),
-      token(randomUUID(), 'CLIENT'),
-      token(randomUUID(), 'AGENT'),
+      token(otherClientId, 'CLIENT'),
+      token(otherAgentId, 'AGENT'),
     ]);
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -759,6 +767,152 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
         new RegExp(inquiries.map(({ envelope }) => envelope.eventId).join('|')),
       ),
     });
+  });
+
+  it('pagina y ordena la bandeja de consultas sin exponer las de otro agente', async () => {
+    const ids = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+    const tied = ids.slice(0, 2).sort();
+    const date = new Date(Date.now() - 60_000);
+    const later = new Date(date.getTime() + 1000);
+    await database.query(
+      `INSERT INTO inquiries
+         (id, property_id, client_id, agent_id, contact_name, contact_email, contact_phone, message, created_at)
+       VALUES ($1,$5,$6,$7,'Ana','ana@example.com','70000000','Mensaje privado',$9),
+              ($2,$5,$6,$7,'Ana','ana@example.com',NULL,'Otro mensaje',$9),
+              ($3,$5,$6,$7,'Ana','ana@example.com',NULL,'Otro mensaje',$10),
+              ($4,$5,$6,$8,'Ana','ana@example.com',NULL,'Otro agente',$10)`,
+      [...ids, inboxPropertyId, clientId, agentId, otherAgentId, date, later],
+    );
+
+    const http = request(app.getHttpServer());
+    const endpoint = '/api/v1/inquiries';
+    const list = (token: string, query: object) =>
+      http.get(endpoint).auth(token, { type: 'bearer' }).query(query);
+    await http.get(endpoint).expect(401);
+    await list(clientToken, { propertyId: inboxPropertyId }).expect(403);
+    const first = await list(agentToken, {
+      propertyId: inboxPropertyId,
+      size: 1,
+    }).expect(200);
+    expect(first.body).toEqual({
+      data: [
+        {
+          id: ids[2],
+          propertyId: inboxPropertyId,
+          contactName: 'Ana',
+          createdAt: later.toISOString(),
+        },
+      ],
+      page: { number: 1, size: 1, totalElements: 3, totalPages: 3 },
+    });
+    const second = await list(agentToken, {
+      propertyId: inboxPropertyId,
+      size: 1,
+      page: 2,
+    }).expect(200);
+    expect(second.body).toMatchObject({ data: [{ id: tied[1] }] });
+    const ascending = await list(agentToken, {
+      propertyId: inboxPropertyId,
+      sort: 'createdAt,asc',
+    }).expect(200);
+    expect(ascending.body).toMatchObject({
+      data: [{ id: tied[0] }, { id: tied[1] }, { id: ids[2] }],
+      page: { number: 1, size: 20, totalElements: 3, totalPages: 1 },
+    });
+    const outside = await list(agentToken, {
+      propertyId: inboxPropertyId,
+      page: 9,
+    }).expect(200);
+    expect(outside.body).toEqual({
+      data: [],
+      page: { number: 9, size: 20, totalElements: 3, totalPages: 1 },
+    });
+    const other = await list(otherAgentToken, {
+      propertyId: inboxPropertyId,
+    }).expect(200);
+    expect(other.body).toMatchObject({
+      data: [{ id: ids[3] }],
+      page: { totalElements: 1 },
+    });
+    await list(agentToken, { agentId: otherAgentId }).expect(400);
+    await list(agentToken, { sort: 'createdAt,desc; DROP' }).expect(400);
+  });
+
+  it('lista visitas por rol y aplica los filtros al contenido y al total', async () => {
+    const ids = [randomUUID(), randomUUID(), randomUUID()];
+    const requestedAt = new Date(Date.now() - 60_000);
+    const scheduledStart = new Date(Date.now() + 10 * 86_400_000);
+    const scheduledEnd = new Date(scheduledStart.getTime() + 3600_000);
+    await database.query(
+      `INSERT INTO visits
+         (id, property_id, client_id, agent_id, status, proposed_at, requested_at, updated_at, scheduled_start, scheduled_end)
+       VALUES ($1,$4,$5,$7,'REQUESTED',$9,$10,$10,NULL,NULL),
+              ($2,$4,$6,$7,'SCHEDULED',$9,$11,$11,$12,$13),
+              ($3,$4,$6,$8,'REQUESTED',$9,$11,$11,NULL,NULL)`,
+      [
+        ...ids,
+        inboxPropertyId,
+        clientId,
+        otherClientId,
+        agentId,
+        otherAgentId,
+        body.proposedAt,
+        requestedAt,
+        new Date(requestedAt.getTime() + 1000),
+        scheduledStart,
+        scheduledEnd,
+      ],
+    );
+    const http = request(app.getHttpServer());
+    const list = (token: string, query: object) =>
+      http.get(path).auth(token, { type: 'bearer' }).query(query);
+    const filter = { propertyId: inboxPropertyId };
+    const all = await list(agentToken, filter).expect(200);
+    expect(all.body).toMatchObject({
+      data: [
+        { id: ids[1], scheduledStart: scheduledStart.toISOString() },
+        { id: ids[0] },
+      ],
+      page: { totalElements: 2, totalPages: 1 },
+    });
+    const pending = await list(agentToken, {
+      ...filter,
+      status: 'REQUESTED',
+    }).expect(200);
+    expect(pending.body).toMatchObject({
+      data: [{ id: ids[0], status: 'REQUESTED' }],
+      page: { totalElements: 1 },
+    });
+    const client = await list(clientToken, filter).expect(200);
+    expect(client.body).toMatchObject({
+      data: [{ id: ids[0] }],
+      page: { totalElements: 1 },
+    });
+    const other = await list(otherAgentToken, filter).expect(200);
+    expect(other.body).toMatchObject({
+      data: [{ id: ids[2] }],
+      page: { totalElements: 1 },
+    });
+    const empty = await list(agentToken, {
+      ...filter,
+      status: 'REJECTED',
+    }).expect(200);
+    expect(empty.body).toEqual({
+      data: [],
+      page: { number: 1, size: 20, totalElements: 0, totalPages: 0 },
+    });
+    for (const query of [
+      { page: '0' },
+      { page: ['1', '2'] },
+      { size: '101' },
+      { status: 'PENDING' },
+      { propertyId: 'not-a-uuid' },
+      { sort: 'createdAt,asc' },
+    ]) {
+      await list(agentToken, query)
+        .expect(400)
+        .expect(/VALIDATION_ERROR/);
+    }
   });
 
   it('valida credenciales, rol, formato, fecha y estado de la propiedad', async () => {

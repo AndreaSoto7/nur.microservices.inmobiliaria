@@ -7,8 +7,14 @@ type VisitRequest = {
   requestedAt: Date;
 };
 
-export type VisitStatus =
-  'REQUESTED' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'REJECTED';
+export const visitStatuses = [
+  'REQUESTED',
+  'SCHEDULED',
+  'COMPLETED',
+  'CANCELLED',
+  'REJECTED',
+] as const;
+export type VisitStatus = (typeof visitStatuses)[number];
 export type VisitSlot = { start: Date; end: Date };
 
 const visitDurationMs = 60 * 60 * 1000;

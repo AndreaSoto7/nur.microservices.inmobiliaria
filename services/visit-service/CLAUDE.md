@@ -49,7 +49,7 @@ Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es 
 | `closeOportunityCommand` | `CloseLeadCommand` | `LeadClosed` (lo consume listing) |
 | — | `GetInquiryByIdQuery` (cliente dueño o agente asignado) | — |
 | — | `GetVisitByIdQuery` (cliente dueño o agente asignado) | — |
-| — | `ListMyVisitsQuery` (cliente), `ListAgentVisitsQuery`, `ListAgentInquiriesQuery`, `ListAgentLeadsQuery` | — |
+| — | `ListVisitsQuery` (por rol), `ListAgentInquiriesQuery`, `ListAgentLeadsQuery` | — |
 
 `VisitRejected` lleva `reason` obligatorio y `actor` (`AGENT` o `SYSTEM`). `VisitCancelled` lleva `reason` (puede ser `null`) y `actor` (`CLIENT`, `AGENT` o `SYSTEM`). `LeadClosed` lleva `propertyId`, `agentId`, `clientId` y `outcome`.
 

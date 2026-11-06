@@ -3,9 +3,11 @@ import { randomUUID } from 'node:crypto';
 import { QueryFailedError, type EntityManager } from 'typeorm';
 import { VisitDatabase } from '../../database/visit-database.js';
 import type {
+  AgentInquirySummary,
   Inquiry,
   InquiryDetails,
 } from '../../inquiries/domain/inquiry.js';
+import type { Page, PageFilter } from '../../shared/page.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import type {
   LeadContact,
@@ -14,11 +16,44 @@ import type {
   VisitCreation,
   VisitDetails,
   VisitEvent,
+  VisitListFilter,
   VisitPrincipal,
   VisitRepository,
   VisitTransaction,
 } from '../domain/visit.repository.js';
 import { Visit, type VisitSlot, type VisitState } from '../domain/visit.js';
+
+type VisitRow = Omit<
+  VisitDetails,
+  'scheduledStart' | 'scheduledEnd' | 'resolutionReason' | 'completedAt'
+> & {
+  scheduledStart: Date | null;
+  scheduledEnd: Date | null;
+  resolutionReason: string | null;
+  completedAt: Date | null;
+};
+
+const visitColumns = `id, property_id AS "propertyId", status,
+  proposed_at AS "proposedAt", requested_at AS "requestedAt",
+  scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd",
+  CASE WHEN status = 'COMPLETED' THEN resolved_at END AS "completedAt",
+  CASE WHEN status IN ('REJECTED', 'CANCELLED') THEN resolution_reason END AS "resolutionReason"`;
+
+function visitDetails(row: VisitRow): VisitDetails {
+  const {
+    scheduledStart,
+    scheduledEnd,
+    resolutionReason,
+    completedAt,
+    ...details
+  } = row;
+  return {
+    ...details,
+    ...(scheduledStart && scheduledEnd ? { scheduledStart, scheduledEnd } : {}),
+    ...(resolutionReason !== null ? { resolutionReason } : {}),
+    ...(completedAt ? { completedAt } : {}),
+  };
+}
 
 @Injectable()
 export class PostgresVisits implements VisitRepository {
@@ -55,6 +90,74 @@ export class PostgresVisits implements VisitRepository {
     }
   }
 
+  listAgentInquiries(
+    agentId: string,
+    filter: PageFilter,
+  ): Promise<Page<AgentInquirySummary>> {
+    return this.readPage<AgentInquirySummary>(
+      'id, property_id AS "propertyId", contact_name AS "contactName", created_at AS "createdAt"',
+      'FROM inquiries WHERE agent_id = $1 AND ($2::uuid IS NULL OR property_id = $2)',
+      'created_at',
+      [agentId, filter.propertyId ?? null],
+      filter,
+    );
+  }
+
+  async listVisits(
+    owner: { id: string; role: 'AGENT' | 'CLIENT' },
+    filter: VisitListFilter,
+  ): Promise<Page<VisitDetails>> {
+    const ownerColumn = owner.role === 'AGENT' ? 'agent_id' : 'client_id';
+    const { data, page } = await this.readPage<VisitRow>(
+      visitColumns,
+      `FROM visits WHERE ${ownerColumn} = $1
+        AND ($2::uuid IS NULL OR property_id = $2)
+        AND ($3::varchar IS NULL OR status = $3)`,
+      'requested_at',
+      [owner.id, filter.propertyId ?? null, filter.status ?? null],
+      filter,
+    );
+    return { data: data.map(visitDetails), page };
+  }
+
+  private async readPage<T>(
+    columns: string,
+    from: string,
+    orderColumn: 'created_at' | 'requested_at',
+    parameters: (string | null)[],
+    filter: PageFilter,
+  ): Promise<Page<T>> {
+    const database = await this.database.connect();
+    const order = filter.sort === 'asc' ? 'ASC' : 'DESC';
+    const { page: number, size } = filter;
+    // The count and page use the same snapshot, even if new rows arrive between reads.
+    return database.transaction('REPEATABLE READ', async (manager) => {
+      const [{ total }] = await manager.query<{ total: string }[]>(
+        `SELECT count(*) AS total ${from}`,
+        parameters,
+      );
+      const totalElements = Number(total);
+      const offset = (number - 1) * size;
+      const data =
+        offset >= totalElements
+          ? []
+          : await manager.query<T[]>(
+              `SELECT ${columns} ${from} ORDER BY ${orderColumn} ${order}, id ${order}
+          LIMIT $${parameters.length + 1} OFFSET $${parameters.length + 2}`,
+              [...parameters, size, offset],
+            );
+      return {
+        data,
+        page: {
+          number,
+          size,
+          totalElements,
+          totalPages: Math.ceil(totalElements / size),
+        },
+      };
+    });
+  }
+
   async findVisibleInquiry(
     id: string,
     principal: VisitPrincipal,
@@ -85,24 +188,9 @@ export class PostgresVisits implements VisitRepository {
     principal: VisitPrincipal,
   ): Promise<VisitDetails | undefined> {
     const database = await this.database.connect();
-    const [visit] = await database.query<
-      (Omit<
-        VisitDetails,
-        'scheduledStart' | 'scheduledEnd' | 'resolutionReason' | 'completedAt'
-      > & {
-        scheduledStart: Date | null;
-        scheduledEnd: Date | null;
-        resolutionReason: string | null;
-        completedAt: Date | null;
-      })[]
-    >(
-      `SELECT id, property_id AS "propertyId", status,
-              proposed_at AS "proposedAt", requested_at AS "requestedAt",
-              scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd",
-              CASE WHEN status = 'COMPLETED' THEN resolved_at END AS "completedAt",
-              CASE WHEN status IN ('REJECTED', 'CANCELLED') THEN resolution_reason END AS "resolutionReason"
-         FROM visits WHERE id = $1
-           AND (($3 AND client_id = $2) OR ($4 AND agent_id = $2))`,
+    const [visit] = await database.query<VisitRow[]>(
+      `SELECT ${visitColumns} FROM visits WHERE id = $1
+         AND (($3 AND client_id = $2) OR ($4 AND agent_id = $2))`,
       [
         id,
         principal.id,
@@ -110,22 +198,7 @@ export class PostgresVisits implements VisitRepository {
         principal.roles.includes('AGENT'),
       ],
     );
-    if (!visit) return;
-    const {
-      scheduledStart,
-      scheduledEnd,
-      resolutionReason,
-      completedAt,
-      ...details
-    } = visit;
-    return {
-      ...details,
-      ...(scheduledStart && scheduledEnd
-        ? { scheduledStart, scheduledEnd }
-        : {}),
-      ...(resolutionReason !== null ? { resolutionReason } : {}),
-      ...(completedAt ? { completedAt } : {}),
-    };
+    return visit ? visitDetails(visit) : undefined;
   }
 }
 

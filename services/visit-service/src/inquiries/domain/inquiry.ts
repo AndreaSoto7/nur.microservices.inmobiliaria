@@ -8,6 +8,11 @@ export type InquiryInput = {
 
 export type InquiryDetails = InquiryInput & { id: string; createdAt: Date };
 
+export type AgentInquirySummary = Pick<
+  InquiryDetails,
+  'id' | 'propertyId' | 'contactName' | 'createdAt'
+>;
+
 export class InvalidInquiryError extends Error {}
 
 function text(value: string, max: number): string {

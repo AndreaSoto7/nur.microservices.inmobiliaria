@@ -5,6 +5,7 @@ import {
   Headers,
   Param,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -29,8 +30,10 @@ import {
   VisitRoles,
   type AuthenticatedRequest,
 } from '../../shared/identity.guard.js';
+import { parsePageQuery } from '../../shared/page-query.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import { GetInquiryByIdQuery } from '../application/get-inquiry-by-id.js';
+import { ListAgentInquiriesQuery } from '../application/list-agent-inquiries.js';
 import { SendInquiryCommand } from '../application/send-inquiry.js';
 
 class SendInquiryDto {
@@ -73,6 +76,20 @@ export class InquiriesController {
     private readonly commands: CommandBus,
     private readonly queries: QueryBus,
   ) {}
+
+  @Get()
+  @VisitRoles(['AGENT'])
+  async listInquiries(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+    @Query() query: Record<string, unknown>,
+  ) {
+    const filter = parsePageQuery(query, 'createdAt');
+    ensureCorrelationId(request, response);
+    return this.queries.execute(
+      new ListAgentInquiriesQuery(request.principal.id, filter),
+    );
+  }
 
   @Post()
   @VisitRoles(['CLIENT'])

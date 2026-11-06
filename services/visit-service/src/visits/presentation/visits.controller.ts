@@ -6,6 +6,7 @@ import {
   HttpCode,
   Param,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
@@ -30,10 +31,13 @@ import {
   VisitRoles,
   type AuthenticatedRequest,
 } from '../../shared/identity.guard.js';
+import { parsePageQuery } from '../../shared/page-query.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import { CancelVisitCommand } from '../application/cancel-visit.js';
 import { CompleteVisitCommand } from '../application/complete-visit.js';
 import { GetVisitByIdQuery } from '../application/get-visit-by-id.js';
+import { ListVisitsQuery } from '../application/list-visits.js';
+import { visitStatuses } from '../domain/visit.js';
 import { RejectVisitCommand } from '../application/reject-visit.js';
 import { RequestVisitCommand } from '../application/request-visit.js';
 import { ScheduleVisitCommand } from '../application/schedule-visit.js';
@@ -87,6 +91,23 @@ export class VisitsController {
     private readonly commands: CommandBus,
     private readonly queries: QueryBus,
   ) {}
+
+  @Get()
+  @VisitRoles(['CLIENT', 'AGENT'])
+  async listVisits(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+    @Query() query: Record<string, unknown>,
+  ) {
+    const filter = parsePageQuery(query, 'requestedAt', ['status']);
+    const status = visitStatuses.find((value) => value === query.status);
+    if (query.status !== undefined && !status)
+      throw new VisitProblem('VALIDATION_ERROR');
+    ensureCorrelationId(request, response);
+    return this.queries.execute(
+      new ListVisitsQuery(request.principal, { ...filter, status }),
+    );
+  }
 
   @Post()
   @VisitRoles(['CLIENT'])
