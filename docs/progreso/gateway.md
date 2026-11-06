@@ -23,7 +23,7 @@
 | feat | Proxy cableado en `main`: el gateway ya reenvía a las réplicas sanas, con la cadena completa | #63 |
 | feat | Gateway en el compose, probado de punta a punta con identity y listing reales: 3 réplicas repartidas en orden, y al matar una falla 1 request de 15 | #69 |
 | feat | Ruta `/api/v1/notifications/**` hacia `notification-service`, con JWT. Responde 503 hasta que el servicio exista | #71 |
-| feat | Renovar el JWKS cada 5 minutos: una clave retirada deja de valer sin esperar a un `kid` desconocido | este PR |
+| feat | Renovar el JWKS cada 5 minutos: una clave retirada deja de valer sin esperar a un `kid` desconocido | #72 |
 
 ## Pendientes
 
