@@ -1,0 +1,7 @@
+.env
+.env.*
+*.md
+**/*_test.go
+Dockerfile
+.dockerignore
+.golangci.yml
