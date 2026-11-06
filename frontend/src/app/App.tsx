@@ -8,6 +8,7 @@ import { CatalogPage } from '../features/catalog/containers/CatalogPage'
 import { FavoritesPage } from '../features/favorites/containers/FavoritesPage'
 import { LoginPage } from '../features/auth/containers/LoginPage'
 import { RegisterPage } from '../features/auth/containers/RegisterPage'
+import { NotificationsPage } from '../features/notifications/containers/NotificationsPage'
 import { PropertyDetailPage } from '../features/property-detail/containers/PropertyDetailPage'
 import { EmptyState } from '../shared/ui/EmptyState'
 import { AppLayout } from './AppLayout'
@@ -25,6 +26,14 @@ export function App() {
           element={
             <RequireAuth>
               <AccountPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="avisos"
+          element={
+            <RequireAuth>
+              <NotificationsPage />
             </RequireAuth>
           }
         />

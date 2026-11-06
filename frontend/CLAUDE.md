@@ -1,6 +1,6 @@
 # frontend — React + Vite + TypeScript
 
-Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están la base, el cliente HTTP, la sesión, registro, login, "Mi cuenta", el catálogo público, el detalle de propiedad, "Mis propiedades" del agente y favoritos; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están la base, el cliente HTTP, la sesión, registro, login, "Mi cuenta", el catálogo público, el detalle de propiedad, "Mis propiedades" del agente, favoritos y avisos; el resto es el diseño acordado. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
@@ -20,10 +20,11 @@ Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, qu
 | Registro, login, sesión | identity: `/api/v1/auth/**`, `/api/v1/users/me` |
 | Catálogo y detalle públicos | listing: `/api/v1/catalog/properties` (filtros en la URL) |
 | Favoritos | listing: `/api/v1/favorites` |
+| Avisos | notification: `/api/v1/notifications` (ADR 0007) |
 | Mis propiedades, galería (agente) | listing: `/api/v1/properties/**` |
 | Consultas, visitas, oportunidades | visit: `/api/v1/inquiries`, `/api/v1/visits`, `/api/v1/leads` |
 
-Las notificaciones tienen API (`/api/v1/notifications`, ADR 0007), pero todavía no tienen pantalla. Nunca se llama a un microservicio directo.
+Nunca se llama a un microservicio directo.
 
 ## Aspecto visual
 
@@ -49,10 +50,10 @@ Paleta, tokens, tipografía, estados de pantalla y accesibilidad: [`docs/convenc
 frontend/src/
   app/             raíz de composición: App.tsx (rutas), AppLayout (smart), components/AppHeader (dumb)
   core/            cliente HTTP (vía gateway), auth (token, refresh), rutas protegidas, modelos de la API
-    api/           httpClient.ts (apiRequest; admite headers propios y FormData), problem.ts (ApiError a partir del problem+json), catalogApi.ts, propertiesApi.ts, favoritesApi.ts
+    api/           httpClient.ts (apiRequest; admite headers propios y FormData), problem.ts (ApiError a partir del problem+json), catalogApi.ts, propertiesApi.ts, favoritesApi.ts, notificationsApi.ts
     auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
-    models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts)
-  shared/format/   formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones, estados y extras
+    models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts, notification.ts)
+  shared/format/   fechas en hora local, formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones, estados y extras
   shared/ui/       dumbs genéricos: Button, TextField, SelectField, TextAreaField, StatusBadge, RowListSkeleton, ErrorMessage, LoadingState, Pagination, EmptyState, icons
   test/            setup de Vitest, mocks de fetch y renderApp
   features/
@@ -81,6 +82,9 @@ frontend/src/
     favorites/
       containers/  FavoritesPage  FavoriteControl   (smart) · components/ FavoriteList  FavoriteToggle   (dumb)
       useFavorites.ts   (facade de la página y del botón)
+    notifications/
+      containers/  NotificationsPage  NotificationsNavLink   (smart) · components/ NotificationList   (dumb)
+      useNotifications.ts   (facade de la página y del contador)
     my-visits/
 ```
 
@@ -88,6 +92,7 @@ frontend/src/
 |---|---|
 | `CatalogPage`: filtros en la URL, catálogo de listing vía `useCatalog` | `PropertyFilters` (`onFiltersChange`), `SortSelect` (`onSortChange`), `PropertyCardList`, `PropertyGridSkeleton`, `Pagination` |
 | `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `FavoriteControl`, `VisitRequestForm` (`onSubmitRequest`) |
+| `NotificationsPage` | `NotificationList` (`onMarkRead`), `Pagination` |
 | `FavoritesPage`, `FavoriteControl` | `FavoriteList` (`onRemove`), `FavoriteToggle` (`onToggle`), `Pagination` |
 | `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `StatusFilter` (`onStatusChange`) |
 | `PropertyCreatePage`, `PropertyEditPage` | `PropertyDataForm` (`onSubmit`), `PropertyFeaturesForm` (`onSubmit`), `PropertyImagesForm` (`onUpload`), `PublishChecklist`, `PropertyActions` |
@@ -117,6 +122,12 @@ frontend/src/
 - El contrato no dice si una propiedad es favorita: se deriva de `GET /favorites` con `size=100`, el máximo. Con más de 100 favoritos, el botón del detalle podría ofrecer guardar una que ya está guardada.
 - `FAVORITE_ALREADY_EXISTS` y `FAVORITE_NOT_FOUND` no se muestran como error: lo que se pedía ya es cierto, por ejemplo por un cambio en otra pestaña.
 - Solo se guarda una propiedad `PUBLISHED`, pero se puede quitar en cualquier estado. Si ya no es visible, la lista avisa "Ya no está disponible".
+
+## Avisos
+
+- Ruta `/avisos`, para cualquier usuario con sesión. El filtro "Solo sin leer" y la página viven en la URL.
+- `type` es `string` y no un enum: el contrato pide tolerar tipos nuevos, y el texto ya viene en `message`.
+- El contador de la cabecera se vuelve a pedir cada 60 s, porque los avisos nacen de eventos y nadie le avisa al navegador. Se monta solo con sesión. Si notification no responde, el enlace sigue ahí sin número.
 
 ## Sesión y tokens
 
