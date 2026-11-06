@@ -14,6 +14,7 @@ import {
 import { RegisterLeadFollowUpHandler } from './leads/application/register-lead-follow-up.js';
 import { LeadsController } from './leads/presentation/leads.controller.js';
 import { ListingEventsController } from './properties/listing-events.controller.js';
+import { PropertyVisitPolicy } from './properties/property-visit-policy.js';
 import { PropertyProjection } from './properties/property-projection.js';
 import { HealthController } from './shared/health/health.controller.js';
 import { IdentityGuard } from './shared/identity.guard.js';
@@ -44,6 +45,7 @@ import { VisitsController } from './visits/presentation/visits.controller.js';
     VisitDatabase,
     OutboxRelay,
     PropertyProjection,
+    PropertyVisitPolicy,
     RequestVisitHandler,
     ScheduleVisitHandler,
     RejectVisitHandler,

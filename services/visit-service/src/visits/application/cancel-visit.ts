@@ -5,6 +5,7 @@ import { VisitProblem } from '../../shared/visit-problem.js';
 import {
   VISIT_REPOSITORY,
   type CancelledVisit,
+  type PropertyPolicySource,
   type RequestKey,
   type VisitPrincipal,
   type VisitRepository,
@@ -15,11 +16,16 @@ import {
   VisitNotScheduledError,
 } from '../domain/visit.js';
 
-export class CancelVisitCommand extends Command<CancelledVisit> {
+export class CancelVisitCommand extends Command<CancelledVisit | undefined> {
   constructor(
     readonly visitId: string,
-    readonly principal: VisitPrincipal,
-    readonly idempotencyKey: string,
+    readonly source:
+      | PropertyPolicySource
+      | {
+          actor: 'USER';
+          principal: VisitPrincipal;
+          idempotencyKey: string;
+        },
     readonly reason: string | undefined,
     readonly correlationId: string,
   ) {
@@ -33,39 +39,61 @@ export class CancelVisitHandler implements ICommandHandler<CancelVisitCommand> {
     @Inject(VISIT_REPOSITORY) private readonly visits: VisitRepository,
   ) {}
 
-  async execute(command: CancelVisitCommand): Promise<CancelledVisit> {
-    const key: RequestKey = {
-      actorId: command.principal.id,
-      key: command.idempotencyKey,
-      operation: 'cancel-visit',
-    };
-    const hash = createHash('sha256')
-      .update(
-        JSON.stringify({ visitId: command.visitId, reason: command.reason }),
-      )
-      .digest('hex');
+  async execute(
+    command: CancelVisitCommand,
+  ): Promise<CancelledVisit | undefined> {
+    const { source } = command;
+    const idempotency =
+      source.actor === 'USER'
+        ? {
+            key: {
+              actorId: source.principal.id,
+              key: source.idempotencyKey,
+              operation: 'cancel-visit',
+            } satisfies RequestKey,
+            hash: createHash('sha256')
+              .update(
+                JSON.stringify({
+                  visitId: command.visitId,
+                  reason: command.reason,
+                }),
+              )
+              .digest('hex'),
+          }
+        : undefined;
 
     return this.visits.transaction(async (transaction) => {
-      await transaction.lockRequest(key);
-      const visit = await transaction.findParticipantVisit(
-        command.visitId,
-        command.principal,
-      );
-      if (!visit) throw new VisitProblem('VISIT_NOT_FOUND');
-
-      const previous = await transaction.findRequest<CancelledVisit>(key);
-      if (previous) {
-        if (previous.hash !== hash)
-          throw new VisitProblem('IDEMPOTENCY_KEY_REUSED');
-        return previous.response;
+      if (idempotency) await transaction.lockRequest(idempotency.key);
+      const visit =
+        source.actor === 'SYSTEM'
+          ? await transaction.findPolicyVisit(command.visitId, source)
+          : await transaction.findParticipantVisit(
+              command.visitId,
+              source.principal,
+            );
+      if (!visit) {
+        if (source.actor === 'SYSTEM') return;
+        throw new VisitProblem('VISIT_NOT_FOUND');
+      }
+      if (idempotency) {
+        const previous = await transaction.findRequest<CancelledVisit>(
+          idempotency.key,
+        );
+        if (previous) {
+          if (previous.hash !== idempotency.hash)
+            throw new VisitProblem('IDEMPOTENCY_KEY_REUSED');
+          return previous.response;
+        }
       }
 
       const { id, propertyId, clientId, agentId } = visit;
       const actor =
-        clientId === command.principal.id &&
-        command.principal.roles.includes('CLIENT')
-          ? 'CLIENT'
-          : 'AGENT';
+        source.actor === 'SYSTEM'
+          ? 'SYSTEM'
+          : clientId === source.principal.id &&
+              source.principal.roles.includes('CLIENT')
+            ? 'CLIENT'
+            : 'AGENT';
       const now = new Date();
       let reason: string | null;
       try {
@@ -86,10 +114,17 @@ export class CancelVisitHandler implements ICommandHandler<CancelVisitCommand> {
         aggregateId: id,
         occurredAt: now,
         correlationId: command.correlationId,
+        causationId: source.actor === 'SYSTEM' ? source.eventId : undefined,
         payload: { visitId: id, propertyId, clientId, agentId, actor, reason },
       });
       const result: CancelledVisit = { id, status: 'CANCELLED' };
-      await transaction.saveRequest(key, hash, result, 200);
+      if (idempotency)
+        await transaction.saveRequest(
+          idempotency.key,
+          idempotency.hash,
+          result,
+          200,
+        );
       return result;
     });
   }

@@ -39,7 +39,7 @@ El cliente que solicitó la visita o el agente asignado puede usar `POST /api/v1
 
 El agente asignado puede usar `POST /api/v1/visits/{visitId}/complete` con un UUID en `Idempotency-Key`, sin enviar datos en el cuerpo. La visita debe estar programada y haber llegado a su hora de fin. Los participantes pueden consultar la fecha de registro (`completedAt`) por ID.
 
-Visit guarda `InquiryReceived`, `VisitRequested`, `LeadOpened`, `VisitScheduled`, `VisitRejected`, `VisitCancelled` y `VisitCompleted` en `outbox`. Si `KAFKA_BROKERS` está configurado, un publicador dentro de Visit envía los pendientes y actualiza `published_at` al recibir la confirmación de Kafka. Si el proceso se interrumpe entre el envío y el guardado de la confirmación, el mismo `eventId` puede llegar de nuevo. Queda pendiente aplicar las políticas que modifican visitas existentes.
+Visit guarda `InquiryReceived`, `VisitRequested`, `LeadOpened`, `VisitScheduled`, `VisitRejected`, `VisitCancelled` y `VisitCompleted` en `outbox`. Si `KAFKA_BROKERS` está configurado, un publicador dentro de Visit envía los pendientes y actualiza `published_at` al recibir la confirmación de Kafka. Si el proceso se interrumpe entre el envío y el guardado de la confirmación, el mismo `eventId` puede llegar de nuevo.
 
 ## Bandeja y listados
 
@@ -64,7 +64,7 @@ docker compose --env-file infra/.env.example -f infra/docker-compose.yml -f infr
 
 Para NestJS en Windows, configura `KAFKA_BROKERS=127.0.0.1:9092` en el `.env` de Visit y reinicia el proceso. Si Visit corre en Docker con este Compose, configura VISIT_DOCKER_KAFKA_BROKERS con una dirección anunciada por Kafka que sea accesible desde el contenedor. Con el valor vacío Visit puede arrancar para pruebas HTTP aisladas.
 
-El grupo `visit-service` consume `listing.property.events`. Un grupo nuevo empieza desde el primer evento disponible. La proyección guarda el estado en `property_snapshots` y descarta eventos duplicados o anteriores al último aplicado.
+El grupo `visit-service` consume `listing.property.events`. Un grupo nuevo empieza desde el primer evento disponible. La proyección guarda el estado en `property_snapshots`. `PropertyReserved` rechaza las visitas pendientes; `PropertySold` y `PropertyRented` también cancelan las programadas que aún no empezaron. Visit confirma el evento después de aplicar la política. Una reentrega retoma las visitas restantes y un evento más antiguo que la copia local no modifica visitas.
 
 ## Docker local
 

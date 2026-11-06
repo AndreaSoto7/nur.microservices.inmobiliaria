@@ -40,7 +40,7 @@ export class ListingEventsController {
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        await this.projection.apply(event);
+        await this.projection.apply(event, context.getHeartbeat());
         return;
       } catch (error) {
         if (attempt === 2) {

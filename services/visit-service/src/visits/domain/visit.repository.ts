@@ -43,7 +43,15 @@ export type ScheduledVisit = {
 export type RejectedVisit = { id: string; status: 'REJECTED' };
 export type CancelledVisit = { id: string; status: 'CANCELLED' };
 export type CompletedVisit = { id: string; status: 'COMPLETED' };
-export type VisitCancellationActor = 'CLIENT' | 'AGENT';
+export type VisitCancellationActor = 'CLIENT' | 'AGENT' | 'SYSTEM';
+export type VisitRejectionActor = 'AGENT' | 'SYSTEM';
+export type PropertyPolicySource = {
+  actor: 'SYSTEM';
+  eventId: string;
+  propertyId: string;
+  status: 'RESERVED' | 'SOLD' | 'RENTED';
+  occurredAt: string;
+};
 export type RequestKey = {
   actorId: string;
   key: string;
@@ -104,6 +112,10 @@ export interface VisitTransaction {
     id: string,
     principal: VisitPrincipal,
   ): Promise<Visit | undefined>;
+  findPolicyVisit(
+    id: string,
+    source: PropertyPolicySource,
+  ): Promise<Visit | undefined>;
   saveCancellation(
     id: string,
     actor: VisitCancellationActor,
@@ -111,7 +123,12 @@ export interface VisitTransaction {
     now: Date,
   ): Promise<void>;
   saveSchedule(id: string, slot: VisitSlot, now: Date): Promise<void>;
-  saveRejection(id: string, reason: string, now: Date): Promise<void>;
+  saveRejection(
+    id: string,
+    actor: VisitRejectionActor,
+    reason: string,
+    now: Date,
+  ): Promise<void>;
   saveCompletion(id: string, completedAt: Date): Promise<void>;
   saveRequest(
     key: RequestKey,
@@ -126,6 +143,11 @@ export interface VisitRepository {
   transaction<T>(
     work: (transaction: VisitTransaction) => Promise<T>,
   ): Promise<T>;
+  listPolicyVisitIds(
+    source: PropertyPolicySource,
+    status: 'REQUESTED' | 'SCHEDULED',
+    after?: string,
+  ): Promise<string[]>;
   listAgentLeads(
     agentId: string,
     filter: LeadListFilter,

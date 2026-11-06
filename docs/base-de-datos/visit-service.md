@@ -228,9 +228,9 @@ Es una excepción consciente a "un aggregate por transacción": los dos viven en
 
 ### Consumidor de `listing.property.events`
 
-**Copia local** (todos los eventos de propiedad), en una transacción:
+**Copia local**, en una transacción (para eventos con política, el registro de procesado se difiere al paso final):
 
-1. `INSERT INTO processed_events`. Si ya existe, se descarta el duplicado.
+1. Verificar `processed_events`. Para eventos sin política, registrar el ID en esta misma transacción. Si ya existe, descartar el duplicado.
 2. Upsert en `property_snapshots` solo si `occurredAt > last_event_at`. `PropertyPublished` trae todos los datos; los demás eventos actualizan `status` (y `PropertyUpdated`, también `title` y `zone`).
 
 **Políticas 3.2 y 3.3** (`PropertyReserved`, `PropertySold`, `PropertyRented`), después de actualizar la copia:
@@ -239,7 +239,7 @@ Es una excepción consciente a "un aggregate por transacción": los dos viven en
 2. **Una transacción por visita** (un aggregate por transacción): `RejectVisit` o `CancelVisit` con `resolved_by = 'SYSTEM'`, más su fila en `outbox`.
 3. Al final, `INSERT INTO processed_events` del evento.
 
-Si el consumidor se cae a la mitad, el evento se vuelve a procesar. No hay problema: el paso 1 solo selecciona visitas que siguen `REQUESTED` o `SCHEDULED`, así que las ya rechazadas o canceladas no se tocan dos veces.
+Si el consumidor se cae a la mitad, el evento se vuelve a procesar mientras su estado y fecha todavía coincidan con la copia local. No hay problema: el paso 1 solo selecciona visitas que siguen `REQUESTED` o `SCHEDULED`, así que las ya rechazadas o canceladas no se tocan dos veces.
 
 ## Notas
 

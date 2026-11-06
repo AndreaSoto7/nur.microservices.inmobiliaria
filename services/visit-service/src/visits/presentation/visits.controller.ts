@@ -187,8 +187,11 @@ export class VisitsController {
     return this.commands.execute(
       new RejectVisitCommand(
         visitId.toLowerCase(),
-        request.principal.id,
-        key.toLowerCase(),
+        {
+          actor: 'USER',
+          principal: request.principal,
+          idempotencyKey: key.toLowerCase(),
+        },
         body.reason,
         ensureCorrelationId(request, response),
       ),
@@ -216,8 +219,11 @@ export class VisitsController {
     return this.commands.execute(
       new CancelVisitCommand(
         visitId.toLowerCase(),
-        request.principal,
-        key.toLowerCase(),
+        {
+          actor: 'USER',
+          principal: request.principal,
+          idempotencyKey: key.toLowerCase(),
+        },
         body?.reason,
         ensureCorrelationId(request, response),
       ),

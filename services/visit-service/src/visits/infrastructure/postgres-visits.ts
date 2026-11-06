@@ -20,6 +20,7 @@ import { VisitProblem } from '../../shared/visit-problem.js';
 import type {
   LeadContact,
   LeadListFilter,
+  PropertyPolicySource,
   RequestKey,
   VisitCancellationActor,
   VisitCreation,
@@ -27,6 +28,7 @@ import type {
   VisitEvent,
   VisitListFilter,
   VisitPrincipal,
+  VisitRejectionActor,
   VisitRepository,
   VisitTransaction,
 } from '../domain/visit.repository.js';
@@ -97,6 +99,30 @@ export class PostgresVisits implements VisitRepository {
       }
       throw error;
     }
+  }
+
+  async listPolicyVisitIds(
+    source: PropertyPolicySource,
+    status: 'REQUESTED' | 'SCHEDULED',
+    after?: string,
+  ): Promise<string[]> {
+    const database = await this.database.connect();
+    const rows = await database.query<{ id: string }[]>(
+      `SELECT v.id FROM visits v JOIN property_snapshots p ON p.property_id = v.property_id
+        WHERE v.property_id = $1 AND v.status = $2
+          AND ($2 <> 'SCHEDULED' OR v.scheduled_start > clock_timestamp())
+          AND ($3::uuid IS NULL OR v.id > $3)
+          AND p.status = $4 AND p.last_event_at = $5
+        ORDER BY v.id LIMIT 100`,
+      [
+        source.propertyId,
+        status,
+        after ?? null,
+        source.status,
+        source.occurredAt,
+      ],
+    );
+    return rows.map(({ id }) => id);
   }
 
   async listAgentLeads(
@@ -439,6 +465,26 @@ class PostgresVisitTransaction implements VisitTransaction {
     return row ? Visit.restore(row) : undefined;
   }
 
+  async findPolicyVisit(
+    id: string,
+    source: PropertyPolicySource,
+  ): Promise<Visit | undefined> {
+    const [snapshot] = await this.manager.query<{ property_id: string }[]>(
+      `SELECT property_id FROM property_snapshots
+        WHERE property_id = $1 AND status = $2 AND last_event_at = $3 FOR SHARE`,
+      [source.propertyId, source.status, source.occurredAt],
+    );
+    if (!snapshot) return;
+    const [row] = await this.manager.query<VisitState[]>(
+      `SELECT id, property_id AS "propertyId", client_id AS "clientId", agent_id AS "agentId",
+              status, proposed_at AS "proposedAt", requested_at AS "requestedAt",
+              scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd"
+        FROM visits WHERE id = $1 AND property_id = $2 FOR UPDATE`,
+      [id, source.propertyId],
+    );
+    return row ? Visit.restore(row) : undefined;
+  }
+
   async saveSchedule(id: string, slot: VisitSlot, now: Date): Promise<void> {
     await this.manager.query(
       `UPDATE visits SET status = 'SCHEDULED', scheduled_start = $2, scheduled_end = $3,
@@ -447,11 +493,16 @@ class PostgresVisitTransaction implements VisitTransaction {
     );
   }
 
-  async saveRejection(id: string, reason: string, now: Date): Promise<void> {
+  async saveRejection(
+    id: string,
+    actor: VisitRejectionActor,
+    reason: string,
+    now: Date,
+  ): Promise<void> {
     await this.manager.query(
-      `UPDATE visits SET status = 'REJECTED', resolution_reason = $2, resolved_by = 'AGENT',
-          resolved_at = $3, updated_at = $3, version = version + 1 WHERE id = $1`,
-      [id, reason, now],
+      `UPDATE visits SET status = 'REJECTED', resolution_reason = $2, resolved_by = $3,
+          resolved_at = $4, updated_at = $4, version = version + 1 WHERE id = $1`,
+      [id, reason, actor, now],
     );
   }
 

@@ -17,6 +17,7 @@
 | feat | Listar las consultas del agente y las visitas de cada participante, con filtros y paginación | Pendiente |
 | feat | Listar oportunidades del agente y registrar notas de seguimiento | Pendiente |
 | feat | Cerrar oportunidades como ganadas o perdidas y emitir LeadClosed | Pendiente |
+| feat | Aplicar las políticas de reserva, venta y alquiler de Listing a las visitas | Pendiente |
 
 ## Pendientes
 
@@ -52,5 +53,5 @@
 
 **Políticas (ADR 0005, secciones 3.2 y 3.3)**
 
-- [ ] `PropertyReserved` → rechazar las visitas `REQUESTED` de esa propiedad (`reason: PROPERTY_RESERVED`, `actor: SYSTEM`)
-- [ ] `PropertySold` / `PropertyRented` → rechazar las `REQUESTED` y cancelar las `SCHEDULED` futuras (`reason: PROPERTY_UNAVAILABLE`, `actor: SYSTEM`)
+- [x] `PropertyReserved` → rechazar las visitas `REQUESTED` de esa propiedad (`reason: PROPERTY_RESERVED`, `actor: SYSTEM`)
+- [x] `PropertySold` / `PropertyRented` → rechazar las `REQUESTED` y cancelar las `SCHEDULED` futuras (`reason: PROPERTY_UNAVAILABLE`, `actor: SYSTEM`)

@@ -18,6 +18,7 @@ export type PropertyEvent = {
   agentId: string;
   status: string;
   occurredAt: string;
+  correlationId: string;
   details?: { title: string; zone: string; operationType: 'SALE' | 'RENT' };
 };
 
@@ -67,6 +68,11 @@ export function parsePropertyEvent(value: unknown): PropertyEvent | undefined {
     propertyId: aggregateId,
     agentId: payload.agentId,
     occurredAt,
+    correlationId:
+      typeof value.correlationId === 'string' &&
+      /^[A-Za-z0-9._-]{1,128}$/.test(value.correlationId)
+        ? value.correlationId
+        : eventId,
     status: payload.status,
   };
   if (type !== 'PropertyPublished' && type !== 'PropertyUpdated') return event;
