@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Mis propiedades (agente), parte 1: lista con filtro por estado y cambios de estado, con confirmación si son irreversibles. El cliente HTTP ahora admite headers propios, multipart y 201 sin body | #91 |
 | feat | Mejora visual, parte 2: buscador con "Más filtros", orden junto a los resultados, esqueleto de carga, estado vacío sin filtros y convenciones en `docs/convenciones-frontend.md` | #89 |
 | feat | Mejora visual, parte 1: paleta y tokens, cabecera, detalle de propiedad, ingreso, registro, mi cuenta y favicon propio | #88 |
 | feat | Catálogo público con filtros en la URL (zona, tipo, operación, precio, dormitorios, características), orden y paginación, y detalle de propiedad con galería | #49 |
@@ -39,7 +40,8 @@
 
 **Agentes (enunciado)**
 
-- [ ] Mis propiedades: crear, editar, publicar y pausar
+- [x] Mis propiedades: lista, publicar, pausar, reservar, marcar vendida o alquilada
+- [ ] Crear y editar propiedades
 - [ ] Galería y características
 - [ ] Consultas y solicitudes recibidas; programar visitas y seguimiento
 
