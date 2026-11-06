@@ -104,13 +104,18 @@ a {
 
 .field input,
 .field select {
-  /* Sin esto, un input number tiene un ancho mínimo propio y se sale de la columna de la grilla. */
-  width: 100%;
-  min-width: 0;
   padding: 0.6rem 0.75rem;
   font: inherit;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
+}
+
+/* Sin esto, un input number tiene un ancho mínimo propio y se sale de la columna de la grilla.
+   Los radio y checkbox quedan fuera: con width 100% se desalinean de su texto. */
+.field input:not([type='radio']):not([type='checkbox']),
+.field select {
+  width: 100%;
+  min-width: 0;
 }
 
 .field input[aria-invalid='true'] {
