@@ -28,7 +28,7 @@ describe('favorito en el detalle de una propiedad', () => {
 
     renderApp(path)
 
-    expect(await screen.findByRole('link', { name: 'Ingresa para guardarla' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: /^Ingresa para guardarla/ })).toHaveAttribute(
       'href',
       '/login',
     )

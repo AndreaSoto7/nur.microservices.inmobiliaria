@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Enviar una consulta y solicitar una visita desde el detalle, con `Idempotency-Key`. Probado contra visit real, hasta el aviso que recibe el agente | este PR |
 | feat | Avisos: página con filtro de no leídos, marcar como leído y contador en la cabecera | #95 |
 | feat | Favoritos: botón en el detalle y página propia con paginación. Probado contra listing real, en navegador y con CSP | #94 |
 | feat | Mis propiedades (agente), parte 3: características, subida de fotos y requisitos para publicar. Probado de punta a punta contra listing real, en navegador y con CSP | #93 |
@@ -39,7 +40,7 @@
 - [ ] Probar el catálogo vía gateway con propiedades reales (vacío ya responde bien; con datos solo se probó simulado)
 - [x] Pantalla de avisos
 - [x] Favoritos
-- [ ] Enviar una consulta y solicitar una visita
+- [x] Enviar una consulta y solicitar una visita
 - [ ] Mis visitas (estado de las solicitudes)
 
 **Agentes (enunciado)**
