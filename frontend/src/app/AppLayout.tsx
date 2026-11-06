@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useAuth } from '../core/auth/AuthContext'
+import { NotificationsNavLink } from '../features/notifications/containers/NotificationsNavLink'
 import { HouseIcon } from '../shared/ui/icons'
 import { AppHeader } from './components/AppHeader'
 
@@ -19,6 +20,7 @@ export function AppLayout() {
       <>
         {hasRole('AGENT') && <NavLink to="/agente/propiedades">Mis propiedades</NavLink>}
         {(hasRole('CLIENT') || hasRole('AGENT')) && <NavLink to="/favoritos">Favoritos</NavLink>}
+        <NotificationsNavLink />
         <NavLink to="/cuenta">Mi cuenta</NavLink>
       </>
     ) : status === 'anonymous' ? (

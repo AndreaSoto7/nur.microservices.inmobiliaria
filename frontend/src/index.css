@@ -205,6 +205,20 @@ a {
   text-decoration: underline;
 }
 
+.nav-count {
+  display: inline-block;
+  min-width: 1.25rem;
+  margin-left: var(--space-1);
+  padding-inline: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1.25rem;
+  color: var(--color-brand);
+  text-align: center;
+  background: var(--color-on-brand);
+  border-radius: var(--radius-pill);
+}
+
 .app-header__user {
   color: var(--color-on-brand-muted);
 }
@@ -1011,6 +1025,12 @@ a {
   gap: var(--space-2) var(--space-4);
   align-items: flex-start;
   justify-content: space-between;
+}
+
+/* El texto ocupa todo lo que pueda: la etiqueta baja de línea solo si de verdad no entra. */
+.row-card__head > :first-child {
+  flex: 1 1 16rem;
+  min-width: 0;
 }
 
 .row-card__title {
