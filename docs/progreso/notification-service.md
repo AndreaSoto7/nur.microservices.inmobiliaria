@@ -16,7 +16,7 @@
 | fix | Test inestable de paginación: el repositorio falso no desempataba el orden, a diferencia del real | #78 |
 | feat | Validación del access token con el JWKS de identity, con caché, recarga limitada y renovación cada 5 minutos | #80 |
 | feat | API: listar mis avisos (paginado, con filtro `unread`) y marcarlos como leídos, con JWT | #82 |
-| feat | Consumidor de Kafka: `UserRegistered`, `VisitRequested` y `PropertyReserved` crean avisos. Idempotente, con 3 reintentos y DLQ | este PR |
+| feat | Consumidor de Kafka: `UserRegistered`, `VisitRequested` y `PropertyReserved` crean avisos. Idempotente, con 3 reintentos y DLQ | #84 |
 
 ## Pendientes
 
