@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// defaultMaxImageBodyBytes coincide con listing: 5 imágenes de 5 MB por request, más el multipart.
+const defaultMaxImageBodyBytes = 26 << 20
+
 // Config es la configuración del gateway ya validada.
 type Config struct {
 	Port                   string
@@ -39,7 +42,7 @@ func Load(getenv func(string) string) (Config, error) {
 		RateLimitAuthPerMinute: int(r.positiveInt("RATE_LIMIT_AUTH_PER_MINUTE", 10)),
 		UpstreamTimeout:        r.duration("UPSTREAM_TIMEOUT", 10*time.Second),
 		ReplicaDownDuration:    r.duration("REPLICA_DOWN_DURATION", 30*time.Second),
-		MaxImageBodyBytes:      r.positiveInt("MAX_BODY_BYTES", 10485760),
+		MaxImageBodyBytes:      r.positiveInt("MAX_BODY_BYTES", defaultMaxImageBodyBytes),
 		AuthReadTimeout:        r.duration("AUTH_READ_TIMEOUT", 5*time.Second),
 	}
 

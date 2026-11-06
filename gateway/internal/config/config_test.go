@@ -41,7 +41,8 @@ func TestLoadUsesDefaultsFromTheRule(t *testing.T) {
 	if cfg.ReplicaDownDuration != 30*time.Second {
 		t.Errorf("ReplicaDownDuration = %v", cfg.ReplicaDownDuration)
 	}
-	if cfg.MaxImageBodyBytes != 10485760 {
+	// listing acepta 5 imágenes de 5 MB por request (spring.servlet.multipart.max-request-size=26MB).
+	if cfg.MaxImageBodyBytes != 26<<20 {
 		t.Errorf("MaxImageBodyBytes = %d", cfg.MaxImageBodyBytes)
 	}
 	if cfg.AuthReadTimeout != 5*time.Second {

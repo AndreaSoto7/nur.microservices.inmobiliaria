@@ -143,3 +143,39 @@ func TestServicesListsEachServiceOnce(t *testing.T) {
 		t.Errorf("Services() = %v, want %v", got, want)
 	}
 }
+
+func TestIsAuthPath(t *testing.T) {
+	tests := map[string]bool{
+		"/api/v1/auth":                       true,
+		"/api/v1/auth/login":                 true,
+		"/api/v1/auth/.well-known/jwks.json": true,
+		"/api/v1/authx":                      false,
+		"/api/v1/users/me":                   false,
+	}
+
+	for path, want := range tests {
+		if got := IsAuthPath(path); got != want {
+			t.Errorf("IsAuthPath(%q) = %v, want %v", path, got, want)
+		}
+	}
+}
+
+func TestIsImageUpload(t *testing.T) {
+	tests := []struct {
+		method, path string
+		want         bool
+	}{
+		{http.MethodPost, "/api/v1/properties/3f6c/images", true},
+		{http.MethodGet, "/api/v1/properties/3f6c/images", false},
+		{http.MethodPost, "/api/v1/properties/3f6c/images/9a1b", false},
+		{http.MethodPost, "/api/v1/properties/3f6c/publish", false},
+		{http.MethodPost, "/api/v1/favorites/3f6c/images", false},
+		{http.MethodPost, "/api/v1/properties", false},
+	}
+
+	for _, tt := range tests {
+		if got := IsImageUpload(tt.method, tt.path); got != tt.want {
+			t.Errorf("IsImageUpload(%s, %q) = %v, want %v", tt.method, tt.path, got, tt.want)
+		}
+	}
+}

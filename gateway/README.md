@@ -30,7 +30,7 @@ Todas tienen valor por defecto, y un valor inválido impide arrancar. Están en 
 | `RATE_LIMIT_AUTH_PER_MINUTE` | `10` | Límite por IP y ruta en login y registro |
 | `UPSTREAM_TIMEOUT` | `10s` | Espera máxima a que una réplica responda |
 | `REPLICA_DOWN_DURATION` | `30s` | Tiempo fuera del balanceo tras un fallo |
-| `MAX_BODY_BYTES` | `10485760` | Límite de body en las subidas de imágenes |
+| `MAX_BODY_BYTES` | `27262976` | Límite de body en las subidas de imágenes |
 | `AUTH_READ_TIMEOUT` | `5s` | Tiempo máximo para recibir el body en `/api/v1/auth/**` |
 
 ## Rutas
