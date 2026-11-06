@@ -7,11 +7,14 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/auth"
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/config"
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/discovery"
+	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/gateway/internal/proxy"
 )
 
 const testOrigin = "http://localhost:5173"
@@ -20,13 +23,78 @@ func newTestHandler() http.Handler {
 	return newHandler(slog.New(slog.DiscardHandler), config.Config{
 		RateLimitAuthPerMinute: 2,
 		CORSOrigins:            []string{testOrigin},
-	}, rejectAllTokens{})
+	}, rejectAllTokens{}, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 }
 
 type rejectAllTokens struct{}
 
 func (rejectAllTokens) Validate(context.Context, string) error {
 	return auth.ErrInvalidToken
+}
+
+type acceptAllTokens struct{}
+
+func (acceptAllTokens) Validate(context.Context, string) error { return nil }
+
+type fixedPicker struct{ instance discovery.Instance }
+
+func (f fixedPicker) Pick(string) (discovery.Instance, bool) { return f.instance, true }
+func (fixedPicker) MarkDown(discovery.Instance)              {}
+
+// La cadena completa contra un servicio falso: lo que cada eslabón promete, visto desde afuera.
+func TestFullChainAgainstAFakeService(t *testing.T) {
+	var received http.Header
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received = r.Header.Clone()
+		w.Header().Set("X-Correlation-Id", "del-servicio")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(http.StatusCreated)
+	}))
+	t.Cleanup(backend.Close)
+	logger := slog.New(slog.DiscardHandler)
+	upstream := proxy.New(fixedPicker{discovery.Instance{Address: strings.TrimPrefix(backend.URL, "http://")}}, proxy.Options{
+		UpstreamTimeout:   time.Second,
+		AuthReadTimeout:   time.Second,
+		MaxImageBodyBytes: 1 << 20,
+	}, logger)
+	gateway := httptest.NewServer(newHandler(logger, config.Config{
+		RateLimitAuthPerMinute: 2,
+		CORSOrigins:            []string{testOrigin},
+	}, acceptAllTokens{}, upstream))
+	t.Cleanup(gateway.Close)
+
+	req, err := http.NewRequest(http.MethodPost, gateway.URL+"/api/v1/properties", strings.NewReader("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Authorization", "Bearer abc.def.ghi")
+	req.Header.Set("X-User-Id", "falso")
+	req.Header.Set("Origin", testOrigin)
+	req.Header.Set("X-Correlation-Id", "abc-123")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		t.Errorf("status = %d", resp.StatusCode)
+	}
+	if got := received.Get("Authorization"); got != "Bearer abc.def.ghi" {
+		t.Errorf("Authorization = %q: debe llegar intacto", got)
+	}
+	if got := received.Get("X-User-Id"); got != "" {
+		t.Errorf("X-User-Id llegó al servicio: %q", got)
+	}
+	if got := received.Get("X-Correlation-Id"); got != "abc-123" {
+		t.Errorf("correlation-id reenviado = %q", got)
+	}
+	if got := resp.Header.Values("X-Correlation-Id"); len(got) != 1 || got[0] != "abc-123" {
+		t.Errorf("correlation-id devuelto = %v", got)
+	}
+	if got := resp.Header.Values("Access-Control-Allow-Origin"); len(got) != 1 || got[0] != testOrigin {
+		t.Errorf("Allow-Origin = %v", got)
+	}
 }
 
 func TestProtectedRouteRequiresToken(t *testing.T) {

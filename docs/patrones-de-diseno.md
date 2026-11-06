@@ -31,12 +31,12 @@ El enunciado exige patrones **aplicados y justificados**. Cada vez que se implem
 | Strategy | Comportamiento | gateway | `gateway/internal/balancer/balancer.go` (`Strategy`), `round_robin.go` | Hoy se reparte con round robin, pero otro algoritmo (menos conexiones) no debería obligar a tocar el proxy ni el Circuit Breaker | Un `switch` por algoritmo dentro del balanceador crece con cada caso y mezcla el reparto con el marcado de réplicas |
 | Circuit Breaker | Resiliencia | gateway | `gateway/internal/balancer/balancer.go` (`MarkDown`, `Pick`) | El health check de Consul tarda hasta 10 s en notar una réplica caída: mientras tanto, parte de las requests fallaría | Reintentar en otra réplica podría duplicar un `POST`. Un breaker por servicio apagaría también las réplicas sanas |
 | Proxy | Estructural | gateway | `gateway/internal/proxy/proxy.go` | Hay que interponerse entre el cliente y la réplica para elegirla, limitar el body y traducir los errores de transporte, sin que el cliente lo note | Un redirect expondría las direcciones internas y dejaría al cliente hablar directo con el servicio |
+| API Gateway | Microservicios | gateway | `gateway/cmd/gateway/main.go` | El cliente no debe conocer cuántos servicios hay ni dónde están, y auth, CORS y rate limit no deben repetirse en cada uno | Spring Cloud Gateway o KrakenD resuelven casi todo por configuración: quedaría poco diseño propio que defender (ADR 0002) |
 
 ## Planificados (candidatos, mover a "Aplicados" al implementarlos)
 
 | Patrón | Categoría | Servicio | Idea |
 |---|---|---|---|
-| API Gateway | Microservicios | gateway | Único punto de entrada: auth, CORS, rate limit, ruteo, balanceo de carga (ADR 0002) |
 | Service Registry + Self-Registration | Microservicios | todos + gateway | Cada servicio se registra solo en Consul; el gateway descubre las réplicas sanas |
 | Mediator | Comportamiento | visit, listing | `CommandBus` / `QueryBus` desacoplan los controladores de los handlers |
 | Database per Service | Microservicios | todos | Persistencia independiente |
