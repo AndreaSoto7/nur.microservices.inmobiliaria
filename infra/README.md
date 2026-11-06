@@ -11,6 +11,8 @@ docker compose -f infra/docker-compose.yml up -d --build
 
 | Qué | Dónde |
 |---|---|
+| Gateway (API) | http://localhost:8080 |
+| Frontend | http://localhost:5173 |
 | UI de Consul | http://127.0.0.1:8500 |
 | UI de Kafka | http://127.0.0.1:8090 |
 
@@ -19,6 +21,8 @@ Para trabajar en un servicio, levanta solo lo que necesitas:
 ```bash
 docker compose -f infra/docker-compose.yml up -d identity-service
 ```
+
+El gateway y el frontend publican en todas las interfaces, así que el 8080 y el 5173 deben estar libres en tu máquina.
 
 ## Reglas de puertos (ADR 0002)
 
