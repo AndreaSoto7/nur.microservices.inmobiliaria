@@ -5,6 +5,7 @@ import { AgentPropertiesPage } from '../features/agent/properties-admin/containe
 import { PropertyCreatePage } from '../features/agent/property-form/containers/PropertyCreatePage'
 import { PropertyEditPage } from '../features/agent/property-form/containers/PropertyEditPage'
 import { CatalogPage } from '../features/catalog/containers/CatalogPage'
+import { FavoritesPage } from '../features/favorites/containers/FavoritesPage'
 import { LoginPage } from '../features/auth/containers/LoginPage'
 import { RegisterPage } from '../features/auth/containers/RegisterPage'
 import { PropertyDetailPage } from '../features/property-detail/containers/PropertyDetailPage'
@@ -24,6 +25,14 @@ export function App() {
           element={
             <RequireAuth>
               <AccountPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="favoritos"
+          element={
+            <RequireAuth roles={['CLIENT', 'AGENT']}>
+              <FavoritesPage />
             </RequireAuth>
           }
         />
