@@ -15,7 +15,7 @@
 | feat | Persistencia: migraciones con advisory lock y repositorio con pgx, con el aviso y el evento en una sola transacción | #77 |
 | fix | Test inestable de paginación: el repositorio falso no desempataba el orden, a diferencia del real | #78 |
 | feat | Validación del access token con el JWKS de identity, con caché, recarga limitada y renovación cada 5 minutos | #80 |
-| feat | API: listar mis avisos (paginado, con filtro `unread`) y marcarlos como leídos, con JWT | este PR |
+| feat | API: listar mis avisos (paginado, con filtro `unread`) y marcarlos como leídos, con JWT | #82 |
 
 ## Pendientes
 
