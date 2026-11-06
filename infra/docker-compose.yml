@@ -211,6 +211,7 @@ services:
       CONSUL_HOST: consul
       CONSUL_PORT: "8500"
       IMAGE_STORAGE_DIR: /var/lib/listing/images
+      CATALOG_REBUILD_ON_STARTUP: ${CATALOG_REBUILD_ON_STARTUP:-false}
     volumes:
       # Compartido entre réplicas: una imagen subida a una se sirve desde cualquiera.
       - listing-images:/var/lib/listing/images

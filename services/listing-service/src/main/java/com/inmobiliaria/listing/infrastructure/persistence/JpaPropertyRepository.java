@@ -5,7 +5,9 @@ import com.inmobiliaria.listing.domain.model.PropertyId;
 import com.inmobiliaria.listing.domain.repository.PropertyRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -33,5 +35,11 @@ public class JpaPropertyRepository implements PropertyRepository {
         } else {
             PropertyMapper.copy(property, entity);
         }
+    }
+
+    @Override
+    public List<PropertyId> findAllIds() {
+        return em.createQuery("SELECT p.id FROM PropertyJpaEntity p ORDER BY p.id", UUID.class).getResultList()
+                .stream().map(PropertyId::new).toList();
     }
 }

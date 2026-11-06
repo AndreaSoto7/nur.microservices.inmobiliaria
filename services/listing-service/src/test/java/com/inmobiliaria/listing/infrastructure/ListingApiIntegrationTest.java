@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import com.inmobiliaria.listing.application.command.RebuildCatalogHandler;
 import com.inmobiliaria.listing.application.policy.LeadClosedNotification;
 import com.inmobiliaria.listing.application.policy.ReserveOnLeadWonPolicy;
 import java.nio.file.Path;
@@ -49,6 +50,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
         "spring.cloud.consul.enabled=false",
         "listing.outbox.relay.enabled=false",
         "listing.kafka.consumer.enabled=false",
+        "listing.catalog.rebuild-on-startup=true",
         "spring.kafka.listener.auto-startup=false"})
 @AutoConfigureMockMvc
 @Testcontainers(disabledWithoutDocker = true)
@@ -77,6 +79,9 @@ class ListingApiIntegrationTest {
 
     @Autowired
     JdbcTemplate jdbc;
+
+    @Autowired
+    RebuildCatalogHandler rebuildCatalog;
 
     @Autowired
     ReserveOnLeadWonPolicy policy;
@@ -265,5 +270,20 @@ class ListingApiIntegrationTest {
                 .andExpect(status().isNoContent());
         mvc.perform(delete("/api/v1/favorites/{id}", id).with(user(client, "CLIENT")))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void rebuild_restores_a_catalog_row_that_got_lost() throws Exception {
+        UUID id = createPublishedProperty(UUID.randomUUID(), "Zona Reconstruida", "420000", List.of());
+        jdbc.update("DELETE FROM property_catalog WHERE property_id = ?", id);
+        mvc.perform(get("/api/v1/catalog/properties").param("zone", "zona reconstruida"))
+                .andExpect(jsonPath("$.data", hasSize(0)));
+
+        rebuildCatalog.handle();
+
+        mvc.perform(get("/api/v1/catalog/properties").param("zone", "zona reconstruida"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].id").value(id.toString()));
     }
 }

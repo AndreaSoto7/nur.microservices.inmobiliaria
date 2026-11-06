@@ -20,4 +20,9 @@ public class FakeCatalogProjection implements CatalogProjection {
             rows.remove(property.id());
         }
     }
+
+    @Override
+    public void clear() {
+        rows.clear();
+    }
 }
