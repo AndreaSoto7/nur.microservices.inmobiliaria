@@ -9,12 +9,13 @@
 | Tipo | Qué se hizo | PR |
 |---|---|---|
 | docs | ADR 0007: se retoma el servicio, con avisos solo dentro de la app. Diseño, base y progreso | #73 |
+| feat | Contrato OpenAPI (listar y marcar como leído) y consumidores en el catálogo de eventos | #74 |
 
 ## Pendientes
 
 **Base**
 
-- [ ] Contrato `contracts/openapi/notification-service.yaml` y consumidores en `contracts/events/README.md`
+- [x] Contrato `contracts/openapi/notification-service.yaml` y consumidores en `contracts/events/README.md`
 - [ ] Scaffold: capas, health, Consul, problem+json, correlation-id, Dockerfile y lint
 - [ ] Servicio y base en el compose
 
