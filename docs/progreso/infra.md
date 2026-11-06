@@ -10,6 +10,7 @@
 |---|---|---|
 | feat | Compose base y de depuración con Kafka KRaft, Kafka UI, Consul, topics e identity | #26 |
 | feat | Gateway en el compose (8080). Healthcheck de las bases por TCP: con un volumen nuevo, `pg_isready` por socket daba listo durante la inicialización, y identity moría con `Connection refused` | #69 |
+| feat | notification-service y su base en el compose. `start_period` en las bases: un volumen nuevo en una máquina ocupada tardaba más que el healthcheck, y Compose cancelaba el arranque | este PR |
 
 ## Pendientes
 

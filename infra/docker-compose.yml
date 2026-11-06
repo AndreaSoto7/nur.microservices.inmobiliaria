@@ -128,6 +128,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+      # Inicializar un volumen nuevo puede tardar: estos fallos no cuentan mientras arranca.
+      start_period: 120s
+      start_interval: 2s
 
   identity-service:
     build: ../services/identity-service
@@ -189,6 +192,9 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+      # Inicializar un volumen nuevo puede tardar: estos fallos no cuentan mientras arranca.
+      start_period: 120s
+      start_interval: 2s
 
   # Sin container_name ni puertos: es el servicio de la demo de balanceo (--scale listing-service=3).
   listing-service:
@@ -216,8 +222,48 @@ services:
       # Compartido entre réplicas: una imagen subida a una se sirve desde cualquiera.
       - listing-images:/var/lib/listing/images
 
+  notification-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: notification
+      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Agrega NOTIFICATION_DB_PASSWORD a infra/.env (infra/.env.example)}
+      POSTGRES_DB: notification
+    volumes:
+      - notification-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U notification"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      # Inicializar un volumen nuevo puede tardar: estos fallos no cuentan mientras arranca.
+      start_period: 120s
+      start_interval: 2s
+
+  # Crea avisos a partir de eventos (ADR 0007). Sin puertos: se ve por la red interna y por Consul.
+  notification-service:
+    build: ../services/notification-service
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      SERVICE_NAME: notification-service
+      SERVICE_PORT: "8005"
+      CONSUL_HTTP_ADDR: http://consul:8500
+      DATABASE_URL: postgres://notification:${NOTIFICATION_DB_PASSWORD:?Agrega NOTIFICATION_DB_PASSWORD a infra/.env (infra/.env.example)}@notification-db:5432/notification
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      JWKS_URL: http://identity-service:8001/api/v1/auth/.well-known/jwks.json
+    # No necesita privilegios ni escribir en disco.
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
 volumes:
   kafka-data:
   identity-db-data:
   listing-db-data:
   listing-images:
+  notification-db-data:
