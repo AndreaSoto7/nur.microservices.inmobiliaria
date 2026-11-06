@@ -21,7 +21,7 @@ export const AppHeader = memo(function AppHeader({
 }: AppHeaderProps) {
   return (
     <header className="app-header">
-      <div className="app-header__brand">{brand}</div>
+      {brand}
       <nav aria-label="Principal" className="app-header__nav">
         {links}
         {!loading && userName && (

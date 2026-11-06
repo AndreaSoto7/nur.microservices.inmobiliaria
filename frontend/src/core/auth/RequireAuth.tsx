@@ -18,12 +18,22 @@ export function RequireAuth({ roles, children }: RequireAuthProps) {
   const { status, hasRole } = useAuth()
   const location = useLocation()
 
-  if (status === 'loading') return <LoadingState label="Recuperando tu sesión…" />
+  if (status === 'loading') {
+    return (
+      <section className="page page--narrow">
+        <LoadingState label="Recuperando tu sesión…" />
+      </section>
+    )
+  }
   if (status === 'anonymous') {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
   if (roles && !roles.some(hasRole)) {
-    return <ErrorMessage title="Sin permiso" message="Tu cuenta no tiene acceso a esta sección." />
+    return (
+      <section className="page page--narrow">
+        <ErrorMessage title="Sin permiso" message="Tu cuenta no tiene acceso a esta sección." />
+      </section>
+    )
   }
   return children
 }

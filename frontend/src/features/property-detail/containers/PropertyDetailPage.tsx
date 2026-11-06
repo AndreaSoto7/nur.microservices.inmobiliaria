@@ -1,5 +1,9 @@
 import { Link, useParams } from 'react-router'
-import { formatPrice } from '../../../shared/format/property'
+import {
+  formatPrice,
+  OPERATION_LABELS,
+  PROPERTY_TYPE_LABELS,
+} from '../../../shared/format/property'
 import { Button } from '../../../shared/ui/Button'
 import { EmptyState } from '../../../shared/ui/EmptyState'
 import { ErrorMessage } from '../../../shared/ui/ErrorMessage'
@@ -15,14 +19,14 @@ export function PropertyDetailPage() {
 
   return (
     <section className="page page--wide">
-      <p>
-        <Link to="/">← Volver al catálogo</Link>
-      </p>
+      <Link to="/" className="back-link">
+        ← Volver al catálogo
+      </Link>
 
       {loading && <LoadingState label="Cargando la propiedad…" />}
 
       {notFound && (
-        <EmptyState title="Esta propiedad no está disponible">
+        <EmptyState title="Esta propiedad no está disponible" titleAs="h1">
           Puede que se haya pausado, vendido o alquilado. <Link to="/">Ver otras propiedades</Link>
         </EmptyState>
       )}
@@ -40,16 +44,29 @@ export function PropertyDetailPage() {
         <article className="detail">
           <header className="detail__header">
             <h1>{property.title}</h1>
-            <p className="detail__price">{formatPrice(property.price, property.operationType)}</p>
-            {property.status === 'RESERVED' && (
-              <p className="badge badge--inline">Reservada: no recibe visitas nuevas</p>
-            )}
+            <p className="detail__meta">
+              {PROPERTY_TYPE_LABELS[property.propertyType]} en{' '}
+              {OPERATION_LABELS[property.operationType].toLowerCase()} · {property.location.zone}
+            </p>
           </header>
           <div className="detail__layout">
-            <ImageGallery images={property.images} title={property.title} />
-            <PropertySpecs property={property} />
+            <div className="detail__main">
+              <ImageGallery images={property.images} title={property.title} />
+              {property.description && (
+                <section className="detail__description">
+                  <h2>Descripción</h2>
+                  <p>{property.description}</p>
+                </section>
+              )}
+            </div>
+            <aside className="card detail__aside" aria-label="Datos de la propiedad">
+              <p className="detail__price">{formatPrice(property.price, property.operationType)}</p>
+              {property.status === 'RESERVED' && (
+                <p className="notice notice--warning">Reservada: no recibe visitas nuevas</p>
+              )}
+              <PropertySpecs property={property} />
+            </aside>
           </div>
-          {property.description && <p className="detail__description">{property.description}</p>}
         </article>
       )}
     </section>

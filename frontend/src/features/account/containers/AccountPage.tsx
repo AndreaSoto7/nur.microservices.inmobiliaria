@@ -7,7 +7,7 @@ export function AccountPage() {
   if (!user) return null
   return (
     <section className="page page--narrow">
-      <h1>Mi cuenta</h1>
+      <h1 className="account__title">Mi cuenta</h1>
       <ProfileCard user={user} />
     </section>
   )

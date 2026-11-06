@@ -1,11 +1,11 @@
-import { Route, Routes } from 'react-router'
+import { Link, Route, Routes } from 'react-router'
 import { RequireAuth } from '../core/auth/RequireAuth'
 import { AccountPage } from '../features/account/containers/AccountPage'
 import { CatalogPage } from '../features/catalog/containers/CatalogPage'
 import { LoginPage } from '../features/auth/containers/LoginPage'
 import { RegisterPage } from '../features/auth/containers/RegisterPage'
 import { PropertyDetailPage } from '../features/property-detail/containers/PropertyDetailPage'
-import { ErrorMessage } from '../shared/ui/ErrorMessage'
+import { EmptyState } from '../shared/ui/EmptyState'
 import { AppLayout } from './AppLayout'
 
 export function App() {
@@ -26,7 +26,13 @@ export function App() {
         />
         <Route
           path="*"
-          element={<ErrorMessage title="Página no encontrada" message="Revisa la dirección." />}
+          element={
+            <section className="page page--narrow">
+              <EmptyState title="Página no encontrada" titleAs="h1">
+                Revisa la dirección o <Link to="/">vuelve al catálogo</Link>.
+              </EmptyState>
+            </section>
+          }
         />
       </Route>
     </Routes>

@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useAuth } from '../core/auth/AuthContext'
+import { HouseIcon } from '../shared/ui/icons'
 import { AppHeader } from './components/AppHeader'
 
 /** Smart: arma la cabecera según la sesión y maneja el cierre de sesión. */
@@ -19,14 +20,21 @@ export function AppLayout() {
     ) : status === 'anonymous' ? (
       <>
         <NavLink to="/login">Ingresar</NavLink>
-        <NavLink to="/registro">Crear cuenta</NavLink>
+        <NavLink to="/registro" className="button button--primary">
+          Crear cuenta
+        </NavLink>
       </>
     ) : null
 
   return (
     <>
       <AppHeader
-        brand={<Link to="/">Plataforma Inmobiliaria</Link>}
+        brand={
+          <Link to="/" className="brand">
+            <HouseIcon className="brand__icon" />
+            Plataforma Inmobiliaria
+          </Link>
+        }
         links={links}
         userName={user?.fullName ?? null}
         loading={status === 'loading'}
