@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Avisos de consultas y visitas: programada, rechazada y cancelada para el cliente; consulta recibida y cancelación del cliente para el agente. Probado contra el stack real | este PR |
+| feat | Avisos de consultas y visitas: programada, rechazada y cancelada para el cliente; consulta recibida y cancelación del cliente para el agente. Probado contra el stack real | #105 |
 | docs | Contrato de los avisos de consultas y visitas: tipos nuevos, consumidores en el catálogo y ADR 0007 | #104 |
 | docs | ADR 0007: se retoma el servicio, con avisos solo dentro de la app. Diseño, base y progreso | #73 |
 | feat | Contrato OpenAPI (listar y marcar como leído) y consumidores en el catálogo de eventos | #74 |
