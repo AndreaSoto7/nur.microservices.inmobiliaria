@@ -62,6 +62,21 @@ python infra/scripts/demo.py chains   # recorre las políticas del ADR 0005 en v
   Si una reacción no llega en 45 s, el script termina con código 1 y dice cuál falló. Cada request lleva un `X-Correlation-Id` que empieza con `demo-`, para buscarlo en los logs. Los eventos se ven en la UI de Kafka.
 - El gateway limita login y registro por minuto (`RATE_LIMIT_AUTH_PER_MINUTE`). Si responde 429, el script espera lo que indica `Retry-After` y reintenta.
 
+### Balanceo, discovery y Circuit Breaker (ADR 0002)
+
+```bash
+docker compose -f infra/docker-compose.yml up -d --scale listing-service=3
+python infra/scripts/demo.py balance              # réplicas en Consul y round robin del gateway
+python infra/scripts/demo.py balance --failover   # además tumba una réplica y la recupera
+```
+
+- **`balance`** espera a que las réplicas estén sanas en Consul y manda tres requests por réplica a una ruta pública. Después muestra qué réplica atendió cada una. Lo lee del log JSON del gateway (campo `upstream`), buscando por `X-Correlation-Id`, así que necesita el CLI de docker.
+- **`--failover`** mata una réplica con `docker kill`, sin que se dé de baja, y vuelve a mandar requests:
+  - La primera request que le toca responde 504 (o 502), y el gateway saca la réplica.
+  - El resto va a las réplicas sanas, aunque Consul todavía la vea sana: su health check corre cada 10 s.
+  - Después la arranca de nuevo y espera a que Consul la vea sana y a que el gateway le vuelva a mandar tráfico. Eso pasa cuando termina `REPLICA_DOWN_DURATION` (30 s).
+- `--service identity-service` hace lo mismo con identity, con `--scale identity-service=2`. Para terminar, vuelve a una réplica con `--scale listing-service=1`.
+
 ## Agregar tu servicio
 
 En tu propio PR:

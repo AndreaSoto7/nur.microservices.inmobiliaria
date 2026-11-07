@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | `demo.py balance`: réplicas sanas en Consul y reparto round robin del gateway, leído de su log por `X-Correlation-Id`; con `--failover`, Circuit Breaker ante una réplica caída y su recuperación | #103 |
 | feat | `infra/scripts/demo.py`: `seed` carga cuentas, propiedades con fotos, favoritos, una consulta y visitas; `chains` recorre en vivo las políticas del ADR 0005 (publicar, ganar la oportunidad, reservar y vender) y los avisos, a través del gateway | #102 |
 | feat | visit-service en el compose (`visit-db`, `visit-migrate` y `visit-service`), con `VISIT_DB_PASSWORD` y puertos de depuración 8003 y 5435 | #96 |
 | feat | Compose base y de depuración con Kafka KRaft, Kafka UI, Consul, topics e identity | #26 |
@@ -20,5 +21,5 @@
 - [x] `infra/docker-compose.debug.yml`: puertos de los servicios, sus bases y Kafka (9092), todo solo en `127.0.0.1` (hoy, identity en 8001 y su base en 5433)
 - [x] Kafka en modo KRaft + Kafka UI, con los topics creados explícitamente; `retention.ms=-1` en `listing.property.events`
 - [x] Consul en modo dev
-- [ ] Un PostgreSQL por servicio (hoy solo identity; cada responsable agrega el suyo)
-- [ ] Cada responsable agrega su servicio al compose, sin `container_name`
+- [x] Un PostgreSQL por servicio: identity, listing, notification y visit (audit-service es opcional y todavía no existe)
+- [x] Cada responsable agrega su servicio al compose, sin `container_name` (están los cuatro, más gateway y frontend)
