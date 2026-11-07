@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | El aviso de visita realizada lleva a mis visitas. Probados contra el stack real, en navegador: marcar realizada, marcar alquilada y el catálogo con datos | #109 |
 | feat | Cada aviso lleva a su pantalla según el tipo: mis visitas, solicitudes, consultas o la propiedad | #106 |
 | feat | Oportunidades: agregar notas y cerrar como ganada o perdida. Probada contra el stack real la cadena completa: cerrar como ganada reserva la propiedad por evento y avisa al agente | #101 |
 | feat | Consultas recibidas: quién preguntó, sobre qué propiedad, y el mensaje con sus datos de contacto al abrirla. Probado contra visit real | #100 |
@@ -42,7 +43,7 @@
 - [x] Registro y login
 - [x] Catálogo con filtros (zona, tipo, operación, precio, dormitorios, características), orden y paginación
 - [x] Detalle de propiedad con galería
-- [ ] Probar el catálogo vía gateway con propiedades reales (vacío ya responde bien; con datos solo se probó simulado)
+- [x] Probar el catálogo vía gateway con propiedades reales (los filtros, por la API)
 - [x] Pantalla de avisos
 - [x] Favoritos
 - [x] Enviar una consulta y solicitar una visita
@@ -59,7 +60,6 @@
 **Riesgos conocidos**
 
 - [ ] El contrato de visit no permite listar las notas de seguimiento ni trae el nombre del interesado en una oportunidad. Coordinar con su responsable si hacen falta.
-- [ ] "Marcar realizada" solo se probó con datos simulados: visit exige que haya terminado el horario, de 60 minutos.
 - [ ] Un `POST /api/v1/properties` tardó más de 10 s y el gateway respondió 504, aunque el borrador se guardó. Pasó una vez, con el stack levantado hace más de una hora y sin uso. Causa sin identificar: no se repitió con el servicio ya en uso (0,3 a 0,7 s) ni después de reiniciar listing (0,6 s). La UI avisa para que no se duplique el borrador.
 
 **Más adelante**
