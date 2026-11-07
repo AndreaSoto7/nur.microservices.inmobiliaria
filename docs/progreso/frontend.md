@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Las visitas muestran el título que trae `propertyTitle`: ya no sale "Propiedad no disponible" al venderse o alquilarse la propiedad, ni se pide cada título aparte. Probado contra el stack real | este PR |
 | fix | Los motivos automáticos de una visita se muestran en español, y no como `PROPERTY_UNAVAILABLE` | #110 |
 | feat | El aviso de visita realizada lleva a mis visitas. Probados contra el stack real, en navegador: marcar realizada, marcar alquilada y el catálogo con datos | #109 |
 | feat | Cada aviso lleva a su pantalla según el tipo: mis visitas, solicitudes, consultas o la propiedad | #106 |
@@ -61,7 +62,6 @@
 **Riesgos conocidos**
 
 - [ ] El contrato de visit no permite listar las notas de seguimiento ni trae el nombre del interesado en una oportunidad. Coordinar con su responsable si hacen falta.
-- [ ] En "Mis visitas", una propiedad vendida, alquilada o pausada sale como "Propiedad no disponible": el catálogo ya no la devuelve y la visita no trae el título. Se resuelve si visit agrega un `propertyTitle` opcional desde su copia local: coordinar con su responsable.
 - [ ] Un `POST /api/v1/properties` tardó más de 10 s y el gateway respondió 504, aunque el borrador se guardó. Pasó una vez, con el stack levantado hace más de una hora y sin uso. Causa sin identificar: no se repitió con el servicio ya en uso (0,3 a 0,7 s) ni después de reiniciar listing (0,6 s). La UI avisa para que no se duplique el borrador.
 
 **Más adelante**

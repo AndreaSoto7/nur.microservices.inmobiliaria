@@ -10,7 +10,6 @@ import { Pagination } from '../../../shared/ui/Pagination'
 import { RowListSkeleton } from '../../../shared/ui/RowListSkeleton'
 import { MyVisitRow } from '../components/MyVisitRow'
 import { useMyVisits } from '../useMyVisits'
-import { usePropertyTitles } from '../usePropertyTitles'
 
 export function MyVisitsPage() {
   const {
@@ -25,10 +24,6 @@ export function MyVisitsPage() {
     cancellingId,
     cancelError,
   } = useMyVisits()
-  const titles = usePropertyTitles(
-    (page?.data ?? []).map((visit) => visit.propertyId),
-    'catalog',
-  )
 
   const handleCancel = useCallback(
     (visitId: string, reason: string | undefined) => cancelVisit({ visitId, reason }),
@@ -64,7 +59,7 @@ export function MyVisitsPage() {
               <MyVisitRow
                 key={visit.id}
                 visit={visit}
-                title={titles[visit.propertyId]}
+                title={visit.propertyTitle}
                 href={`/properties/${visit.propertyId}`}
                 cancelling={cancellingId === visit.id}
                 onCancel={handleCancel}

@@ -9,7 +9,7 @@ import { VisitDetails } from './VisitDetails'
 
 interface MyVisitRowProps {
   visit: Visit
-  /** Sin título, la propiedad ya no está en el catálogo. */
+  /** El contrato lo trae como opcional: visit puede no haber recibido la propiedad. */
   title: string | undefined
   href: string
   cancelling: boolean
