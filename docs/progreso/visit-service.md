@@ -19,7 +19,7 @@
 | feat | Cerrar oportunidades como ganadas o perdidas y emitir LeadClosed | Pendiente |
 | feat | Aplicar las políticas de reserva, venta y alquiler de Listing a las visitas | Pendiente |
 | docs | Contrato: `propertyTitle` opcional en la visita | #111 |
-| feat | Las visitas devuelven `propertyTitle` desde la copia local de la propiedad | este PR |
+| feat | Las visitas devuelven `propertyTitle` desde la copia local de la propiedad | #112 |
 
 ## Pendientes
 
