@@ -42,7 +42,7 @@ Esta es la fuente de verdad de los eventos entre servicios. Si un evento no est�
 | [`VisitScheduled`](visit/visit-scheduled.v1.schema.json) | 1 | visit.visit.events | visit | notification, audit* | El agente programa la visita |
 | [`VisitRejected`](visit/visit-rejected.v1.schema.json) | 1 | visit.visit.events | visit | notification, audit* | El agente rechaza la solicitud, o el sistema la rechaza porque la propiedad se reserv처, vendi처 o alquil처 |
 | [`VisitCancelled`](visit/visit-cancelled.v1.schema.json) | 1 | visit.visit.events | visit | notification, audit* | El cliente o el agente cancela, o el sistema la cancela porque la propiedad se vendi처 o alquil처 |
-| [`VisitCompleted`](visit/visit-completed.v1.schema.json) | 1 | visit.visit.events | visit | audit* | La visita se realiz처 |
+| [`VisitCompleted`](visit/visit-completed.v1.schema.json) | 1 | visit.visit.events | visit | notification, audit* | La visita se realiz처 |
 | [`LeadOpened`](visit/lead-opened.v1.schema.json) | 1 | visit.lead.events | visit | audit* | Una consulta o solicitud de visita abre una oportunidad |
 | [`LeadFollowUpRegistered`](visit/lead-follow-up-registered.v1.schema.json) | 1 | visit.lead.events | visit | audit* | El agente registra un seguimiento de la oportunidad |
 | [`LeadClosed`](visit/lead-closed.v1.schema.json) | 1 | visit.lead.events | visit | listing, audit* | El agente cierra la oportunidad como ganada (`WON`) o perdida (`LOST`) |
@@ -71,6 +71,7 @@ Detalle y reglas en el [ADR 0005](../../docs/adr/0005-realinear-servicios-y-cade
 | `VisitRejected` | `clientId` | `VISIT_REJECTED` |
 | `VisitCancelled` con `actor: AGENT` o `SYSTEM` | `clientId` | `VISIT_CANCELLED` |
 | `VisitCancelled` con `actor: CLIENT` | `agentId` | `VISIT_CANCELLED_BY_CLIENT` |
+| `VisitCompleted` | `clientId` | `VISIT_COMPLETED` |
 
 ## Schemas definidos
 
