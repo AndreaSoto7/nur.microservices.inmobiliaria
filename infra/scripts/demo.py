@@ -3,16 +3,18 @@
 
     python infra/scripts/demo.py seed     # agente, interesado, propiedades con fotos, favoritos y visitas
     python infra/scripts/demo.py chains   # recorre las políticas entre listing y visit y muestra cada reacción
+    python infra/scripts/demo.py balance  # réplicas en Consul y round robin del gateway (--failover: Circuit Breaker)
 
 Solo usa la biblioteca estándar (Python 3.10 o más nuevo). Necesita el stack levantado
 (`docker compose -f infra/docker-compose.yml up -d --build`). Las cuentas de `seed` son de la demo local:
-la contraseña se cambia con la variable `DEMO_PASSWORD`.
+la contraseña se cambia con la variable `DEMO_PASSWORD`. `balance` además usa el CLI de docker.
 """
 
 import argparse
 import json
 import os
 import struct
+import subprocess
 import sys
 import time
 import urllib.error
@@ -23,6 +25,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 DEFAULT_GATEWAY = "http://localhost:8080"
+DEFAULT_CONSUL = "http://127.0.0.1:8500"
 DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "demo-inmobiliaria")
 AGENT_EMAIL = "agente@demo.test"
 CLIENT_EMAIL = "cliente@demo.test"
@@ -47,8 +50,10 @@ class Gateway:
     def __init__(self, base_url: str) -> None:
         self.base_url = base_url.rstrip("/")
 
-    def call(self, method: str, path: str, body=None, token=None, idempotent=False, raw=None) -> Response:
-        headers = {"X-Correlation-Id": f"demo-{uuid.uuid4().hex[:12]}"}
+    def call(
+        self, method: str, path: str, body=None, token=None, idempotent=False, raw=None, correlation_id=None
+    ) -> Response:
+        headers = {"X-Correlation-Id": correlation_id or f"demo-{uuid.uuid4().hex[:12]}"}
         data = None
         if body is not None:
             data, headers["Content-Type"] = json.dumps(body).encode(), "application/json"
@@ -87,7 +92,12 @@ def expect(response: Response, *statuses: int, what: str) -> dict:
     return response.body or {}
 
 
-def wait_until(what: str, check, timeout: float = EVENT_TIMEOUT_SECONDS):
+def wait_until(
+    what: str,
+    check,
+    timeout: float = EVENT_TIMEOUT_SECONDS,
+    hint: str = "Revisa los logs del servicio y la UI de Kafka",
+):
     """Espera una reacción asíncrona (consistencia eventual) y muestra cuánto tardó."""
     started = time.monotonic()
     while time.monotonic() - started < timeout:
@@ -96,7 +106,7 @@ def wait_until(what: str, check, timeout: float = EVENT_TIMEOUT_SECONDS):
             print(f"   ✔ {what} ({time.monotonic() - started:.1f} s)")
             return value
         time.sleep(POLL_INTERVAL_SECONDS)
-    raise DemoError(f"{what}: no pasó en {timeout:.0f} s. Revisa los logs del servicio y la UI de Kafka")
+    raise DemoError(f"{what}: no pasó en {timeout:.0f} s. {hint}")
 
 
 def utc_in(days: int, hour: int) -> str:
@@ -471,15 +481,191 @@ def _with_status(visit: dict, status: str) -> dict | None:
     return visit if visit["status"] == status else None
 
 
+# --- Balanceo, discovery y Circuit Breaker (ADR 0002) ---
+
+# Una ruta pública por servicio, para no depender de un token.
+BALANCE_PATHS = {
+    "listing-service": "/api/v1/catalog/properties?size=1",
+    "identity-service": "/api/v1/auth/.well-known/jwks.json",
+}
+SERVICE_PORTS = {"listing-service": 8002, "identity-service": 8001}
+
+
+@dataclass
+class Replica:
+    container: str
+    address: str
+
+
+def docker(*args: str) -> str:
+    try:
+        result = subprocess.run(["docker", *args], capture_output=True, text=True, encoding="utf-8", check=True)
+    except FileNotFoundError:
+        raise DemoError("balance necesita el CLI de docker en el PATH") from None
+    except subprocess.CalledProcessError as error:
+        raise DemoError(f"docker {' '.join(args)}: {error.stderr.strip()}") from None
+    return result.stdout + result.stderr
+
+
+def consul_addresses(consul_url: str, service: str) -> set[str]:
+    """Lo mismo que consulta el gateway: las réplicas que pasan su health check en Consul."""
+    url = f"{consul_url.rstrip('/')}/v1/health/service/{service}?passing=true"
+    try:
+        with urllib.request.urlopen(url, timeout=5) as response:
+            entries = json.loads(response.read())
+    except urllib.error.URLError as error:
+        raise DemoError(f"No responde Consul en {consul_url} ({error})") from None
+    return {f"{entry['Service']['Address']}:{entry['Service']['Port']}" for entry in entries}
+
+
+def replicas_of(service: str, port: int) -> list[Replica]:
+    """Contenedores del servicio en Compose, con la dirección con la que se registran en Consul."""
+    ids = docker("ps", "-q", "--filter", f"label=com.docker.compose.service={service}").split()
+    if not ids:
+        return []
+    template = "{{.Name}} {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}"
+    replicas = []
+    for line in docker("inspect", "-f", template, *ids).splitlines():
+        name, ip = line.strip().lstrip("/").split(" ")
+        replicas.append(Replica(name, f"{ip}:{port}"))
+    return sorted(replicas, key=lambda replica: replica.container)
+
+
+@dataclass
+class GatewayLog:
+    served: dict[str, tuple[int, str]]  # correlationId → (status, réplica)
+    warnings: list[str]
+
+
+def gateway_log(prefix: str) -> GatewayLog:
+    """Lee el log JSON del gateway: qué réplica atendió cada request de esta corrida, y con qué status."""
+    gateway_ids = docker("ps", "-q", "--filter", "label=com.docker.compose.service=gateway").split()
+    if not gateway_ids:
+        raise DemoError("No encuentro el contenedor del gateway")
+    log = GatewayLog({}, [])
+    for line in docker("logs", "--since", "10m", gateway_ids[0]).splitlines():
+        if prefix not in line:
+            continue
+        entry = json.loads(line)
+        if entry.get("msg") == "request":
+            log.served[entry["correlationId"]] = (entry["status"], entry.get("upstream") or "—")
+        elif entry.get("level") == "WARN":  # por ejemplo, la réplica caída: lleva el mismo correlationId
+            log.warnings.append(f"{entry['correlationId']}  {entry.get('msg')}: {entry.get('error', '')}")
+    return log
+
+
+def burst(gw: Gateway, path: str, count: int, prefix: str) -> list[str]:
+    ids = [f"{prefix}-{index:02d}" for index in range(1, count + 1)]
+    for correlation_id in ids:
+        gw.call("GET", path, correlation_id=correlation_id)
+    return ids
+
+
+def show_burst(gw: Gateway, path: str, count: int, replicas: list[Replica], label: str) -> None:
+    prefix = f"demo-{label}-{uuid.uuid4().hex[:6]}"
+    ids = burst(gw, path, count, prefix)
+    names = {replica.address: replica.container for replica in replicas}
+    log = wait_until(
+        "el gateway registró las requests", lambda: _all_logged(prefix, ids), timeout=10, hint="Revisa el gateway"
+    )
+    per_replica: dict[str, int] = {}
+    for correlation_id in ids:
+        status, address = log.served[correlation_id]
+        name = names.get(address, address)
+        per_replica[name] = per_replica.get(name, 0) + 1
+        print(f"     {correlation_id}  {status}  → {name}")
+    for warning in log.warnings:
+        print(f"     gateway WARN  {warning}")
+    print("   " + " · ".join(f"{name}: {total}" for name, total in sorted(per_replica.items())))
+
+
+def _all_logged(prefix: str, ids: list[str]) -> GatewayLog | None:
+    log = gateway_log(prefix)
+    return log if all(correlation_id in log.served for correlation_id in ids) else None
+
+
+def balance(gw: Gateway, args: argparse.Namespace) -> None:
+    service = args.service
+    replicas = replicas_of(service, SERVICE_PORTS[service])
+    if len(replicas) < 2:
+        raise DemoError(
+            f"Hay {len(replicas)} réplica(s) de {service}. Escala con: "
+            f"docker compose -f infra/docker-compose.yml up -d --scale {service}=3"
+        )
+    print(f"Discovery · réplicas de {service} en Consul ({args.consul})")
+    wait_until(
+        "todas se registraron solas y pasan su health check",
+        lambda: {replica.address for replica in replicas} <= consul_addresses(args.consul, service),
+        timeout=60,
+        hint="Revisa el registro de cada réplica en la UI de Consul",
+    )
+    for replica in replicas:
+        print(f"     {replica.container}  {replica.address}")
+    print(f"\nBalanceo · {3 * len(replicas)} requests por el gateway, en round robin")
+    show_burst(gw, BALANCE_PATHS[service], 3 * len(replicas), replicas, "balance")
+    if args.failover:
+        failover(gw, args, replicas)
+
+
+def failover(gw: Gateway, args: argparse.Namespace, replicas: list[Replica]) -> None:
+    victim = replicas[-1]
+    print(f"\nCircuit Breaker · se cae {victim.container} sin darse de baja (docker kill)")
+    docker("kill", victim.container)
+    try:
+        show_burst(gw, BALANCE_PATHS[args.service], 2 * len(replicas), replicas, "failover")
+        print("   El gateway saca la réplica al primer error de conexión y sigue con las sanas.")
+        if victim.address in consul_addresses(args.consul, args.service):
+            print("   Consul todavía la ve sana: su health check corre cada 10 s. Por eso el gateway")
+            print("   tiene su propio Circuit Breaker, y no depende solo de Consul.")
+    finally:
+        print(f"\nRecuperación · vuelve {victim.container} (docker start)")
+        docker("start", victim.container)
+    wait_until(
+        "arrancó (healthcheck de Docker)",
+        lambda: docker("inspect", "-f", "{{.State.Health.Status}}", victim.container).strip() == "healthy",
+        timeout=180,
+        hint=f"Revisa docker logs {victim.container}",
+    )
+    # Al reiniciar puede tomar otra IP: se vuelve a leer, y se registra sola con el mismo ID.
+    revived = next(r for r in replicas_of(args.service, SERVICE_PORTS[args.service]) if r.container == victim.container)
+    wait_until(
+        f"está registrada en Consul ({revived.address}) y pasa su health check",
+        lambda: revived.address in consul_addresses(args.consul, args.service),
+        timeout=120,
+        hint="Revisa su health check en la UI de Consul",
+    )
+    wait_until(
+        "el gateway le vuelve a mandar tráfico (pasó REPLICA_DOWN_DURATION, 30 s por defecto)",
+        lambda: _receives_traffic(gw, args.service, revived),
+        timeout=60,
+        hint="Revisa REPLICA_DOWN_DURATION y DISCOVERY_REFRESH_INTERVAL del gateway",
+    )
+
+
+def _receives_traffic(gw: Gateway, service: str, replica: Replica) -> bool:
+    prefix = f"demo-recovery-{uuid.uuid4().hex[:6]}"
+    ids = burst(gw, BALANCE_PATHS[service], 3, prefix)
+    time.sleep(POLL_INTERVAL_SECONDS)
+    served = gateway_log(prefix).served
+    return any(served.get(correlation_id, (0, ""))[1] == replica.address for correlation_id in ids)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["seed", "chains"])
+    parser.add_argument("command", choices=["seed", "chains", "balance"])
     parser.add_argument("--gateway", default=DEFAULT_GATEWAY, help=f"URL del gateway (por defecto {DEFAULT_GATEWAY})")
+    parser.add_argument("--consul", default=DEFAULT_CONSUL, help=f"URL de Consul (por defecto {DEFAULT_CONSUL})")
+    parser.add_argument("--service", default="listing-service", choices=sorted(BALANCE_PATHS), help="para balance")
+    parser.add_argument("--failover", action="store_true", help="balance: tumba una réplica y la recupera")
     args = parser.parse_args()
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(encoding="utf-8")
+    gw = Gateway(args.gateway)
     try:
-        (seed if args.command == "seed" else chains)(Gateway(args.gateway))
+        if args.command == "balance":
+            balance(gw, args)
+        else:
+            (seed if args.command == "seed" else chains)(gw)
     except DemoError as error:
         print(f"   ✘ {error}", file=sys.stderr)
         return 1
