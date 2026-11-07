@@ -164,6 +164,7 @@ frontend/src/
 - **`Idempotency-Key` obligatorio en los POST de visit:** `useIdempotencyKey` reutiliza la clave si se reintenta lo mismo, para que un corte de red no duplique la solicitud, y usa otra si cambió el contenido, porque el servicio responde 422. `crypto.randomUUID` no existe fuera de HTTPS o localhost: `newIdempotencyKey` tiene alternativa para cuando se abre por la IP de la red local.
 - El `datetime-local` da hora local: se manda en UTC con `localInputToUtc`.
 - **Mis visitas** (`/my-visits`, solo `CLIENT`): el estado y la página viven en la URL. Una visita solo se cancela si está `SCHEDULED`. El contrato no trae el título de la propiedad: `usePropertyTitles` lo pide al catálogo, y si ya no está publicada muestra "Propiedad no disponible".
+- **Motivos:** las políticas de visit dejan `PROPERTY_RESERVED` o `PROPERTY_UNAVAILABLE` como motivo. `visitReasonLabel` los pasa a español; el motivo que escribe una persona se muestra tal cual.
 
 ## Sesión y tokens
 

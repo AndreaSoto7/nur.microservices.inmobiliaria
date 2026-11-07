@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import type { Visit } from '../../../core/models/visit'
 import { formatDateTime } from '../../../shared/format/date'
+import { visitReasonLabel } from '../../../shared/format/visit'
 
 /** Dumb: las fechas y el motivo de una visita. Lo usan el interesado y el agente. */
 export const VisitDetails = memo(function VisitDetails({ visit }: { visit: Visit }) {
@@ -23,7 +24,7 @@ export const VisitDetails = memo(function VisitDetails({ visit }: { visit: Visit
       {visit.resolutionReason && (
         <>
           <dt>Motivo</dt>
-          <dd>{visit.resolutionReason}</dd>
+          <dd>{visitReasonLabel(visit.resolutionReason)}</dd>
         </>
       )}
     </dl>
