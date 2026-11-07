@@ -119,6 +119,22 @@ func (p *fakePolicies) OnPropertyReserved(_ context.Context, event, agent, prope
 	return p.record("OnPropertyReserved", event, agent, propertyID, actor)
 }
 
+func (p *fakePolicies) OnInquiryReceived(_ context.Context, event, agent, propertyID string) error {
+	return p.record("OnInquiryReceived", event, agent, propertyID)
+}
+
+func (p *fakePolicies) OnVisitScheduled(_ context.Context, event, client, propertyID, visitID string) error {
+	return p.record("OnVisitScheduled", event, client, propertyID, visitID)
+}
+
+func (p *fakePolicies) OnVisitRejected(_ context.Context, event, client, propertyID, visitID string) error {
+	return p.record("OnVisitRejected", event, client, propertyID, visitID)
+}
+
+func (p *fakePolicies) OnVisitCancelled(_ context.Context, event, client, agent, propertyID, visitID, actor string) error {
+	return p.record("OnVisitCancelled", event, client, agent, propertyID, visitID, actor)
+}
+
 type harness struct {
 	reader   *fakeReader
 	dlq      *fakeDLQ
@@ -162,6 +178,18 @@ func TestEachEventReachesItsPolicyAndIsCommitted(t *testing.T) {
 		{"PropertyReserved", segmentio.Message{Topic: "listing.property.events", Value: eventValue("PropertyReserved", 1,
 			fmt.Sprintf(`{"propertyId":%q,"agentId":%q,"status":"RESERVED","actor":"SYSTEM"}`, property, agentID))},
 			policyCall{"OnPropertyReserved", []string{eventID, agentID, property, "SYSTEM"}}},
+		{"InquiryReceived", segmentio.Message{Topic: "visit.inquiry.events", Value: eventValue("InquiryReceived", 1,
+			fmt.Sprintf(`{"inquiryId":%q,"propertyId":%q,"clientId":%q,"agentId":%q}`, visit, property, userID, agentID))},
+			policyCall{"OnInquiryReceived", []string{eventID, agentID, property}}},
+		{"VisitScheduled", segmentio.Message{Topic: "visit.visit.events", Value: eventValue("VisitScheduled", 1,
+			fmt.Sprintf(`{"visitId":%q,"propertyId":%q,"clientId":%q,"agentId":%q,"scheduledStart":"2026-11-07T10:00:00Z","scheduledEnd":"2026-11-07T11:00:00Z"}`, visit, property, userID, agentID))},
+			policyCall{"OnVisitScheduled", []string{eventID, userID, property, visit}}},
+		{"VisitRejected", segmentio.Message{Topic: "visit.visit.events", Value: eventValue("VisitRejected", 1,
+			fmt.Sprintf(`{"visitId":%q,"propertyId":%q,"clientId":%q,"agentId":%q,"actor":"AGENT","reason":"motivo privado"}`, visit, property, userID, agentID))},
+			policyCall{"OnVisitRejected", []string{eventID, userID, property, visit}}},
+		{"VisitCancelled", segmentio.Message{Topic: "visit.visit.events", Value: eventValue("VisitCancelled", 1,
+			fmt.Sprintf(`{"visitId":%q,"propertyId":%q,"clientId":%q,"agentId":%q,"actor":"CLIENT","reason":null}`, visit, property, userID, agentID))},
+			policyCall{"OnVisitCancelled", []string{eventID, userID, agentID, property, visit, "CLIENT"}}},
 	}
 
 	for _, tt := range tests {
@@ -398,7 +426,7 @@ func TestPersonalDataIsNotLogged(t *testing.T) {
 }
 
 func TestTopicsAreTheOnesInTheCatalog(t *testing.T) {
-	want := []string{"identity.user.events", "listing.property.events", "visit.visit.events"}
+	want := []string{"identity.user.events", "listing.property.events", "visit.inquiry.events", "visit.visit.events"}
 
 	if !slices.Equal(Topics(), want) {
 		t.Errorf("Topics() = %v", Topics())

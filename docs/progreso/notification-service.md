@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Avisos de consultas y visitas: programada, rechazada y cancelada para el cliente; consulta recibida y cancelación del cliente para el agente. Probado contra el stack real | este PR |
 | docs | Contrato de los avisos de consultas y visitas: tipos nuevos, consumidores en el catálogo y ADR 0007 | #104 |
 | docs | ADR 0007: se retoma el servicio, con avisos solo dentro de la app. Diseño, base y progreso | #73 |
 | feat | Contrato OpenAPI (listar y marcar como leído) y consumidores en el catálogo de eventos | #74 |
@@ -34,9 +35,9 @@
 - [x] Casos de uso: `NotifyOnEvent`, `MarkNotificationRead` y `ListNotifications`
 - [x] Persistencia y API: listar mis avisos y marcarlos como leídos
 - [x] Consumir `UserRegistered`, `VisitRequested` y `PropertyReserved` (idempotente, con DLQ)
+- [x] Consumir `InquiryReceived`, `VisitScheduled`, `VisitRejected` y `VisitCancelled`
 
 **Depende de otros**
 
-- Schemas de `InquiryReceived`, `VisitScheduled`, `VisitRejected` y `VisitCancelled` ([visit-service.md](visit-service.md)). Cuando existan, se agrega su aviso.
-- Pantalla de avisos ([frontend.md](frontend.md)).
+- Pantalla de avisos: hecha en #95.
 - Ruta `/api/v1/notifications/**` en el gateway: hecha en #71.

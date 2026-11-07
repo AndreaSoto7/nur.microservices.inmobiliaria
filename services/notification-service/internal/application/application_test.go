@@ -157,6 +157,100 @@ func TestPropertyReservedOnlyNotifiesWhenTheSystemReservedIt(t *testing.T) {
 	}
 }
 
+func TestInquiryReceivedNotifiesTheAgent(t *testing.T) {
+	store := newStore()
+
+	err := newPolicies(store).OnInquiryReceived(context.Background(), eventOne, userA, property)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	notification := store.only(t)
+	if notification.RecipientID() != userA || notification.Type() != domain.TypeInquiryReceived {
+		t.Errorf("aviso = %s para %s", notification.Type(), notification.RecipientID())
+	}
+	if notification.PropertyID() != property || notification.VisitID() != "" {
+		t.Errorf("referencias = %s, %s", notification.PropertyID(), notification.VisitID())
+	}
+}
+
+func TestVisitOutcomesNotifyTheClient(t *testing.T) {
+	tests := []struct {
+		name   string
+		notify func(*EventPolicies) error
+		want   domain.NotificationType
+	}{
+		{"scheduled", func(p *EventPolicies) error {
+			return p.OnVisitScheduled(context.Background(), eventOne, userA, property, visit)
+		}, domain.TypeVisitScheduled},
+		{"rejected", func(p *EventPolicies) error {
+			return p.OnVisitRejected(context.Background(), eventOne, userA, property, visit)
+		}, domain.TypeVisitRejected},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := newStore()
+
+			if err := tt.notify(newPolicies(store)); err != nil {
+				t.Fatal(err)
+			}
+
+			notification := store.only(t)
+			if notification.RecipientID() != userA || notification.Type() != tt.want {
+				t.Errorf("aviso = %s para %s", notification.Type(), notification.RecipientID())
+			}
+			if notification.PropertyID() != property || notification.VisitID() != visit {
+				t.Errorf("referencias = %s, %s", notification.PropertyID(), notification.VisitID())
+			}
+		})
+	}
+}
+
+// Avisar a quien canceló no sirve: se avisa a la otra parte.
+func TestVisitCancelledNotifiesTheOtherParty(t *testing.T) {
+	const client, agent = userA, userB
+	tests := []struct {
+		name, actor   string
+		wantRecipient string
+		wantType      domain.NotificationType
+	}{
+		{"client cancelled: the agent is told", "CLIENT", agent, domain.TypeVisitCancelledByClient},
+		{"agent cancelled: the client is told", "AGENT", client, domain.TypeVisitCancelled},
+		{"a policy cancelled: the client is told", ActorSystem, client, domain.TypeVisitCancelled},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			store := newStore()
+
+			err := newPolicies(store).OnVisitCancelled(context.Background(), eventOne, client, agent, property, visit, tt.actor)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			notification := store.only(t)
+			if notification.RecipientID() != tt.wantRecipient || notification.Type() != tt.wantType {
+				t.Errorf("aviso = %s para %s", notification.Type(), notification.RecipientID())
+			}
+		})
+	}
+}
+
+// Un actor que el schema no define no debe avisarle a nadie por error, y tampoco es un mensaje dañado.
+func TestVisitCancelledWithUnknownActorDoesNotNotify(t *testing.T) {
+	store := newStore()
+
+	err := newPolicies(store).OnVisitCancelled(context.Background(), eventOne, userA, userB, property, visit, "OTRO")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(store.items) != 0 {
+		t.Errorf("avisos = %d", len(store.items))
+	}
+}
+
 // Kafka entrega al menos una vez: el mismo evento no debe duplicar el aviso.
 func TestSameEventTwiceCreatesOneNotification(t *testing.T) {
 	store := newStore()
