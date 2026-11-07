@@ -123,6 +123,13 @@ func (p *EventPolicies) OnVisitRejected(ctx context.Context, eventID, clientID, 
 	})
 }
 
+// OnVisitCompleted le avisa al cliente: la marca el agente, y el cliente no vería el cambio sin entrar a revisar.
+func (p *EventPolicies) OnVisitCompleted(ctx context.Context, eventID, clientID, propertyID, visitID string) error {
+	return p.notify.Handle(ctx, NotifyOnEventCommand{
+		EventID: eventID, RecipientID: clientID, Type: domain.TypeVisitCompleted, PropertyID: propertyID, VisitID: visitID,
+	})
+}
+
 // OnVisitCancelled le avisa a la otra parte: quien canceló ya lo sabe. Un actor desconocido no avisa a nadie.
 func (p *EventPolicies) OnVisitCancelled(ctx context.Context, eventID, clientID, agentID, propertyID, visitID, actor string) error {
 	command := NotifyOnEventCommand{EventID: eventID, PropertyID: propertyID, VisitID: visitID}

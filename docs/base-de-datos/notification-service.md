@@ -32,7 +32,7 @@ CREATE TABLE notifications (
     id           uuid         PRIMARY KEY,
     recipient_id uuid         NOT NULL,
     type         varchar(40)  NOT NULL CHECK (type IN ('WELCOME', 'VISIT_REQUESTED', 'PROPERTY_RESERVED', 'INQUIRY_RECEIVED',
-                                      'VISIT_SCHEDULED', 'VISIT_REJECTED', 'VISIT_CANCELLED', 'VISIT_CANCELLED_BY_CLIENT')),
+                                      'VISIT_SCHEDULED', 'VISIT_REJECTED', 'VISIT_CANCELLED', 'VISIT_CANCELLED_BY_CLIENT', 'VISIT_COMPLETED')),
     message      varchar(255) NOT NULL,
     property_id  uuid,
     visit_id     uuid,

@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Aviso de visita realizada para el cliente. Probado contra el stack real: se marcó desde la pantalla del agente | este PR |
 | docs | Contrato del aviso de visita realizada: tipo nuevo, consumidor en el catálogo y ADR 0007 | #107 |
 | feat | Avisos de consultas y visitas: programada, rechazada y cancelada para el cliente; consulta recibida y cancelación del cliente para el agente. Probado contra el stack real | #105 |
 | docs | Contrato de los avisos de consultas y visitas: tipos nuevos, consumidores en el catálogo y ADR 0007 | #104 |
@@ -36,7 +37,7 @@
 - [x] Casos de uso: `NotifyOnEvent`, `MarkNotificationRead` y `ListNotifications`
 - [x] Persistencia y API: listar mis avisos y marcarlos como leídos
 - [x] Consumir `UserRegistered`, `VisitRequested` y `PropertyReserved` (idempotente, con DLQ)
-- [x] Consumir `InquiryReceived`, `VisitScheduled`, `VisitRejected` y `VisitCancelled`
+- [x] Consumir `InquiryReceived`, `VisitScheduled`, `VisitRejected`, `VisitCancelled` y `VisitCompleted`
 
 **Depende de otros**
 
