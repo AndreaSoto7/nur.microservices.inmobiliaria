@@ -46,7 +46,7 @@ def an_outbox_message(published_at: datetime | None) -> OutboxMessage:
     )
 
 
-def test_borra_los_tokens_usados_que_ya_vencieron():
+def test_deletes_used_tokens_that_already_expired():
     expired = a_used_token(NOW - timedelta(hours=2))
 
     purge()
@@ -55,7 +55,7 @@ def test_borra_los_tokens_usados_que_ya_vencieron():
 
 
 @pytest.mark.parametrize("expires_at", [NOW + timedelta(days=1), NOW - timedelta(minutes=30)])
-def test_conserva_los_tokens_usados_vigentes_o_recien_vencidos(expires_at):
+def test_keeps_used_tokens_that_are_valid_or_recently_expired(expires_at):
     # Si se borrara un token todavía vigente, se podría canjear otra vez sin que se detecte el robo.
     kept = a_used_token(expires_at)
 
@@ -64,7 +64,7 @@ def test_conserva_los_tokens_usados_vigentes_o_recien_vencidos(expires_at):
     assert UsedRefreshToken.objects.filter(pk=kept.pk).exists()
 
 
-def test_borra_una_familia_revocada_despues_del_tope_de_la_sesion():
+def test_deletes_a_revoked_family_after_the_session_cap():
     old = a_revoked_family(NOW - SESSION_MAX - timedelta(hours=2))
 
     purge()
@@ -73,7 +73,7 @@ def test_borra_una_familia_revocada_despues_del_tope_de_la_sesion():
 
 
 @pytest.mark.parametrize("age", [timedelta(days=8), SESSION_MAX + timedelta(minutes=30)])
-def test_conserva_una_familia_revocada_mientras_pueda_tener_tokens_vivos(age):
+def test_keeps_a_revoked_family_while_it_may_have_live_tokens(age):
     # Si se borrara antes, un token de la familia revocada volvería a servir.
     kept = a_revoked_family(NOW - age)
 
@@ -82,7 +82,7 @@ def test_conserva_una_familia_revocada_mientras_pueda_tener_tokens_vivos(age):
     assert RevokedRefreshFamily.objects.filter(pk=kept.pk).exists()
 
 
-def test_borra_los_eventos_publicados_hace_mas_de_siete_dias():
+def test_deletes_events_published_more_than_seven_days_ago():
     old = an_outbox_message(NOW - timedelta(days=8))
 
     purge()
@@ -90,7 +90,7 @@ def test_borra_los_eventos_publicados_hace_mas_de_siete_dias():
     assert not OutboxMessage.objects.filter(pk=old.pk).exists()
 
 
-def test_conserva_los_eventos_publicados_recientemente():
+def test_keeps_recently_published_events():
     recent = an_outbox_message(NOW - timedelta(days=1))
 
     purge()
@@ -98,7 +98,7 @@ def test_conserva_los_eventos_publicados_recientemente():
     assert OutboxMessage.objects.filter(pk=recent.pk).exists()
 
 
-def test_nunca_borra_un_evento_pendiente_aunque_sea_viejo():
+def test_never_deletes_a_pending_event_even_if_old():
     pending = an_outbox_message(None)
 
     purge()
@@ -106,7 +106,7 @@ def test_nunca_borra_un_evento_pendiente_aunque_sea_viejo():
     assert OutboxMessage.objects.filter(pk=pending.pk).exists()
 
 
-def test_informa_cuantas_filas_borro():
+def test_reports_how_many_rows_it_deleted():
     a_used_token(NOW - timedelta(hours=2))
     a_revoked_family(NOW - SESSION_MAX - timedelta(hours=2))
     an_outbox_message(NOW - timedelta(days=8))
@@ -115,7 +115,7 @@ def test_informa_cuantas_filas_borro():
     assert purge() == PurgeResult(used_tokens=1, revoked_families=1, outbox_messages=2)
 
 
-def test_un_error_de_base_no_tumba_la_limpieza(monkeypatch):
+def test_database_error_does_not_crash_the_cleanup(monkeypatch):
     def broken(**kwargs):
         raise DatabaseError("sin base")
 
@@ -125,7 +125,7 @@ def test_un_error_de_base_no_tumba_la_limpieza(monkeypatch):
     run_maintenance.purge_once()
 
 
-def test_un_bug_de_programacion_si_tumba_la_limpieza(monkeypatch):
+def test_programming_bug_does_crash_the_cleanup(monkeypatch):
     def broken(**kwargs):
         raise TypeError("bug")
 

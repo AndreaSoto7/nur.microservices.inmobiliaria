@@ -23,7 +23,7 @@ def post(client, body, **headers):
     return client.post(URL, body, content_type="application/json", headers=headers)
 
 
-def test_registra_y_responde_201_con_el_id(client):
+def test_registers_and_responds_201_with_the_id(client):
     response = post(client, a_body())
 
     assert response.status_code == 201
@@ -33,14 +33,14 @@ def test_registra_y_responde_201_con_el_id(client):
     assert saved.roles == ["CLIENT"]
 
 
-def test_registra_un_agente(client):
+def test_registers_an_agent(client):
     response = post(client, a_body(role="AGENT"))
 
     assert response.status_code == 201
     assert UserModel.objects.get(email="ana@example.com").roles == ["AGENT"]
 
 
-def test_guarda_la_contrasena_hasheada(client):
+def test_stores_the_hashed_password(client):
     post(client, a_body())
 
     saved = UserModel.objects.get(email="ana@example.com")
@@ -48,11 +48,11 @@ def test_guarda_la_contrasena_hasheada(client):
     assert saved.check_password("S3gura-2026")
 
 
-def test_la_respuesta_no_incluye_la_contrasena(client):
+def test_response_does_not_include_the_password(client):
     assert "password" not in post(client, a_body()).json()
 
 
-def test_email_repetido_responde_409_sin_revelar_el_email(client):
+def test_duplicate_email_responds_409_without_revealing_the_email(client):
     post(client, a_body())
 
     response = post(client, a_body(email="ANA@example.com"))
@@ -64,7 +64,7 @@ def test_email_repetido_responde_409_sin_revelar_el_email(client):
     assert body["detail"] == "Ya existe un usuario con ese email."
 
 
-def test_campos_faltantes_responden_400_problem_json_con_nombres_en_camel_case(client):
+def test_missing_fields_respond_400_problem_json_with_camel_case_names(client):
     response = post(client, {"email": "ana@example.com"}, **{"X-Correlation-Id": "corr-1"})
 
     assert response.status_code == 400
@@ -79,7 +79,7 @@ def test_campos_faltantes_responden_400_problem_json_con_nombres_en_camel_case(c
 
 
 @pytest.mark.parametrize("password", ["corta", "x" * 200, "x" * 2000])
-def test_contrasena_fuera_de_rango_responde_siempre_user_weak_password(client, password):
+def test_out_of_range_password_always_responds_user_weak_password(client, password):
     response = post(client, a_body(password=password))
 
     assert response.status_code == 400
@@ -87,7 +87,7 @@ def test_contrasena_fuera_de_rango_responde_siempre_user_weak_password(client, p
 
 
 @pytest.mark.parametrize("role", ["ADMIN", "FOO"])
-def test_rol_no_permitido_responde_400_user_role_not_allowed(client, role):
+def test_disallowed_role_responds_400_user_role_not_allowed(client, role):
     response = post(client, a_body(role=role))
 
     assert response.status_code == 400
@@ -95,7 +95,7 @@ def test_rol_no_permitido_responde_400_user_role_not_allowed(client, role):
     assert not UserModel.objects.exists()
 
 
-def test_json_malformado_responde_validation_error_sin_detalles_del_parser(client):
+def test_malformed_json_responds_validation_error_without_parser_details(client):
     response = client.post(URL, "{email: ", content_type="application/json")
 
     assert response.status_code == 400
@@ -104,7 +104,7 @@ def test_json_malformado_responde_validation_error_sin_detalles_del_parser(clien
     assert body["detail"] == "El cuerpo de la petición no es JSON válido."
 
 
-def test_metodo_no_permitido_tiene_titulo_legible(client):
+def test_method_not_allowed_has_a_readable_title(client):
     response = client.get(URL)
 
     assert response.status_code == 405
@@ -121,7 +121,7 @@ class _Capture(logging.Handler):
         self.records.append(record)
 
 
-def test_el_log_de_django_request_lleva_el_correlation_id(client):
+def test_django_request_log_carries_the_correlation_id(client):
     capture = _Capture()
     logger = logging.getLogger("django.request")
     logger.addHandler(capture)
@@ -134,7 +134,7 @@ def test_el_log_de_django_request_lleva_el_correlation_id(client):
 
 
 @pytest.mark.parametrize("override", [{"password": 12345678}, {"fullName": 123}, {"role": 1}])
-def test_los_valores_que_no_son_string_responden_400(client, override):
+def test_non_string_values_respond_400(client, override):
     response = post(client, a_body(**override))
 
     assert response.status_code == 400

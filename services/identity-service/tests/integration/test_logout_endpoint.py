@@ -29,20 +29,20 @@ def post(client, url, token):
     return client.post(url, {"refreshToken": token}, content_type="application/json")
 
 
-def test_responde_204_sin_body(client, tokens):
+def test_responds_204_without_body(client, tokens):
     response = post(client, LOGOUT, tokens["refreshToken"])
 
     assert response.status_code == 204
     assert response.content == b""
 
 
-def test_despues_de_cerrar_sesion_el_refresh_no_sirve(client, tokens):
+def test_refresh_is_rejected_after_logout(client, tokens):
     post(client, LOGOUT, tokens["refreshToken"])
 
     assert post(client, REFRESH, tokens["refreshToken"]).status_code == 401
 
 
-def test_tambien_revoca_los_tokens_que_salieron_de_una_rotacion(client, tokens):
+def test_also_revokes_tokens_issued_by_a_rotation(client, tokens):
     rotated = post(client, REFRESH, tokens["refreshToken"]).json()["refreshToken"]
 
     post(client, LOGOUT, tokens["refreshToken"])
@@ -50,13 +50,13 @@ def test_tambien_revoca_los_tokens_que_salieron_de_una_rotacion(client, tokens):
     assert post(client, REFRESH, rotated).status_code == 401
 
 
-def test_es_idempotente(client, tokens):
+def test_is_idempotent(client, tokens):
     post(client, LOGOUT, tokens["refreshToken"])
 
     assert post(client, LOGOUT, tokens["refreshToken"]).status_code == 204
 
 
-def test_no_cierra_otras_sesiones_del_mismo_usuario(client, tokens):
+def test_does_not_close_other_sessions_of_the_same_user(client, tokens):
     other_session = login(client)
 
     post(client, LOGOUT, tokens["refreshToken"])
@@ -64,18 +64,18 @@ def test_no_cierra_otras_sesiones_del_mismo_usuario(client, tokens):
     assert post(client, REFRESH, other_session["refreshToken"]).status_code == 200
 
 
-def test_un_token_invalido_responde_401(client):
+def test_invalid_token_responds_401(client):
     response = post(client, LOGOUT, "no-es-un-jwt")
 
     assert response.status_code == 401
     assert response.json()["code"] == "AUTH_INVALID_REFRESH_TOKEN"
 
 
-def test_un_access_token_no_cierra_la_sesion(client, tokens):
+def test_access_token_does_not_close_the_session(client, tokens):
     assert post(client, LOGOUT, tokens["accessToken"]).status_code == 401
     assert post(client, REFRESH, tokens["refreshToken"]).status_code == 200
 
 
 @pytest.mark.parametrize("value", ["", 123])
-def test_un_body_mal_formado_responde_400(client, value):
+def test_malformed_body_responds_400(client, value):
     assert post(client, LOGOUT, value).status_code == 400

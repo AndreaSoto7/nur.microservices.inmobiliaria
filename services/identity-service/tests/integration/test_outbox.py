@@ -64,7 +64,7 @@ class FakeProducer:
         return delivered
 
 
-def test_el_evento_cumple_el_contrato():
+def test_event_matches_the_contract():
     token = correlation_id.set("corr-1")
     try:
         integration = to_integration_event(an_event())
@@ -83,18 +83,18 @@ def test_el_evento_cumple_el_contrato():
     assert integration.key == integration.envelope["aggregateId"]
 
 
-def test_sin_request_en_curso_genera_un_correlation_id_valido():
+def test_without_current_request_generates_a_valid_correlation_id():
     envelope = to_integration_event(an_event()).envelope
 
     jsonschema.validate(envelope, json.loads((EVENTS / "envelope.schema.json").read_text()))
 
 
-def test_el_evento_no_lleva_la_contrasena():
+def test_event_does_not_carry_the_password():
     assert "hash" not in json.dumps(to_integration_event(an_event()).envelope)
 
 
 @pytest.mark.django_db
-def test_guardar_un_usuario_escribe_su_evento_en_el_outbox():
+def test_saving_a_user_writes_its_event_to_the_outbox():
     user = a_user()
 
     DjangoUserRepository().add(user)
@@ -108,7 +108,7 @@ def test_guardar_un_usuario_escribe_su_evento_en_el_outbox():
 
 
 @pytest.mark.django_db
-def test_si_falla_el_outbox_tampoco_se_guarda_el_usuario(monkeypatch):
+def test_when_the_outbox_fails_the_user_is_not_saved_either(monkeypatch):
     def broken(event):
         raise RuntimeError("fallo al armar el evento")
 
@@ -121,7 +121,7 @@ def test_si_falla_el_outbox_tampoco_se_guarda_el_usuario(monkeypatch):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_si_falla_el_usuario_tampoco_se_guarda_el_evento(monkeypatch):
+def test_when_the_user_fails_the_event_is_not_saved_either(monkeypatch):
     def broken(user):
         model = to_model(user)
         model.full_name = None  # NOT NULL
@@ -136,7 +136,7 @@ def test_si_falla_el_usuario_tampoco_se_guarda_el_evento(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_el_relay_publica_con_la_clave_del_agregado_y_marca_lo_enviado():
+def test_relay_publishes_with_the_aggregate_key_and_marks_it_sent():
     user = a_user()
     DjangoUserRepository().add(user)
     producer = FakeProducer()
@@ -151,7 +151,7 @@ def test_el_relay_publica_con_la_clave_del_agregado_y_marca_lo_enviado():
 
 
 @pytest.mark.django_db
-def test_el_relay_no_vuelve_a_publicar_lo_enviado():
+def test_relay_does_not_republish_what_was_sent():
     DjangoUserRepository().add(a_user())
     producer = FakeProducer()
     publish_pending(producer, now=NOW)
@@ -161,7 +161,7 @@ def test_el_relay_no_vuelve_a_publicar_lo_enviado():
 
 
 @pytest.mark.django_db
-def test_lo_que_kafka_no_confirma_queda_pendiente_para_reintentar():
+def test_what_kafka_does_not_ack_stays_pending_for_retry():
     user = a_user()
     DjangoUserRepository().add(user)
 
@@ -174,7 +174,7 @@ def test_lo_que_kafka_no_confirma_queda_pendiente_para_reintentar():
 
 
 @pytest.mark.django_db
-def test_el_endpoint_de_registro_deja_el_evento_en_el_outbox(client):
+def test_register_endpoint_leaves_the_event_in_the_outbox(client):
     response = client.post(
         "/api/v1/auth/register",
         {"email": "ana@example.com", "password": "S3gura-2026", "fullName": "Ana"},
@@ -188,7 +188,7 @@ def test_el_endpoint_de_registro_deja_el_evento_en_el_outbox(client):
 
 
 @pytest.mark.django_db
-def test_un_email_repetido_no_deja_un_evento_huerfano():
+def test_duplicate_email_leaves_no_orphan_event():
     repository = DjangoUserRepository()
     repository.add(a_user())
 
@@ -199,7 +199,7 @@ def test_un_email_repetido_no_deja_un_evento_huerfano():
 
 
 @pytest.mark.django_db
-def test_el_comando_publica_lo_pendiente(monkeypatch):
+def test_command_publishes_what_is_pending(monkeypatch):
     from django.core.management import call_command
 
     from identity import container
@@ -214,7 +214,7 @@ def test_el_comando_publica_lo_pendiente(monkeypatch):
     assert OutboxMessage.objects.get().published_at is not None
 
 
-def test_el_productor_solo_informa_lo_que_kafka_confirmo(monkeypatch):
+def test_producer_only_reports_what_kafka_acked(monkeypatch):
     from identity.infrastructure.messaging import kafka_producer
 
     class FakeKafka:
@@ -242,7 +242,7 @@ def test_el_productor_solo_informa_lo_que_kafka_confirmo(monkeypatch):
 
 
 @pytest.mark.parametrize("error", [DatabaseError("sin base"), KafkaException("sin kafka")])
-def test_un_error_de_base_o_de_kafka_no_tumba_el_relay(monkeypatch, error):
+def test_database_or_kafka_error_does_not_crash_the_relay(monkeypatch, error):
     def broken(producer, *, now):
         raise error
 
@@ -252,7 +252,7 @@ def test_un_error_de_base_o_de_kafka_no_tumba_el_relay(monkeypatch, error):
     assert run_outbox_relay.publish_once(FakeProducer()) == 0
 
 
-def test_un_bug_de_programacion_si_tumba_el_relay(monkeypatch):
+def test_programming_bug_does_crash_the_relay(monkeypatch):
     def broken(producer, *, now):
         raise TypeError("bug")
 

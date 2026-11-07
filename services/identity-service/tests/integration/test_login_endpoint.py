@@ -26,7 +26,7 @@ def login(client, email="ana@example.com", password=PASSWORD):
     )
 
 
-def test_login_valido_responde_200_con_el_par_de_tokens(client, registered):
+def test_valid_login_responds_200_with_the_token_pair(client, registered):
     response = login(client)
 
     assert response.status_code == 200
@@ -36,18 +36,18 @@ def test_login_valido_responde_200_con_el_par_de_tokens(client, registered):
     assert body["expiresIn"] == 900
 
 
-def test_la_respuesta_con_tokens_no_se_cachea(client, registered):
+def test_token_response_is_not_cached(client, registered):
     response = login(client)
 
     assert response["Cache-Control"] == "no-store"
     assert response["Pragma"] == "no-cache"
 
 
-def test_el_email_no_distingue_mayusculas(client, registered):
+def test_email_is_case_insensitive(client, registered):
     assert login(client, email="ANA@Example.com").status_code == 200
 
 
-def test_devuelve_el_correlation_id_recibido(client, registered):
+def test_echoes_the_received_correlation_id(client, registered):
     response = client.post(
         LOGIN,
         {"email": "ana@example.com", "password": PASSWORD},
@@ -58,7 +58,7 @@ def test_devuelve_el_correlation_id_recibido(client, registered):
     assert response["X-Correlation-Id"] == "corr-login"
 
 
-def test_el_access_token_se_valida_con_el_jwks_publicado(client, registered):
+def test_access_token_validates_against_the_published_jwks(client, registered):
     token = login(client).json()["accessToken"]
     keys = client.get(JWKS).json()["keys"]
     kid = jwt.get_unverified_header(token)["kid"]
@@ -72,7 +72,7 @@ def test_el_access_token_se_valida_con_el_jwks_publicado(client, registered):
     assert claims["roles"] == ["CLIENT"]
 
 
-def test_contrasena_incorrecta_responde_401_problem_json(client, registered):
+def test_wrong_password_responds_401_problem_json(client, registered):
     response = login(client, password="otra-clave")
 
     assert response.status_code == 401
@@ -91,35 +91,35 @@ def _public_view(response) -> tuple:
     return response.status_code, headers, body
 
 
-def test_email_inexistente_responde_exactamente_lo_mismo(client, registered):
+def test_unknown_email_responds_exactly_the_same(client, registered):
     wrong_password = login(client, password="otra-clave")
     unknown_email = login(client, email="nadie@example.com")
 
     assert _public_view(unknown_email) == _public_view(wrong_password)
 
 
-def test_usuario_inactivo_responde_exactamente_lo_mismo(client, registered):
+def test_inactive_user_responds_exactly_the_same(client, registered):
     wrong_password = login(client, password="otra-clave")
     UserModel.objects.filter(email="ana@example.com").update(is_active=False)
 
     assert _public_view(login(client)) == _public_view(wrong_password)
 
 
-def test_campos_faltantes_responden_400(client):
+def test_missing_fields_respond_400(client):
     response = client.post(LOGIN, {"email": "ana@example.com"}, content_type="application/json")
 
     assert response.status_code == 400
     assert response.json()["code"] == "VALIDATION_ERROR"
 
 
-def test_email_con_formato_invalido_responde_400(client):
+def test_malformed_email_responds_400(client):
     response = login(client, email="no-es-un-email")
 
     assert response.status_code == 400
     assert response.json()["code"] == "VALIDATION_ERROR"
 
 
-def test_el_jwks_es_publico_cacheable_y_solo_trae_la_parte_publica(client):
+def test_jwks_is_public_cacheable_and_only_has_the_public_part(client):
     response = client.get(JWKS)
 
     assert response.status_code == 200
@@ -128,14 +128,14 @@ def test_el_jwks_es_publico_cacheable_y_solo_trae_la_parte_publica(client):
     assert set(key) == {"kty", "use", "alg", "kid", "n", "e"}
 
 
-def test_una_contrasena_que_no_es_string_responde_400(client, registered):
+def test_non_string_password_responds_400(client, registered):
     response = login(client, password=12345678)
 
     assert response.status_code == 400
     assert response.json()["code"] == "VALIDATION_ERROR"
 
 
-def test_un_usuario_con_datos_corruptos_responde_500_y_no_revela_nada(registered):
+def test_user_with_corrupt_data_responds_500_and_reveals_nothing(registered):
     from django.test import Client
 
     UserModel.objects.filter(email="ana@example.com").update(roles=[])
@@ -154,7 +154,7 @@ def test_un_usuario_con_datos_corruptos_responde_500_y_no_revela_nada(registered
 
 
 @pytest.mark.parametrize("password", [PASSWORD, "otra-clave"])
-def test_un_nombre_corrupto_responde_500_y_no_revela_que_la_cuenta_existe(registered, password):
+def test_corrupt_name_responds_500_and_does_not_reveal_the_account_exists(registered, password):
     from django.test import Client
 
     UserModel.objects.filter(email="ana@example.com").update(full_name="")
@@ -169,7 +169,7 @@ def test_un_nombre_corrupto_responde_500_y_no_revela_que_la_cuenta_existe(regist
     assert response.json()["code"] == "INTERNAL_ERROR"
 
 
-def test_el_login_actualiza_un_hash_viejo_sin_cambiar_la_contrasena(client, registered, settings):
+def test_login_updates_an_outdated_hash_without_changing_the_password(client, registered, settings):
     old = UserModel.objects.get(email="ana@example.com").password
     settings.PASSWORD_HASHERS = [
         "django.contrib.auth.hashers.PBKDF2PasswordHasher",

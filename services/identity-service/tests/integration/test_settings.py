@@ -21,7 +21,7 @@ def load_settings(**env: str) -> subprocess.CompletedProcess:
     )
 
 
-def test_la_configuracion_por_defecto_es_valida():
+def test_default_configuration_is_valid():
     assert load_settings().returncode == 0
 
 
@@ -38,14 +38,14 @@ def test_la_configuracion_por_defecto_es_valida():
         {"JWT_AUDIENCE": ""},
     ],
 )
-def test_rechaza_configuraciones_de_jwt_peligrosas(env):
+def test_rejects_dangerous_jwt_configurations(env):
     result = load_settings(**env)
 
     assert result.returncode != 0
     assert "ImproperlyConfigured" in result.stderr
 
 
-def test_service_address_entra_en_allowed_hosts():
+def test_service_address_is_included_in_allowed_hosts():
     # Consul llama a http://<SERVICE_ADDRESS>:8001/health. Sin esto, el check da 400.
     result = subprocess.run(
         [

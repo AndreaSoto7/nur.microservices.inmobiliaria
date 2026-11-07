@@ -12,7 +12,7 @@ def a_record(**extra) -> logging.LogRecord:
     return record
 
 
-def test_el_log_es_json_con_el_correlation_id():
+def test_log_is_json_with_the_correlation_id():
     token = correlation_id.set("corr-log")
     try:
         entry = json.loads(JsonFormatter().format(a_record(method="GET", status=200)))
@@ -24,13 +24,13 @@ def test_el_log_es_json_con_el_correlation_id():
     assert entry["status"] == 200
 
 
-def test_solo_salen_los_campos_de_la_lista_blanca():
+def test_only_allowlisted_fields_are_emitted():
     entry = json.loads(JsonFormatter().format(a_record(password="S3gura-2026")))
 
     assert "password" not in entry
 
 
-def test_health_no_se_loguea(client, caplog):
+def test_health_is_not_logged(client, caplog):
     with caplog.at_level(logging.INFO, logger="identity.request"):
         client.get("/health")
 

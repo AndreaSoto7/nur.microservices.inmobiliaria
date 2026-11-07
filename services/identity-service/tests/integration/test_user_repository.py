@@ -32,7 +32,7 @@ def a_user(email: str = "ana@example.com") -> User:
     )
 
 
-def test_guarda_el_usuario_y_lo_encuentra_por_email():
+def test_saves_the_user_and_finds_it_by_email():
     repository = DjangoUserRepository()
 
     repository.add(a_user())
@@ -41,7 +41,7 @@ def test_guarda_el_usuario_y_lo_encuentra_por_email():
     assert repository.exists_with_email(Email("otro@example.com")) is False
 
 
-def test_un_email_repetido_lanza_error_de_dominio():
+def test_duplicate_email_raises_domain_error():
     repository = DjangoUserRepository()
     repository.add(a_user())
 
@@ -49,7 +49,7 @@ def test_un_email_repetido_lanza_error_de_dominio():
         repository.add(a_user())
 
 
-def test_otra_violacion_de_integridad_no_se_disfraza_de_email_repetido(monkeypatch):
+def test_other_integrity_violation_is_not_disguised_as_duplicate_email(monkeypatch):
     def broken_to_model(user):
         model = to_model(user)
         model.full_name = None  # NOT NULL
@@ -61,7 +61,7 @@ def test_otra_violacion_de_integridad_no_se_disfraza_de_email_repetido(monkeypat
         DjangoUserRepository().add(a_user())
 
 
-def test_el_mapper_ida_y_vuelta_conserva_todos_los_campos():
+def test_mapper_round_trip_keeps_all_fields():
     user = a_user()
 
     restored = to_domain(to_model(user))
@@ -75,7 +75,7 @@ def test_el_mapper_ida_y_vuelta_conserva_todos_los_campos():
     assert restored.registered_at == user.registered_at
 
 
-def test_busca_por_email_y_reconstruye_el_agregado():
+def test_finds_by_email_and_rebuilds_the_aggregate():
     repository = DjangoUserRepository()
     user = a_user()
     repository.add(user)
@@ -87,11 +87,11 @@ def test_busca_por_email_y_reconstruye_el_agregado():
     assert found.password_hash == "pbkdf2_sha256$hash"
 
 
-def test_buscar_un_email_inexistente_devuelve_none():
+def test_finding_an_unknown_email_returns_none():
     assert DjangoUserRepository().get_by_email(Email("nadie@example.com")) is None
 
 
-def test_busca_por_id():
+def test_finds_by_id():
     repository = DjangoUserRepository()
     user = a_user()
     repository.add(user)
@@ -100,7 +100,7 @@ def test_busca_por_id():
     assert repository.get_by_id(uuid4()) is None
 
 
-def test_el_ledger_marca_un_token_usado_una_sola_vez():
+def test_ledger_marks_a_token_used_only_once():
     ledger = DjangoRefreshTokenLedger()
     token = a_refresh_token()
 
@@ -108,7 +108,7 @@ def test_el_ledger_marca_un_token_usado_una_sola_vez():
     assert ledger.mark_used(token) is False
 
 
-def test_el_ledger_revoca_una_familia_de_forma_idempotente():
+def test_ledger_revokes_a_family_idempotently():
     ledger = DjangoRefreshTokenLedger()
     family_id = uuid4()
 
@@ -119,7 +119,7 @@ def test_el_ledger_revoca_una_familia_de_forma_idempotente():
     assert ledger.is_family_revoked(family_id) is True
 
 
-def test_actualiza_solo_el_hash_de_la_contrasena():
+def test_updates_only_the_password_hash():
     repository = DjangoUserRepository()
     user = a_user()
     repository.add(user)
@@ -133,7 +133,7 @@ def test_actualiza_solo_el_hash_de_la_contrasena():
     assert stored.full_name == user.full_name
 
 
-def test_el_rehash_no_pisa_una_contrasena_que_cambio_mientras_tanto():
+def test_rehash_does_not_overwrite_a_password_changed_meanwhile():
     repository = DjangoUserRepository()
     user = a_user()
     repository.add(user)
@@ -145,7 +145,7 @@ def test_el_rehash_no_pisa_una_contrasena_que_cambio_mientras_tanto():
     assert repository.get_by_id(user.id).password_hash == user.password_hash
 
 
-def test_una_falla_al_guardar_el_rehash_no_lanza_error_ni_loguea_el_hash(monkeypatch, caplog):
+def test_failure_saving_the_rehash_neither_raises_nor_logs_the_hash(monkeypatch, caplog):
     repository = DjangoUserRepository()
     user = a_user()
     repository.add(user)

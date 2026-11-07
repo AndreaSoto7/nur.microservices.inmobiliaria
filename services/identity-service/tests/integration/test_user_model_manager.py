@@ -9,7 +9,7 @@ from identity.infrastructure.persistence.models import UserModel
 pytestmark = pytest.mark.django_db
 
 
-def test_crea_un_usuario_que_el_dominio_puede_cargar():
+def test_creates_a_user_the_domain_can_load():
     model = UserModel.objects.create_user("Ana@Example.com", "S3gura-2026", full_name="Ana")
 
     user = to_domain(model)
@@ -19,17 +19,17 @@ def test_crea_un_usuario_que_el_dominio_puede_cargar():
     assert model.check_password("S3gura-2026")
 
 
-def test_create_superuser_crea_un_admin():
+def test_create_superuser_creates_an_admin():
     model = UserModel.objects.create_superuser("root@example.com", "S3gura-2026", full_name="Root")
 
     assert model.roles == ["ADMIN"]
 
 
-def test_rechaza_un_email_que_el_dominio_no_acepta():
+def test_rejects_an_email_the_domain_does_not_accept():
     with pytest.raises(InvalidEmail):
         UserModel.objects.create_user("ana@localhost", "S3gura-2026", full_name="Ana")
 
 
-def test_rechaza_un_usuario_sin_nombre():
+def test_rejects_a_user_without_name():
     with pytest.raises(InvalidFullName):
         UserModel.objects.create_user("ana@example.com", "S3gura-2026")

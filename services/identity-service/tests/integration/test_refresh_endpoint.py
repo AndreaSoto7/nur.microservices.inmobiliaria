@@ -29,7 +29,7 @@ def refresh(client: Client, token):
     return client.post(REFRESH, {"refreshToken": token}, content_type="application/json")
 
 
-def test_entrega_un_par_nuevo_sin_guardar_en_cache(client, tokens):
+def test_returns_a_new_pair_without_caching(client, tokens):
     response = refresh(client, tokens["refreshToken"])
 
     assert response.status_code == 200
@@ -40,7 +40,7 @@ def test_entrega_un_par_nuevo_sin_guardar_en_cache(client, tokens):
     assert body["refreshToken"] != tokens["refreshToken"]
 
 
-def test_el_par_nuevo_pertenece_a_la_misma_familia(client, tokens):
+def test_new_pair_belongs_to_the_same_family(client, tokens):
     body = refresh(client, tokens["refreshToken"]).json()
 
     def fid(token: str) -> str:
@@ -49,7 +49,7 @@ def test_el_par_nuevo_pertenece_a_la_misma_familia(client, tokens):
     assert fid(body["refreshToken"]) == fid(tokens["refreshToken"])
 
 
-def test_reutilizar_un_token_responde_401_y_revoca_el_nuevo(client, tokens):
+def test_reusing_a_token_responds_401_and_revokes_the_new_one(client, tokens):
     newer = refresh(client, tokens["refreshToken"]).json()["refreshToken"]
 
     reused = refresh(client, tokens["refreshToken"])
@@ -60,11 +60,11 @@ def test_reutilizar_un_token_responde_401_y_revoca_el_nuevo(client, tokens):
     assert refresh(client, newer).status_code == 401
 
 
-def test_un_access_token_no_sirve_como_refresh(client, tokens):
+def test_access_token_is_not_accepted_as_refresh(client, tokens):
     assert refresh(client, tokens["accessToken"]).status_code == 401
 
 
-def test_un_token_invalido_responde_lo_mismo_que_uno_reutilizado(client, tokens):
+def test_invalid_token_responds_the_same_as_a_reused_one(client, tokens):
     refresh(client, tokens["refreshToken"])
     reused = refresh(client, tokens["refreshToken"]).json()
     invalid = refresh(client, "no-es-un-jwt").json()
@@ -74,21 +74,21 @@ def test_un_token_invalido_responde_lo_mismo_que_uno_reutilizado(client, tokens)
     assert invalid == reused
 
 
-def test_un_usuario_inactivo_responde_401(client, tokens):
+def test_inactive_user_responds_401(client, tokens):
     UserModel.objects.filter(email="ana@example.com").update(is_active=False)
 
     assert refresh(client, tokens["refreshToken"]).status_code == 401
 
 
 @pytest.mark.parametrize("value", ["", 123, None, "x" * 4097])
-def test_un_body_mal_formado_responde_400(client, value):
+def test_malformed_body_responds_400(client, value):
     response = refresh(client, value)
 
     assert response.status_code == 400
     assert response.json()["code"] == "VALIDATION_ERROR"
 
 
-def test_sin_el_campo_responde_400(client):
+def test_without_the_field_responds_400(client):
     response = client.post(REFRESH, {}, content_type="application/json")
 
     assert response.status_code == 400

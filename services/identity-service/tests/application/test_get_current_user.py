@@ -37,7 +37,7 @@ def user(users) -> User:
     return user
 
 
-def test_devuelve_el_perfil_sin_datos_sensibles(users, user):
+def test_returns_the_profile_without_sensitive_data(users, user):
     profile = GetCurrentUserHandler(users=users).handle(GetCurrentUserQuery(user_id=user.id))
 
     assert profile == UserProfile(
@@ -50,14 +50,14 @@ def test_devuelve_el_perfil_sin_datos_sensibles(users, user):
     assert "secreto" not in repr(profile)
 
 
-def test_un_usuario_que_ya_no_existe_es_un_token_invalido(users):
+def test_user_that_no_longer_exists_is_an_invalid_token(users):
     with pytest.raises(InvalidAccessToken) as error:
         GetCurrentUserHandler(users=users).handle(GetCurrentUserQuery(user_id=uuid4()))
 
     assert error.value.code == "AUTH_INVALID_TOKEN"
 
 
-def test_un_usuario_inactivo_es_un_token_invalido(users, user):
+def test_inactive_user_is_an_invalid_token(users, user):
     users.users[user.email.value] = dataclasses.replace(user, is_active=False)
 
     with pytest.raises(InvalidAccessToken):

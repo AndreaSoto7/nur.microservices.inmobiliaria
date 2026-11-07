@@ -43,7 +43,7 @@ def assert_invalid_token(response) -> None:
     assert response.json()["code"] == "AUTH_INVALID_TOKEN"
 
 
-def test_devuelve_los_datos_del_usuario_autenticado(client, tokens):
+def test_returns_the_authenticated_user_data(client, tokens):
     response = get_me(client, tokens["accessToken"])
 
     assert response.status_code == 200
@@ -55,19 +55,19 @@ def test_devuelve_los_datos_del_usuario_autenticado(client, tokens):
     assert body["registeredAt"].endswith("Z")
 
 
-def test_sin_token_responde_401(client):
+def test_without_token_responds_401(client):
     assert_invalid_token(get_me(client))
 
 
-def test_un_refresh_token_no_sirve_como_access_token(client, tokens):
+def test_refresh_token_is_not_accepted_as_access_token(client, tokens):
     assert_invalid_token(get_me(client, tokens["refreshToken"]))
 
 
-def test_un_token_que_no_es_jwt_responde_401(client):
+def test_non_jwt_token_responds_401(client):
     assert_invalid_token(get_me(client, "no-es-un-jwt"))
 
 
-def test_otro_esquema_de_autenticacion_responde_401(client, tokens):
+def test_other_authentication_scheme_responds_401(client, tokens):
     assert_invalid_token(get_me(client, tokens["accessToken"], scheme="Basic"))
 
 
@@ -85,11 +85,11 @@ def a_token(tokens: dict, **overrides) -> str:
     "overrides",
     [{"aud": "otro"}, {"iss": "otro"}, {"exp": 1_000_000}, {"sub": "no-uuid"}],
 )
-def test_un_token_bien_firmado_con_claims_incorrectos_responde_401(client, tokens, overrides):
+def test_properly_signed_token_with_wrong_claims_responds_401(client, tokens, overrides):
     assert_invalid_token(get_me(client, a_token(tokens, **overrides)))
 
 
-def test_un_token_sin_exp_responde_401(client, tokens):
+def test_token_without_exp_responds_401(client, tokens):
     claims = jwt.decode(tokens["accessToken"], options={"verify_signature": False})
     del claims["exp"]
     token = jwt.encode(
@@ -102,20 +102,20 @@ def test_un_token_sin_exp_responde_401(client, tokens):
     assert_invalid_token(get_me(client, token))
 
 
-def test_un_token_sin_firma_alg_none_responde_401(client, tokens):
+def test_unsigned_alg_none_token_responds_401(client, tokens):
     claims = jwt.decode(tokens["accessToken"], options={"verify_signature": False})
     token = jwt.encode(claims, None, algorithm="none", headers={"typ": "at+jwt"})
 
     assert_invalid_token(get_me(client, token))
 
 
-def test_un_usuario_inactivo_responde_401(client, tokens):
+def test_inactive_user_responds_401(client, tokens):
     UserModel.objects.filter(email="ana@example.com").update(is_active=False)
 
     assert_invalid_token(get_me(client, tokens["accessToken"]))
 
 
-def test_el_ttl_del_access_token_sigue_siendo_de_15_minutos(tokens):
+def test_access_token_ttl_is_still_15_minutes(tokens):
     claims = jwt.decode(tokens["accessToken"], options={"verify_signature": False})
 
     assert timedelta(seconds=claims["exp"] - claims["iat"]) == timedelta(minutes=15)

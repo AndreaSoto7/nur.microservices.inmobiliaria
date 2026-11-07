@@ -29,7 +29,7 @@ def register(role: Role = Role.CLIENT) -> User:
     )
 
 
-def test_registra_un_usuario_activo_con_su_rol():
+def test_registers_an_active_user_with_its_role():
     user = register(role=Role.AGENT)
 
     assert user.email == Email("ana@example.com")
@@ -40,11 +40,11 @@ def test_registra_un_usuario_activo_con_su_rol():
     assert user.registered_at == NOW
 
 
-def test_genera_un_id_distinto_por_usuario():
+def test_generates_a_different_id_per_user():
     assert register().id != register().id
 
 
-def test_registrar_emite_user_registered():
+def test_register_emits_user_registered():
     user = register()
 
     events = user.pull_events()
@@ -60,28 +60,28 @@ def test_registrar_emite_user_registered():
     ]
 
 
-def test_pull_events_vacia_la_lista():
+def test_pull_events_empties_the_list():
     user = register()
     user.pull_events()
 
     assert user.pull_events() == []
 
 
-def test_no_permite_registrarse_como_admin():
+def test_does_not_allow_registering_as_admin():
     with pytest.raises(RoleNotAllowed) as error:
         register(role=Role.ADMIN)
 
     assert error.value.code == "USER_ROLE_NOT_ALLOWED"
 
 
-def test_no_se_pueden_cambiar_los_roles_desde_afuera():
+def test_roles_cannot_be_changed_from_outside():
     user = register()
 
     with pytest.raises(dataclasses.FrozenInstanceError):
         user.roles = frozenset({Role.ADMIN})
 
 
-def test_un_usuario_siempre_tiene_al_menos_un_rol():
+def test_user_always_has_at_least_one_role():
     # Es una invariante, no un error de negocio: si pasa, es un bug o un dato corrupto (500).
     with pytest.raises(ValueError):
         User(
@@ -95,11 +95,11 @@ def test_un_usuario_siempre_tiene_al_menos_un_rol():
         )
 
 
-def test_el_hash_de_la_contrasena_no_aparece_en_repr():
+def test_password_hash_does_not_appear_in_repr():
     assert "hash-de-prueba" not in repr(register())
 
 
-def test_dos_usuarios_son_iguales_si_tienen_el_mismo_id():
+def test_two_users_are_equal_when_they_have_the_same_id():
     user = register()
 
     assert user == User(
@@ -113,27 +113,27 @@ def test_dos_usuarios_son_iguales_si_tienen_el_mismo_id():
     )
 
 
-def test_el_rol_por_defecto_del_autorregistro_es_client():
+def test_default_self_registration_role_is_client():
     assert DEFAULT_SELF_REGISTRATION_ROLE is Role.CLIENT
 
 
-def test_role_parse_acepta_el_nombre_del_rol():
+def test_role_parse_accepts_the_role_name():
     assert Role.parse("AGENT") is Role.AGENT
 
 
-def test_role_parse_rechaza_roles_desconocidos_con_el_texto_del_contrato():
+def test_role_parse_rejects_unknown_roles_with_the_contract_text():
     with pytest.raises(RoleNotAllowed) as error:
         Role.parse("SUPERUSER")
 
     assert error.value.message == "Solo se puede registrar con rol CLIENT o AGENT."
 
 
-def test_full_name_recorta_espacios():
+def test_full_name_trims_spaces():
     assert FullName("  Ana Pérez  ").value == "Ana Pérez"
 
 
 @pytest.mark.parametrize("raw", ["", "   ", "x" * 151])
-def test_full_name_rechaza_nombres_vacios_o_demasiado_largos(raw):
+def test_full_name_rejects_empty_or_too_long_names(raw):
     with pytest.raises(InvalidFullName) as error:
         FullName(raw)
 
@@ -141,37 +141,37 @@ def test_full_name_rechaza_nombres_vacios_o_demasiado_largos(raw):
 
 
 @pytest.mark.parametrize("raw", ["corta", "x" * 129, "x" * 5000])
-def test_rechaza_contrasenas_fuera_de_8_a_128_caracteres(raw):
+def test_rejects_passwords_outside_8_to_128_characters(raw):
     with pytest.raises(WeakPassword) as error:
         RawPassword(raw)
 
     assert error.value.code == "USER_WEAK_PASSWORD"
 
 
-def test_la_contrasena_no_aparece_en_repr():
+def test_password_does_not_appear_in_repr():
     assert "S3gura-2026" not in repr(RawPassword("S3gura-2026"))
 
 
 @pytest.mark.parametrize("value", [None, ""])
-def test_sin_rol_el_autorregistro_usa_client(value):
+def test_self_registration_without_role_uses_client(value):
     assert self_registration_role(value) is Role.CLIENT
 
 
-def test_el_autorregistro_acepta_agent():
+def test_self_registration_accepts_agent():
     assert self_registration_role("AGENT") is Role.AGENT
 
 
 @pytest.mark.parametrize("value", ["ADMIN", "FOO"])
-def test_el_autorregistro_rechaza_admin_y_roles_desconocidos(value):
+def test_self_registration_rejects_admin_and_unknown_roles(value):
     with pytest.raises(RoleNotAllowed):
         self_registration_role(value)
 
 
-def test_un_usuario_activo_puede_autenticarse():
+def test_active_user_can_authenticate():
     register().ensure_can_authenticate()
 
 
-def test_un_usuario_inactivo_no_puede_autenticarse():
+def test_inactive_user_cannot_authenticate():
     user = register()
     inactive = dataclasses.replace(user, is_active=False)
 
@@ -181,7 +181,7 @@ def test_un_usuario_inactivo_no_puede_autenticarse():
     assert error.value.code == "AUTH_INVALID_CREDENTIALS"
 
 
-def test_with_password_hash_devuelve_un_usuario_nuevo_sin_cambiar_el_original():
+def test_with_password_hash_returns_a_new_user_without_changing_the_original():
     user = register()
 
     updated = user.with_password_hash("otro-hash")

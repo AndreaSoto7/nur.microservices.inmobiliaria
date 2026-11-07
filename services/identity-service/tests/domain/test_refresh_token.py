@@ -9,7 +9,7 @@ from tests.application.fakes import InMemoryRefreshTokenLedger, a_refresh_token
 NOW = datetime(2026, 11, 3, tzinfo=UTC)
 
 
-def test_un_token_nuevo_se_consume_y_queda_usado():
+def test_new_token_is_consumed_and_marked_used():
     ledger, token = InMemoryRefreshTokenLedger(), a_refresh_token()
 
     consume(token, ledger, NOW)
@@ -17,7 +17,7 @@ def test_un_token_nuevo_se_consume_y_queda_usado():
     assert token.jti in ledger.used
 
 
-def test_reutilizar_un_token_revoca_toda_su_familia():
+def test_reusing_a_token_revokes_its_whole_family():
     ledger, token = InMemoryRefreshTokenLedger(), a_refresh_token()
     consume(token, ledger, NOW)
 
@@ -28,7 +28,7 @@ def test_reutilizar_un_token_revoca_toda_su_familia():
     assert token.family_id in ledger.revoked
 
 
-def test_un_token_nuevo_de_una_familia_revocada_no_sirve():
+def test_new_token_from_a_revoked_family_is_rejected():
     ledger = InMemoryRefreshTokenLedger()
     first = a_refresh_token()
     newer = a_refresh_token(user_id=first.user_id, family_id=first.family_id)

@@ -29,7 +29,7 @@ def handler(verifier, ledger) -> LogoutHandler:
     return LogoutHandler(verifier=verifier, ledger=ledger, clock=FixedClock(NOW))
 
 
-def test_revoca_la_familia_del_token(handler, verifier, ledger):
+def test_revokes_the_token_family(handler, verifier, ledger):
     token = a_refresh_token()
     verifier.tokens["token"] = token
 
@@ -38,7 +38,7 @@ def test_revoca_la_familia_del_token(handler, verifier, ledger):
     assert token.family_id in ledger.revoked
 
 
-def test_cerrar_una_sesion_ya_cerrada_no_falla(handler, verifier, ledger):
+def test_closing_an_already_closed_session_does_not_fail(handler, verifier, ledger):
     token = a_refresh_token()
     verifier.tokens["token"] = token
 
@@ -48,10 +48,10 @@ def test_cerrar_una_sesion_ya_cerrada_no_falla(handler, verifier, ledger):
     assert token.family_id in ledger.revoked
 
 
-def test_un_token_invalido_lanza_invalid_refresh_token(handler):
+def test_invalid_token_raises_invalid_refresh_token(handler):
     with pytest.raises(InvalidRefreshToken):
         handler.handle(LogoutCommand(refresh_token="basura"))
 
 
-def test_el_comando_no_muestra_el_token_en_repr():
+def test_command_does_not_show_the_token_in_repr():
     assert "secreto" not in repr(LogoutCommand(refresh_token="secreto"))

@@ -44,7 +44,7 @@ def handler(users, hasher) -> AuthenticateUserHandler:
     )
 
 
-def test_con_credenciales_validas_devuelve_el_par_de_tokens(handler, user_id):
+def test_valid_credentials_return_the_token_pair(handler, user_id):
     tokens = handler.handle(AuthenticateUserCommand(email="ana@example.com", password=PASSWORD))
 
     assert tokens == TokenPair(
@@ -55,20 +55,20 @@ def test_con_credenciales_validas_devuelve_el_par_de_tokens(handler, user_id):
     assert tokens.token_type == "Bearer"
 
 
-def test_el_email_no_distingue_mayusculas(handler, user_id):
+def test_email_is_case_insensitive(handler, user_id):
     tokens = handler.handle(AuthenticateUserCommand(email="ANA@Example.com", password=PASSWORD))
 
     assert tokens.access_token == f"access-for-{user_id}"
 
 
-def test_contrasena_incorrecta_da_credenciales_invalidas(handler, user_id):
+def test_wrong_password_gives_invalid_credentials(handler, user_id):
     with pytest.raises(InvalidCredentials) as error:
         handler.handle(AuthenticateUserCommand(email="ana@example.com", password="otra-clave"))
 
     assert error.value.code == "AUTH_INVALID_CREDENTIALS"
 
 
-def test_email_inexistente_da_el_mismo_error_y_mensaje(handler, user_id):
+def test_unknown_email_gives_the_same_error_and_message(handler, user_id):
     with pytest.raises(InvalidCredentials) as wrong_password:
         handler.handle(AuthenticateUserCommand(email="ana@example.com", password="otra-clave"))
     with pytest.raises(InvalidCredentials) as unknown_email:
@@ -77,21 +77,19 @@ def test_email_inexistente_da_el_mismo_error_y_mensaje(handler, user_id):
     assert unknown_email.value.message == wrong_password.value.message
 
 
-def test_email_inexistente_igual_verifica_una_contrasena_para_no_revelarlo_por_tiempo(
-    handler, hasher, user_id
-):
+def test_unknown_email_still_verifies_a_password_to_avoid_timing_leaks(handler, hasher, user_id):
     with pytest.raises(InvalidCredentials):
         handler.handle(AuthenticateUserCommand(email="nadie@example.com", password=PASSWORD))
 
     assert hasher.verify_calls == 1
 
 
-def test_email_con_formato_invalido_da_credenciales_invalidas(handler):
+def test_malformed_email_gives_invalid_credentials(handler):
     with pytest.raises(InvalidCredentials):
         handler.handle(AuthenticateUserCommand(email="no-es-un-email", password=PASSWORD))
 
 
-def test_un_usuario_inactivo_no_obtiene_tokens(handler, users, user_id):
+def test_inactive_user_gets_no_tokens(handler, users, user_id):
     users.users["ana@example.com"] = dataclasses.replace(
         users.users["ana@example.com"], is_active=False
     )
@@ -100,17 +98,17 @@ def test_un_usuario_inactivo_no_obtiene_tokens(handler, users, user_id):
         handler.handle(AuthenticateUserCommand(email="ana@example.com", password=PASSWORD))
 
 
-def test_no_aplica_la_politica_de_contrasenas_al_login(handler, user_id):
+def test_password_policy_is_not_applied_on_login(handler, user_id):
     # Una contraseña corta no es "débil" en el login: simplemente no coincide.
     with pytest.raises(InvalidCredentials):
         handler.handle(AuthenticateUserCommand(email="ana@example.com", password="x"))
 
 
-def test_la_consulta_no_muestra_la_contrasena_en_repr():
+def test_query_does_not_show_the_password_in_repr():
     assert PASSWORD not in repr(AuthenticateUserCommand(email="a@b.com", password=PASSWORD))
 
 
-def test_actualiza_el_hash_si_el_algoritmo_quedo_viejo(handler, users):
+def test_updates_the_hash_when_the_algorithm_is_outdated(handler, users):
     email = "ana@example.com"
     users.users[email] = dataclasses.replace(users.users[email], password_hash=f"viejo::{PASSWORD}")
 
@@ -119,7 +117,7 @@ def test_actualiza_el_hash_si_el_algoritmo_quedo_viejo(handler, users):
     assert users.users[email].password_hash == f"hashed::{PASSWORD}"
 
 
-def test_no_toca_el_hash_si_la_contrasena_es_incorrecta(handler, users):
+def test_does_not_touch_the_hash_when_the_password_is_wrong(handler, users):
     email = "ana@example.com"
     users.users[email] = dataclasses.replace(users.users[email], password_hash=f"viejo::{PASSWORD}")
 
@@ -129,7 +127,7 @@ def test_no_toca_el_hash_si_la_contrasena_es_incorrecta(handler, users):
     assert users.users[email].password_hash == f"viejo::{PASSWORD}"
 
 
-def test_no_toca_el_hash_si_ya_esta_al_dia(handler, users):
+def test_does_not_touch_the_hash_when_it_is_up_to_date(handler, users):
     before = users.users["ana@example.com"]
 
     handler.handle(AuthenticateUserCommand(email="ana@example.com", password=PASSWORD))

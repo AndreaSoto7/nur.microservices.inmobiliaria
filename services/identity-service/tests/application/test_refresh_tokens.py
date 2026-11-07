@@ -64,7 +64,7 @@ def handler(users, verifier, ledger, issuer) -> RefreshTokensHandler:
     )
 
 
-def test_canjea_el_token_por_un_par_nuevo_de_la_misma_familia(
+def test_exchanges_the_token_for_a_new_pair_of_the_same_family(
     handler, verifier, ledger, issuer, user
 ):
     token = a_refresh_token(user_id=user.id)
@@ -77,12 +77,12 @@ def test_canjea_el_token_por_un_par_nuevo_de_la_misma_familia(
     assert issuer.renewed == [token]
 
 
-def test_un_token_desconocido_es_invalido(handler):
+def test_unknown_token_is_invalid(handler):
     with pytest.raises(InvalidRefreshToken):
         handler.handle(RefreshTokensCommand(refresh_token="basura"))
 
 
-def test_reutilizar_un_token_es_invalido_y_no_emite_nada(handler, verifier, issuer, ledger, user):
+def test_reusing_a_token_is_invalid_and_issues_nothing(handler, verifier, issuer, ledger, user):
     token = a_refresh_token(user_id=user.id)
     verifier.tokens["viejo"] = token
     handler.handle(RefreshTokensCommand(refresh_token="viejo"))
@@ -94,7 +94,7 @@ def test_reutilizar_un_token_es_invalido_y_no_emite_nada(handler, verifier, issu
     assert token.family_id in ledger.revoked
 
 
-def test_un_usuario_inexistente_es_invalido(handler, verifier, issuer):
+def test_nonexistent_user_is_invalid(handler, verifier, issuer):
     verifier.tokens["viejo"] = a_refresh_token()
 
     with pytest.raises(InvalidRefreshToken):
@@ -103,7 +103,7 @@ def test_un_usuario_inexistente_es_invalido(handler, verifier, issuer):
     assert issuer.renewed == []
 
 
-def test_un_usuario_inactivo_no_renueva_y_no_gasta_el_token(handler, users, verifier, ledger, user):
+def test_inactive_user_does_not_refresh_nor_spend_the_token(handler, users, verifier, ledger, user):
     token = a_refresh_token(user_id=user.id)
     verifier.tokens["viejo"] = token
     users.users[user.email.value] = dataclasses.replace(user, is_active=False)
@@ -114,5 +114,5 @@ def test_un_usuario_inactivo_no_renueva_y_no_gasta_el_token(handler, users, veri
     assert ledger.used == set()
 
 
-def test_el_comando_no_muestra_el_token_en_repr():
+def test_command_does_not_show_the_token_in_repr():
     assert "secreto" not in repr(RefreshTokensCommand(refresh_token="secreto"))

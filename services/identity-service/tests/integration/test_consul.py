@@ -52,7 +52,7 @@ def a_registration(consul_url: str) -> ServiceRegistration:
     )
 
 
-def test_registra_la_replica_con_su_ip_y_health_check(consul_url):
+def test_registers_the_replica_with_its_ip_and_health_check(consul_url):
     assert register(a_registration(consul_url)) is True
 
     method, path, body = FakeConsul.requests[0]
@@ -66,7 +66,7 @@ def test_registra_la_replica_con_su_ip_y_health_check(consul_url):
     assert body["Check"]["DeregisterCriticalServiceAfter"] == "1m"
 
 
-def test_se_da_de_baja_con_su_id(consul_url):
+def test_deregisters_with_its_id(consul_url):
     deregister(a_registration(consul_url))
 
     assert FakeConsul.requests[0][:2] == (
@@ -75,7 +75,7 @@ def test_se_da_de_baja_con_su_id(consul_url):
     )
 
 
-def test_si_consul_no_responde_reintenta_y_no_tumba_el_servicio():
+def test_retries_when_consul_does_not_respond_and_does_not_crash_the_service():
     waits: list[float] = []
     registration = ServiceRegistration(
         consul_addr="http://127.0.0.1:1", name="identity-service", port=8001, address="10.0.0.5"
@@ -88,7 +88,7 @@ def test_si_consul_no_responde_reintenta_y_no_tumba_el_servicio():
 
 
 @pytest.mark.parametrize("address", ["localhost", "127.0.0.1", "127.0.1.1", "::1"])
-def test_no_permite_registrarse_con_una_direccion_de_loopback(address):
+def test_does_not_allow_registering_with_a_loopback_address(address):
     with pytest.raises(ValueError):
         ServiceRegistration(
             consul_addr="http://consul:8500",
@@ -98,7 +98,7 @@ def test_no_permite_registrarse_con_una_direccion_de_loopback(address):
         )
 
 
-def test_una_respuesta_invalida_de_consul_no_tumba_el_registro():
+def test_invalid_consul_response_does_not_crash_registration():
     # Un servidor que no habla HTTP provoca http.client.HTTPException, que no es OSError.
     server = socket.create_server(("127.0.0.1", 0))
 
@@ -120,7 +120,7 @@ def test_una_respuesta_invalida_de_consul_no_tumba_el_registro():
     server.close()
 
 
-def test_repite_el_registro_de_forma_periodica_hasta_que_lo_detienen(consul_url):
+def test_repeats_registration_periodically_until_stopped(consul_url):
     stop = threading.Event()
     thread = threading.Thread(
         target=keep_registered,
@@ -140,7 +140,7 @@ def test_repite_el_registro_de_forma_periodica_hasta_que_lo_detienen(consul_url)
     assert all(path == "/v1/agent/service/register" for _, path, _ in FakeConsul.requests)
 
 
-def test_espera_antes_del_primer_registro_para_no_cruzarse_con_el_fork(consul_url):
+def test_waits_before_first_registration_to_avoid_racing_the_fork(consul_url):
     # gunicorn crea los workers justo después de when_ready: un hilo activo durante el fork
     # puede dejar a un worker colgado. También le da tiempo al servidor de empezar a escuchar.
     stop = threading.Event()
@@ -162,7 +162,7 @@ def test_espera_antes_del_primer_registro_para_no_cruzarse_con_el_fork(consul_ur
 
 
 @pytest.mark.parametrize("consul_addr", ["http://a..b:8500", "http://[x"])
-def test_una_direccion_mal_formada_no_mata_el_hilo_de_registro(consul_addr):
+def test_malformed_address_does_not_kill_the_registration_thread(consul_addr):
     registration = ServiceRegistration(
         consul_addr=consul_addr, name="identity-service", port=8001, address="10.0.0.5"
     )
@@ -170,7 +170,7 @@ def test_una_direccion_mal_formada_no_mata_el_hilo_de_registro(consul_addr):
     assert register(registration, attempts=1) is False
 
 
-def test_se_detiene_enseguida_aunque_consul_no_responda():
+def test_stops_immediately_even_if_consul_does_not_respond():
     stop = threading.Event()
     registration = ServiceRegistration(
         consul_addr="http://127.0.0.1:1", name="identity-service", port=8001, address="10.0.0.5"
@@ -185,7 +185,7 @@ def test_se_detiene_enseguida_aunque_consul_no_responda():
     assert not thread.is_alive()
 
 
-def test_el_id_por_defecto_incluye_el_hostname(monkeypatch):
+def test_default_id_includes_the_hostname(monkeypatch):
     monkeypatch.setattr("socket.gethostname", lambda: "f3a9c1d2e4b5")
 
     registration = ServiceRegistration.from_env(

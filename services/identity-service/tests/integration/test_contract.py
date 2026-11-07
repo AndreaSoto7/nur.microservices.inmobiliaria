@@ -28,7 +28,7 @@ def a_case(path: str, method: str, operation_id: str):
 
 
 @pytest.mark.parametrize(("path", "method", "operation_id"), [a_case(*op) for op in operations()])
-def test_cada_operacion_del_contrato_tiene_su_ruta(path, method, operation_id):
+def test_every_contract_operation_has_its_route(path, method, operation_id):
     try:
         match = resolve(path)
     except Resolver404:

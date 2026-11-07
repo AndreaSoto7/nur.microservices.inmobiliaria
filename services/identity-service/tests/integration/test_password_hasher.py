@@ -16,20 +16,20 @@ def count_hash_work(monkeypatch) -> list[str]:
     return calls
 
 
-def test_verifica_una_contrasena_correcta():
+def test_verifies_a_correct_password():
     hasher = DjangoPasswordHasher()
 
     assert hasher.verify("S3gura-2026", make_password("S3gura-2026")) is True
 
 
-def test_sin_usuario_igual_paga_el_costo_de_un_hash(monkeypatch):
+def test_without_user_still_pays_the_cost_of_a_hash(monkeypatch):
     calls = count_hash_work(monkeypatch)
 
     assert DjangoPasswordHasher().verify("x", None) is False
     assert calls == ["x"]
 
 
-def test_con_una_contrasena_inutilizable_igual_paga_el_costo_de_un_hash(monkeypatch):
+def test_with_an_unusable_password_still_pays_the_cost_of_a_hash(monkeypatch):
     # Un hash que empieza con "!" (createsuperuser sin contraseña) haría responder al instante
     # y delataría que la cuenta existe.
     unusable = make_password(None)
@@ -45,7 +45,7 @@ PBKDF2_FIRST = [
 ]
 
 
-def test_un_hash_con_otro_algoritmo_necesita_actualizarse(settings):
+def test_hash_with_another_algorithm_needs_update(settings):
     old = make_password("S3gura-2026")  # MD5 en los tests
     settings.PASSWORD_HASHERS = PBKDF2_FIRST
 
@@ -53,18 +53,18 @@ def test_un_hash_con_otro_algoritmo_necesita_actualizarse(settings):
     assert DjangoPasswordHasher().needs_rehash(make_password("S3gura-2026")) is False
 
 
-def test_un_hash_con_menos_iteraciones_necesita_actualizarse(settings):
+def test_hash_with_fewer_iterations_needs_update(settings):
     settings.PASSWORD_HASHERS = PBKDF2_FIRST
     weak = PBKDF2PasswordHasher().encode("S3gura-2026", "salsalsalsal", iterations=1000)
 
     assert DjangoPasswordHasher().needs_rehash(weak) is True
 
 
-def test_un_hash_inutilizable_no_se_actualiza():
+def test_unusable_hash_is_not_updated():
     assert DjangoPasswordHasher().needs_rehash(make_password(None)) is False
 
 
-def test_rehash_genera_un_hash_valido():
+def test_rehash_generates_a_valid_hash():
     hasher = DjangoPasswordHasher()
 
     assert hasher.verify("S3gura-2026", hasher.rehash("S3gura-2026")) is True

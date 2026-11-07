@@ -78,7 +78,7 @@ def decode(token: str, signing_key: SigningKey, audience: str = "inmobiliaria") 
     )
 
 
-def test_el_access_token_lleva_los_claims_del_contrato(issuer, signing_key, user):
+def test_access_token_carries_the_contract_claims(issuer, signing_key, user):
     tokens = issuer.issue(user)
 
     claims = decode(tokens.access_token, signing_key)
@@ -92,7 +92,7 @@ def test_el_access_token_lleva_los_claims_del_contrato(issuer, signing_key, user
     assert tokens.expires_in == 900
 
 
-def test_el_header_del_access_lleva_rs256_el_kid_del_jwks_y_typ_at_jwt(issuer, signing_key, user):
+def test_access_header_carries_rs256_the_jwks_kid_and_typ_at_jwt(issuer, signing_key, user):
     header = jwt.get_unverified_header(issuer.issue(user).access_token)
 
     assert header["alg"] == ALGORITHM == "RS256"
@@ -100,7 +100,7 @@ def test_el_header_del_access_lleva_rs256_el_kid_del_jwks_y_typ_at_jwt(issuer, s
     assert header["typ"] == "at+jwt"
 
 
-def test_el_refresh_token_dura_7_dias_y_no_lleva_datos_personales(issuer, signing_key, user):
+def test_refresh_token_lasts_7_days_and_carries_no_personal_data(issuer, signing_key, user):
     refresh_token = issuer.issue(user).refresh_token
     claims = decode(refresh_token, signing_key, audience="identity-service")
 
@@ -112,13 +112,13 @@ def test_el_refresh_token_dura_7_dias_y_no_lleva_datos_personales(issuer, signin
     assert "email" not in claims
 
 
-def test_el_refresh_token_no_sirve_como_access_token(issuer, signing_key, user):
+def test_refresh_token_is_not_accepted_as_access_token(issuer, signing_key, user):
     # Un servicio que valida aud=inmobiliaria (como pide el contrato) lo rechaza solo.
     with pytest.raises(jwt.InvalidAudienceError):
         decode(issuer.issue(user).refresh_token, signing_key)
 
 
-def test_cada_token_tiene_un_jti_distinto(issuer, signing_key, user):
+def test_each_token_has_a_different_jti(issuer, signing_key, user):
     first, second = issuer.issue(user), issuer.issue(user)
 
     assert (
@@ -127,20 +127,20 @@ def test_cada_token_tiene_un_jti_distinto(issuer, signing_key, user):
     )
 
 
-def test_el_jwks_solo_publica_la_parte_publica(signing_key):
+def test_jwks_only_publishes_the_public_part(signing_key):
     key = jwks([signing_key])["keys"][0]
 
     assert set(key) == {"kty", "use", "alg", "kid", "n", "e"}
     assert (key["kty"], key["use"], key["alg"]) == ("RSA", "sig", "RS256")
 
 
-def test_el_kid_es_estable_para_la_misma_clave():
+def test_kid_is_stable_for_the_same_key():
     pem = a_pem()
 
     assert SigningKey.from_pem(pem).kid == SigningKey.from_pem(pem).kid
 
 
-def test_rechaza_claves_que_no_son_rsa():
+def test_rejects_non_rsa_keys():
     from cryptography.hazmat.primitives.asymmetric import ec
 
     ec_pem = ec.generate_private_key(ec.SECP256R1()).private_bytes(
@@ -153,24 +153,24 @@ def test_rechaza_claves_que_no_son_rsa():
         load_signing_key(pem=ec_pem.decode(), path="")
 
 
-def test_carga_la_clave_desde_un_archivo(tmp_path):
+def test_loads_the_key_from_a_file(tmp_path):
     key_file = tmp_path / "jwt.pem"
     key_file.write_bytes(a_pem())
 
     assert load_signing_key(pem="", path=str(key_file)).kid
 
 
-def test_sin_clave_configurada_lanza_signing_key_unavailable():
+def test_without_configured_key_raises_signing_key_unavailable():
     with pytest.raises(SigningKeyUnavailable):
         load_signing_key(pem="", path="")
 
 
-def test_un_archivo_inexistente_lanza_signing_key_unavailable(tmp_path):
+def test_missing_file_raises_signing_key_unavailable(tmp_path):
     with pytest.raises(SigningKeyUnavailable):
         load_signing_key(pem="", path=str(tmp_path / "no-existe.pem"))
 
 
-def test_una_clave_cifrada_lanza_signing_key_unavailable():
+def test_encrypted_key_raises_signing_key_unavailable():
     encrypted = rsa.generate_private_key(public_exponent=65537, key_size=2048).private_bytes(
         serialization.Encoding.PEM,
         serialization.PrivateFormat.PKCS8,
@@ -181,7 +181,7 @@ def test_una_clave_cifrada_lanza_signing_key_unavailable():
         load_signing_key(pem=encrypted.decode(), path="")
 
 
-def test_una_clave_rsa_de_menos_de_2048_bits_lanza_signing_key_unavailable():
+def test_rsa_key_under_2048_bits_raises_signing_key_unavailable():
     # Clave débil a propósito: se prueba que se rechace.
     small = rsa.generate_private_key(public_exponent=65537, key_size=1024).private_bytes(  # noqa: S505
         serialization.Encoding.PEM,
@@ -198,7 +198,7 @@ def verifier(signing_key) -> PyJwtRefreshTokenVerifier:
     return PyJwtRefreshTokenVerifier(signing_key=signing_key, issuer="identity-service")
 
 
-def test_el_refresh_nuevo_abre_una_familia_y_la_conserva_al_rotar(issuer, verifier, user):
+def test_new_refresh_opens_a_family_and_keeps_it_on_rotation(issuer, verifier, user):
     first = verifier.verify(issuer.issue(user).refresh_token)
     other_login = verifier.verify(issuer.issue(user).refresh_token)
     rotated = verifier.verify(issuer.issue(user, renewing=first).refresh_token)
@@ -208,7 +208,7 @@ def test_el_refresh_nuevo_abre_una_familia_y_la_conserva_al_rotar(issuer, verifi
     assert rotated.jti != first.jti
 
 
-def test_el_verificador_devuelve_los_datos_del_token(issuer, verifier, user):
+def test_verifier_returns_the_token_data(issuer, verifier, user):
     first = verifier.verify(issuer.issue(user).refresh_token)
 
     token = verifier.verify(issuer.issue(user, renewing=first).refresh_token)
@@ -229,14 +229,14 @@ def a_renewable_token(started_at: datetime, user: User) -> RefreshToken:
     )
 
 
-def test_el_login_inicia_la_sesion_con_siete_dias_de_vida(issuer, verifier, user):
+def test_login_starts_the_session_with_seven_days_of_life(issuer, verifier, user):
     token = verifier.verify(issuer.issue(user).refresh_token)
 
     assert token.session_started_at == NOW
     assert token.expires_at == NOW + timedelta(days=7)
 
 
-def test_rotar_conserva_el_inicio_de_la_sesion_y_renueva_siete_dias(issuer, verifier, user):
+def test_rotation_keeps_the_session_start_and_renews_seven_days(issuer, verifier, user):
     started_at = NOW - timedelta(days=10)
 
     token = verifier.verify(
@@ -247,7 +247,7 @@ def test_rotar_conserva_el_inicio_de_la_sesion_y_renueva_siete_dias(issuer, veri
     assert token.expires_at == NOW + timedelta(days=7)
 
 
-def test_rotar_cerca_del_tope_no_pasa_de_treinta_dias_desde_el_login(issuer, verifier, user):
+def test_rotation_near_the_cap_does_not_exceed_thirty_days_from_login(issuer, verifier, user):
     started_at = NOW - timedelta(days=28)
 
     token = verifier.verify(
@@ -257,7 +257,7 @@ def test_rotar_cerca_del_tope_no_pasa_de_treinta_dias_desde_el_login(issuer, ver
     assert token.expires_at == started_at + timedelta(days=30)
 
 
-def test_pasado_el_tope_de_la_sesion_el_refresh_ya_nace_vencido(issuer, verifier, user):
+def test_past_the_session_cap_the_refresh_is_born_expired(issuer, verifier, user):
     started_at = NOW - timedelta(days=31)
 
     refresh_token = issuer.issue(user, renewing=a_renewable_token(started_at, user)).refresh_token
@@ -266,7 +266,7 @@ def test_pasado_el_tope_de_la_sesion_el_refresh_ya_nace_vencido(issuer, verifier
         verifier.verify(refresh_token)
 
 
-def test_el_verificador_rechaza_un_refresh_sin_auth_time(signing_key, verifier, user):
+def test_verifier_rejects_a_refresh_without_auth_time(signing_key, verifier, user):
     claims = {
         "sub": str(user.id),
         "iss": "identity-service",
@@ -287,12 +287,12 @@ def test_el_verificador_rechaza_un_refresh_sin_auth_time(signing_key, verifier, 
         verifier.verify(token)
 
 
-def test_el_verificador_rechaza_un_access_token(issuer, verifier, user):
+def test_verifier_rejects_an_access_token(issuer, verifier, user):
     with pytest.raises(InvalidRefreshToken):
         verifier.verify(issuer.issue(user).access_token)
 
 
-def test_el_verificador_rechaza_un_token_vencido(signing_key, verifier, user):
+def test_verifier_rejects_an_expired_token(signing_key, verifier, user):
     past = NOW - timedelta(days=8)
     old_issuer = PyJwtTokenIssuer(
         signing_key=signing_key,
@@ -308,7 +308,7 @@ def test_el_verificador_rechaza_un_token_vencido(signing_key, verifier, user):
         verifier.verify(old_issuer.issue(user).refresh_token)
 
 
-def test_el_verificador_rechaza_un_token_firmado_con_otra_clave(verifier, signing_key, user):
+def test_verifier_rejects_a_token_signed_with_another_key(verifier, signing_key, user):
     other = PyJwtTokenIssuer(
         signing_key=SigningKey.from_pem(a_pem()),
         issuer="identity-service",
@@ -324,7 +324,7 @@ def test_el_verificador_rechaza_un_token_firmado_con_otra_clave(verifier, signin
 
 
 @pytest.mark.parametrize("missing", ["jti", "sub", "fid", "exp"])
-def test_el_verificador_exige_todos_los_claims(signing_key, verifier, missing):
+def test_verifier_requires_all_claims(signing_key, verifier, missing):
     claims = {
         "sub": str(uuid4()),
         "iss": "identity-service",
@@ -343,7 +343,7 @@ def test_el_verificador_exige_todos_los_claims(signing_key, verifier, missing):
         verifier.verify(token)
 
 
-def test_el_verificador_rechaza_un_sub_que_no_es_uuid(signing_key, verifier):
+def test_verifier_rejects_a_non_uuid_sub(signing_key, verifier):
     claims = {
         "sub": "no-uuid",
         "iss": "identity-service",

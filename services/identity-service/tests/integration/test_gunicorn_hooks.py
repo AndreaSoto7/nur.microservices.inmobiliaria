@@ -74,7 +74,7 @@ def conf_max_exit_seconds() -> int:
     return 2 * REQUEST_TIMEOUT_SECONDS
 
 
-def test_usa_workers_con_hilos_y_deja_margen_frente_a_docker_stop():
+def test_uses_threaded_workers_and_leaves_room_before_docker_stop():
     conf = load_conf()
 
     assert conf.worker_class == "gthread"
@@ -82,7 +82,7 @@ def test_usa_workers_con_hilos_y_deja_margen_frente_a_docker_stop():
     assert conf.graceful_timeout + conf_max_exit_seconds() < 10
 
 
-def test_sin_consul_habilitado_no_registra_y_lo_avisa(monkeypatch):
+def test_without_consul_enabled_does_not_register_and_warns(monkeypatch):
     monkeypatch.setenv("CONSUL_ENABLED", "false")
     conf, server = load_conf(), Server()
 
@@ -92,7 +92,7 @@ def test_sin_consul_habilitado_no_registra_y_lo_avisa(monkeypatch):
     assert any("Consul" in message for message in server.log.messages)
 
 
-def test_con_consul_colgado_when_ready_no_bloquea_y_on_exit_termina(monkeypatch):
+def test_with_hung_consul_when_ready_does_not_block_and_on_exit_finishes(monkeypatch):
     # Un socket que acepta y nunca responde: el puerto cerrado rechazaría al instante y un
     # registro síncrono también pasaría este test.
     hanging = socket.create_server(("127.0.0.1", 0))
@@ -109,7 +109,7 @@ def test_con_consul_colgado_when_ready_no_bloquea_y_on_exit_termina(monkeypatch)
     hanging.close()
 
 
-def test_la_baja_es_lo_ultimo_que_recibe_consul(monkeypatch, consul_url):
+def test_deregistration_is_the_last_thing_consul_receives(monkeypatch, consul_url):
     set_env(monkeypatch, consul_url)
     conf, server = load_conf(), Server()
 
@@ -124,7 +124,7 @@ def test_la_baja_es_lo_ultimo_que_recibe_consul(monkeypatch, consul_url):
     assert FakeConsul.paths[-1].startswith("/v1/agent/service/deregister/")
 
 
-def test_una_direccion_invalida_de_consul_falla_al_arrancar(monkeypatch):
+def test_invalid_consul_address_fails_at_startup(monkeypatch):
     monkeypatch.setenv("CONSUL_ENABLED", "true")
     monkeypatch.setenv("CONSUL_HTTP_ADDR", "consul:8500")
     monkeypatch.setenv("SERVICE_ADDRESS", "10.0.0.5")
