@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| docs | Contrato de la administración de usuarios: listar, cambiar roles, desactivar y activar, solo `ADMIN` | este PR |
 | fix | Re-hash: una falla al guardar no impide el login, y no pisa una contraseña que cambió mientras tanto | #33 |
 | feat | Limpieza periódica de `used_refresh_tokens`, `revoked_refresh_families` y `outbox` (`run_maintenance`) | #32 |
 | feat | Tope de 30 días para la sesión: el refresh guarda `auth_time` y no vence más allá de ese tope | #31 |

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: identity-service
-  version: 1.2.2
+  version: 1.3.0
   description: |
     Registro, autenticación y emisión de JWT RS256 de la Plataforma Inmobiliaria.
 
@@ -22,7 +22,7 @@ tags:
   - name: auth
     description: Registro, login, renovación de tokens, cierre de sesión y claves públicas
   - name: users
-    description: Datos del usuario autenticado
+    description: Datos del usuario autenticado y administración de usuarios (solo `ADMIN`)
   - name: health
     description: Liveness y readiness (no se exponen por el gateway)
 
@@ -335,6 +335,125 @@ paths:
                 code: AUTH_INVALID_TOKEN
                 correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
 
+  /api/v1/users:
+    get:
+      tags: [users]
+      operationId: listUsers
+      summary: Listar los usuarios
+      description: |
+        Solo `ADMIN`. El rol se comprueba en la base en cada petición, no en el claim del token: a un administrador destituido no le sirve un token anterior.
+        Orden: los más recientes primero.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: role, in: query, description: Solo los usuarios con este rol., schema: { $ref: '#/components/schemas/Role' } }
+      responses:
+        '200':
+          description: Página de usuarios.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserPage'
+              example:
+                data:
+                  - id: 6f1c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
+                    email: ana.perez@example.com
+                    fullName: Ana Pérez
+                    roles: [AGENT]
+                    active: true
+                    registeredAt: '2026-10-16T14:30:00Z'
+                page: { number: 1, size: 20, totalElements: 1, totalPages: 1 }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminRequired'
+
+  /api/v1/users/{userId}/roles:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+      - $ref: '#/components/parameters/CorrelationId'
+    put:
+      tags: [users]
+      operationId: assignUserRoles
+      summary: Reemplazar los roles de un usuario
+      description: |
+        Solo `ADMIN`. Reemplaza la lista completa, así que repetirlo deja el mismo resultado.
+        El cambio llega a los demás servicios cuando el usuario renueva su access token, en 15 minutos como máximo.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignUserRolesRequest'
+            example:
+              roles: [CLIENT, AGENT]
+      responses:
+        '204':
+          description: Roles guardados.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminRequired'
+        '404':
+          $ref: '#/components/responses/UserNotFound'
+        '409':
+          $ref: '#/components/responses/OwnAccountProtected'
+
+  /api/v1/users/{userId}/deactivate:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      tags: [users]
+      operationId: deactivateUser
+      summary: Desactivar una cuenta
+      description: |
+        Solo `ADMIN`. El usuario ya no puede iniciar sesión ni renovar sus tokens. Su access token sigue siendo válido en los demás servicios hasta que venza, en 15 minutos como máximo.
+        Desactivar una cuenta ya desactivada no cambia nada y responde 204.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Cuenta desactivada.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminRequired'
+        '404':
+          $ref: '#/components/responses/UserNotFound'
+        '409':
+          $ref: '#/components/responses/OwnAccountProtected'
+
+  /api/v1/users/{userId}/activate:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      tags: [users]
+      operationId: activateUser
+      summary: Volver a activar una cuenta
+      description: Solo `ADMIN`. Activar una cuenta ya activa no cambia nada y responde 204.
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Cuenta activa.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/AdminRequired'
+        '404':
+          $ref: '#/components/responses/UserNotFound'
+
   /api/v1/auth/.well-known/jwks.json:
     get:
       tags: [auth]
@@ -423,6 +542,13 @@ components:
       schema:
         type: string
         pattern: '^[A-Za-z0-9._-]{1,128}$'
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
 
   headers:
     CorrelationId:
@@ -432,6 +558,58 @@ components:
         pattern: '^[A-Za-z0-9._-]{1,128}$'
 
   responses:
+    Unauthorized:
+      description: Falta el access token, es inválido, venció o el usuario está inactivo.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://inmobiliaria.local/problems/auth-invalid-token
+            title: Token inválido
+            status: 401
+            detail: El token de acceso no es válido.
+            code: AUTH_INVALID_TOKEN
+            correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+    AdminRequired:
+      description: El usuario autenticado no tiene el rol `ADMIN`.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://inmobiliaria.local/problems/user-admin-required
+            title: Sin permiso
+            status: 403
+            detail: Solo un administrador puede hacer esto.
+            code: USER_ADMIN_REQUIRED
+            correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+    UserNotFound:
+      description: El usuario no existe.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://inmobiliaria.local/problems/user-not-found
+            title: Usuario no encontrado
+            status: 404
+            detail: El usuario no existe.
+            code: USER_NOT_FOUND
+            correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+    OwnAccountProtected:
+      description: Un administrador no puede quitarse su propio rol `ADMIN` ni desactivar su cuenta. Así el sistema no se queda sin administradores por accidente.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://inmobiliaria.local/problems/user-own-account-protected
+            title: No puedes hacerlo con tu propia cuenta
+            status: 409
+            detail: No puedes quitarte el rol de administrador.
+            code: USER_OWN_ACCOUNT_PROTECTED
+            correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
     RateLimited:
       description: Lo responde el gateway al superar el rate limit.
       content:
@@ -571,6 +749,67 @@ components:
         registeredAt:
           type: string
           format: date-time
+
+    Role:
+      type: string
+      enum: [CLIENT, AGENT, ADMIN]
+
+    AdminUser:
+      type: object
+      description: Lo que un administrador ve de una cuenta. Nunca lleva la contraseña.
+      required: [id, email, fullName, roles, active, registeredAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        active:
+          type: boolean
+        registeredAt:
+          type: string
+          format: date-time
+
+    AdminUserPage:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminUser'
+        page:
+          type: object
+          required: [number, size, totalElements, totalPages]
+          properties:
+            number:
+              type: integer
+              minimum: 1
+            size:
+              type: integer
+            totalElements:
+              type: integer
+            totalPages:
+              type: integer
+
+    AssignUserRolesRequest:
+      type: object
+      required: [roles]
+      additionalProperties: false
+      properties:
+        roles:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Role'
 
     TokenPair:
       type: object
