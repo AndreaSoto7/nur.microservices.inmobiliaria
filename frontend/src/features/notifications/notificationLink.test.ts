@@ -15,7 +15,7 @@ const notice = (type: string, propertyId: string | null = PROPERTY_ID): AppNotif
 })
 
 describe('notificationLink', () => {
-  it.each(['VISIT_SCHEDULED', 'VISIT_REJECTED', 'VISIT_CANCELLED'])(
+  it.each(['VISIT_SCHEDULED', 'VISIT_REJECTED', 'VISIT_CANCELLED', 'VISIT_COMPLETED'])(
     'sends the client to their visits on %s',
     (type) => {
       expect(notificationLink(notice(type))).toEqual({
