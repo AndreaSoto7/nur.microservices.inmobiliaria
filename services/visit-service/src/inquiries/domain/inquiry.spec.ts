@@ -12,7 +12,7 @@ const input = {
 };
 
 describe('Inquiry', () => {
-  it('normaliza el mensaje y el nombre, y admite omitir el teléfono', () => {
+  it('normalizes the message and the name, and allows omitting the phone', () => {
     expect(Inquiry.receive(input)).toMatchObject({
       contactName: 'María Pérez',
       message: '¿Aceptan mascotas?',
@@ -24,7 +24,7 @@ describe('Inquiry', () => {
     { message: ' \n\t' },
     { contactName: 'a'.repeat(151) },
     { contactPhone: '123\0' },
-  ])('rechaza texto inválido: %o', (invalid) => {
+  ])('rejects invalid text: %o', (invalid) => {
     expect(() => Inquiry.receive({ ...input, ...invalid })).toThrow(
       InvalidInquiryError,
     );

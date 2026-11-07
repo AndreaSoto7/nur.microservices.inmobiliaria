@@ -5,7 +5,7 @@ import type { App } from 'supertest/types.js';
 import { AppModule } from '../src/app.module.js';
 import { VisitDatabase } from '../src/database/visit-database.js';
 
-describe('Salud de Visit', () => {
+describe('Visit health', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
@@ -23,10 +23,10 @@ describe('Salud de Visit', () => {
     await app.close();
   });
 
-  it('mantiene liveness mientras PostgreSQL no responde', () =>
+  it('keeps liveness while PostgreSQL does not respond', () =>
     request(app.getHttpServer()).get('/health').expect(200, { status: 'UP' }));
 
-  it('marca readiness como DOWN mientras PostgreSQL no responde', () =>
+  it('marks readiness as DOWN while PostgreSQL does not respond', () =>
     request(app.getHttpServer())
       .get('/health/ready')
       .expect(503, { status: 'DOWN' }));

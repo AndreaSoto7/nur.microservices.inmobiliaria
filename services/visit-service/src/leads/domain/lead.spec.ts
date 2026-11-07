@@ -3,7 +3,7 @@ import { InvalidLeadNoteError, Lead, LeadNotOpenError } from './lead.js';
 describe('Lead', () => {
   const date = new Date('2026-11-05T16:00:00Z');
 
-  it('agrega la nota normalizada a la oportunidad abierta', () => {
+  it('adds the normalized note to the open lead', () => {
     const lead = new Lead('lead', 'property', 'client', 'agent', 'OPEN');
     expect(
       lead.registerFollowUp('note', '  Se llamó al cliente.  ', date),
@@ -17,7 +17,7 @@ describe('Lead', () => {
   });
 
   it.each(['WON', 'LOST'] as const)(
-    'cierra como %s y bloquea nuevos seguimientos',
+    'closes as %s and blocks new follow-ups',
     (outcome) => {
       const lead = new Lead('lead', 'property', 'client', 'agent', 'OPEN');
 
@@ -34,13 +34,13 @@ describe('Lead', () => {
     },
   );
 
-  it('deja abierta la oportunidad si la nota de cierre no es válida', () => {
+  it('keeps the lead open when the closing note is invalid', () => {
     const lead = new Lead('lead', 'property', 'client', 'agent', 'OPEN');
     expect(() => lead.close('WON', date, '  ')).toThrow(InvalidLeadNoteError);
     expect(lead.status).toBe('OPEN');
   });
 
-  it('impide registrar notas cuando la oportunidad está cerrada', () => {
+  it('prevents adding notes when the lead is closed', () => {
     const lead = new Lead('lead', 'property', 'client', 'agent', 'CLOSED');
     expect(() =>
       lead.registerFollowUp('note', 'Se llamó al cliente.', date),
@@ -48,7 +48,7 @@ describe('Lead', () => {
   });
 
   it.each([' \t', 'a'.repeat(2001), 'Nota\0'])(
-    'rechaza notas inválidas',
+    'rejects invalid notes',
     (note) => {
       const lead = new Lead('lead', 'property', 'client', 'agent', 'OPEN');
       expect(() => lead.registerFollowUp('note', note, date)).toThrow(

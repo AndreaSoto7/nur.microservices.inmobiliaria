@@ -62,7 +62,7 @@ integration('Listing → Kafka → Visit', () => {
     else process.env.DATABASE_URL = previousUrl;
   });
 
-  it('actualiza el estado local y conserva el evento más reciente aunque Kafka reentregue mensajes', async () => {
+  it('updates the local state and keeps the most recent event even if Kafka redelivers messages', async () => {
     const propertyId = randomUUID();
     const agentId = randomUUID();
     const common = { propertyId, agentId };
@@ -163,7 +163,7 @@ integration('Listing → Kafka → Visit', () => {
     );
   }, 15_000);
 
-  it('publica las filas pendientes con su clave y registra la confirmación de Kafka', async () => {
+  it('publishes pending rows with their key and records the Kafka acknowledgement', async () => {
     if (!broker) throw new Error('Falta Kafka de prueba');
     const eventId = randomUUID();
     const visitId = randomUUID();
@@ -234,7 +234,7 @@ integration('Listing → Kafka → Visit', () => {
     ['PropertySold', 'SOLD', 'PROPERTY_UNAVAILABLE', 'CANCELLED'],
     ['PropertyRented', 'RENTED', 'PROPERTY_UNAVAILABLE', 'CANCELLED'],
   ])(
-    'aplica %s sin repetir cambios al reentregar el mensaje',
+    'applies %s without repeating changes when the message is redelivered',
     async (eventType, status, reason, futureState) => {
       const propertyId = randomUUID();
       const agentId = randomUUID();
@@ -414,7 +414,7 @@ integration('Listing → Kafka → Visit', () => {
     15_000,
   );
 
-  it('ignora una reserva antigua si la propiedad ya volvió a estar publicada', async () => {
+  it('ignores an old reservation when the property is already published again', async () => {
     const propertyId = randomUUID();
     const agentId = randomUUID();
     const visitId = randomUUID();

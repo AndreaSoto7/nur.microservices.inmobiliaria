@@ -20,7 +20,7 @@ describe('Visit', () => {
     };
   }
 
-  it('crea una visita pendiente vinculada por ID a la propiedad', () => {
+  it('creates a pending visit linked by ID to the property', () => {
     const input = buildRequest();
 
     const visit = Visit.request(input);
@@ -29,7 +29,7 @@ describe('Visit', () => {
   });
 
   it.each(['2026-11-04T15:00:00Z', '2026-11-05T15:00:00Z', 'inválida'])(
-    'rechaza la fecha propuesta %s',
+    'rejects the proposed date %s',
     (proposedAt) => {
       const input = { ...buildRequest(), proposedAt: new Date(proposedAt) };
 
@@ -37,13 +37,13 @@ describe('Visit', () => {
     },
   );
 
-  it('rechaza una fecha de solicitud inválida', () => {
+  it('rejects an invalid request date', () => {
     const input = { ...buildRequest(), requestedAt: new Date(NaN) };
 
     expect(() => Visit.request(input)).toThrow(InvalidProposedVisitDateError);
   });
 
-  it('rechaza la visita pendiente y normaliza el motivo', () => {
+  it('rejects the pending visit and normalizes the reason', () => {
     const visit = Visit.request(buildRequest());
 
     expect(visit.reject('  Horario no disponible.  ')).toBe(
@@ -54,7 +54,7 @@ describe('Visit', () => {
   });
 
   it.each(['', ' \t\n', 'a'.repeat(501)])(
-    'no rechaza una visita si el motivo está vacío o es demasiado largo',
+    'does not reject a visit when the reason is empty or too long',
     (reason) => {
       const visit = Visit.request(buildRequest());
 
@@ -65,7 +65,7 @@ describe('Visit', () => {
     },
   );
 
-  it('no rechaza una visita ya programada', () => {
+  it('does not reject an already scheduled visit', () => {
     const input = buildRequest();
     const visit = Visit.restore({ ...input, status: 'SCHEDULED' });
 
@@ -75,7 +75,7 @@ describe('Visit', () => {
     expect(visit.status).toBe('SCHEDULED');
   });
 
-  it('permite cancelar justo antes de la hora acordada', () => {
+  it('allows cancelling right before the agreed time', () => {
     const input = buildRequest();
     const visit = Visit.request(input);
     visit.schedule(input.proposedAt, input.requestedAt);
@@ -85,7 +85,7 @@ describe('Visit', () => {
   });
 
   it.each([0, 1])(
-    'bloquea la cancelación al inicio o después (desfase %i)',
+    'blocks cancellation at the start or later (offset %i)',
     (offset) => {
       const input = buildRequest();
       const scheduledStart = input.proposedAt;
@@ -102,14 +102,14 @@ describe('Visit', () => {
     },
   );
 
-  it('no cancela una solicitud pendiente', () => {
+  it('does not cancel a pending request', () => {
     const visit = Visit.request(buildRequest());
 
     expect(() => visit.cancel(new Date())).toThrow(VisitNotScheduledError);
     expect(visit.status).toBe('REQUESTED');
   });
 
-  it('completa al llegar la hora de fin, pero no mientras el horario sigue en curso', () => {
+  it('completes when the end time arrives, but not while the slot is still in progress', () => {
     const input = buildRequest();
     const visit = Visit.request(input);
     const { end } = visit.schedule(input.proposedAt, input.requestedAt);
@@ -125,7 +125,7 @@ describe('Visit', () => {
   });
 
   it.each(['REQUESTED', 'CANCELLED', 'REJECTED'] as const)(
-    'no completa una visita en estado %s',
+    'does not complete a visit in status %s',
     (status) => {
       const input = buildRequest();
       const visit = Visit.restore({
@@ -141,7 +141,7 @@ describe('Visit', () => {
     },
   );
 
-  it('preserva la fecha propuesta aunque se muten las fechas expuestas', () => {
+  it('preserves the proposed date even if the exposed dates are mutated', () => {
     const input = buildRequest();
     const originalDate = input.proposedAt.toISOString();
     const visit = Visit.request(input);

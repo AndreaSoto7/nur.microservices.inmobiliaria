@@ -137,7 +137,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     else process.env.JWT_JWKS_URL = previousJwksUrl;
   });
 
-  it('crea una sola visita y oportunidad, repite el resultado y protege su lectura', async () => {
+  it('creates a single visit and lead, replays the result and protects its reading', async () => {
     const key = randomUUID();
     const http = request(app.getHttpServer());
     const create = (payload: unknown, requestKey = key) =>
@@ -195,7 +195,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     ]);
   });
 
-  it('programa una sola solicitud en un horario disputado y permite una visita consecutiva', async () => {
+  it('schedules only one request in a contested slot and allows a back-to-back visit', async () => {
     const ids = [randomUUID(), randomUUID()];
     for (const id of ids) {
       await database.query(
@@ -289,7 +289,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     expect(validator.validate(schema, events[0].envelope.payload)).toBe(true);
   });
 
-  it('rechaza una visita pendiente una sola vez y deja el motivo visible al cliente', async () => {
+  it('rejects a pending visit only once and leaves the reason visible to the client', async () => {
     const id = randomUUID();
     const visitPropertyId = pausedPropertyId;
     await database.query(
@@ -396,7 +396,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     expect(validator.validate(schema, events[0].envelope.payload)).toBe(true);
   });
 
-  it('permite cancelar a los participantes, libera el horario y registra un evento por visita', async () => {
+  it('lets participants cancel, frees the slot and records one event per visit', async () => {
     const start = new Date(Date.now() + 96 * 3600_000);
     const otherStart = new Date(start.getTime() + 3 * 3600_000);
     const past = new Date(Date.now() - 1000);
@@ -533,7 +533,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     );
   });
 
-  it('completa solo una visita del agente cuyo horario terminó y registra la hora una vez', async () => {
+  it('completes only an agent visit whose slot ended and records the time once', async () => {
     const pastEnd = new Date(Date.now() - 2 * 3600_000);
     const futureEnd = new Date(Date.now() + 7 * 86_400_000);
     const ids = [randomUUID(), randomUUID()];
@@ -635,7 +635,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     ).toBe(true);
   });
 
-  it('registra consultas y una sola oportunidad; solo los participantes pueden leer el contacto', async () => {
+  it('records inquiries and a single lead; only participants can read the contact', async () => {
     const http = request(app.getHttpServer());
     const inquiryPath = '/api/v1/inquiries';
     const payload = {
@@ -771,7 +771,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     });
   });
 
-  it('pagina y ordena la bandeja de consultas sin exponer las de otro agente', async () => {
+  it("paginates and sorts the inquiry inbox without exposing another agent's inquiries", async () => {
     const ids = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
     const tied = ids.slice(0, 2).sort();
     const date = new Date(Date.now() - 60_000);
@@ -840,7 +840,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     await list(agentToken, { sort: 'createdAt,desc; DROP' }).expect(400);
   });
 
-  it('lista visitas por rol y aplica los filtros al contenido y al total', async () => {
+  it('lists visits by role and applies the filters to the content and the total', async () => {
     const ids = [randomUUID(), randomUUID(), randomUUID()];
     const requestedAt = new Date(Date.now() - 60_000);
     const scheduledStart = new Date(Date.now() + 10 * 86_400_000);
@@ -917,7 +917,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     }
   });
 
-  it('lista oportunidades propias y registra una sola nota sin publicarla en el evento', async () => {
+  it('lists own leads and records a single note without publishing it in the event', async () => {
     const ids = [randomUUID(), randomUUID(), randomUUID()];
     const [open, closed, foreign] = ids;
     const openedAt = new Date(Date.now() - 60_000);
@@ -1077,7 +1077,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     ).toBe(true);
   });
 
-  it('cierra oportunidades como ganadas o perdidas sin duplicar el evento ni aceptar más notas', async () => {
+  it('closes leads as won or lost without duplicating the event or accepting more notes', async () => {
     const ids = [randomUUID(), randomUUID()];
     const [wonId, lostId] = ids;
     await database.query(
@@ -1206,7 +1206,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     );
   });
 
-  it('valida credenciales, rol, formato, fecha y estado de la propiedad', async () => {
+  it('validates credentials, role, format, date and property status', async () => {
     const http = request(app.getHttpServer());
     await http.get('/health/ready').expect(200, { status: 'UP' });
     await http
