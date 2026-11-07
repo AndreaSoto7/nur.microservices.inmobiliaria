@@ -15,16 +15,26 @@ type NotificationType string
 
 // Tipos de aviso (ADR 0007).
 const (
-	TypeWelcome          NotificationType = "WELCOME"
-	TypeVisitRequested   NotificationType = "VISIT_REQUESTED"
-	TypePropertyReserved NotificationType = "PROPERTY_RESERVED"
+	TypeWelcome                NotificationType = "WELCOME"
+	TypeVisitRequested         NotificationType = "VISIT_REQUESTED"
+	TypePropertyReserved       NotificationType = "PROPERTY_RESERVED"
+	TypeInquiryReceived        NotificationType = "INQUIRY_RECEIVED"
+	TypeVisitScheduled         NotificationType = "VISIT_SCHEDULED"
+	TypeVisitRejected          NotificationType = "VISIT_REJECTED"
+	TypeVisitCancelled         NotificationType = "VISIT_CANCELLED"
+	TypeVisitCancelledByClient NotificationType = "VISIT_CANCELLED_BY_CLIENT"
 )
 
 // El texto es fijo por tipo: así un aviso nunca lleva datos personales.
 var messages = map[NotificationType]string{
-	TypeWelcome:          "Te damos la bienvenida a la plataforma.",
-	TypeVisitRequested:   "Recibiste una nueva solicitud de visita.",
-	TypePropertyReserved: "Tu propiedad quedó reservada porque ganaste una oportunidad.",
+	TypeWelcome:                "Te damos la bienvenida a la plataforma.",
+	TypeVisitRequested:         "Recibiste una nueva solicitud de visita.",
+	TypePropertyReserved:       "Tu propiedad quedó reservada porque ganaste una oportunidad.",
+	TypeInquiryReceived:        "Recibiste una nueva consulta.",
+	TypeVisitScheduled:         "Tu visita quedó programada.",
+	TypeVisitRejected:          "Tu solicitud de visita fue rechazada.",
+	TypeVisitCancelled:         "Tu visita fue cancelada.",
+	TypeVisitCancelledByClient: "Un interesado canceló su visita.",
 }
 
 var (

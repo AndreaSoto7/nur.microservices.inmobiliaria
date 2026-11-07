@@ -78,7 +78,6 @@
   - Un consumidor de `identity.user.events` aunque no se construya audit.
 - **Se pierde o se asume:**
   - Un servicio y una base más en el compose. Quien ya tenga `infra/.env` debe agregar `NOTIFICATION_DB_PASSWORD`.
-  - Mientras visit no publique sus schemas, solo llegan los avisos marcados como "se implementa ahora".
   - Arranca desde el principio de cada topic, como los demás consumidores: con una base vacía crea los avisos de los eventos que sigan en Kafka. Es inofensivo, porque no se envía nada hacia afuera.
 - **Hay que hacer ahora:**
   - [x] `CLAUDE.md`, `docs/enunciado.md`, `docs/progreso/` y `docs/base-de-datos/` (este PR).

@@ -30,7 +30,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 - `MarkReadBy` es idempotente: marcar dos veces conserva la primera fecha.
 - `MarkReadBy` lo pide solo su destinatario. A cualquier otro le responde `ErrNotificationNotFound` (404): no se revela que existe.
 
-**Tipos (`NotificationType`):** `WELCOME`, `VISIT_REQUESTED` y `PROPERTY_RESERVED`.
+**Tipos (`NotificationType`):** `WELCOME`, `VISIT_REQUESTED`, `PROPERTY_RESERVED`, `INQUIRY_RECEIVED`, `VISIT_SCHEDULED`, `VISIT_REJECTED`, `VISIT_CANCELLED` y `VISIT_CANCELLED_BY_CLIENT`.
 
 ## Casos de uso
 
@@ -42,20 +42,25 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 
 ## Eventos que consume
 
-Consumer group `notification-service`, desde el principio de cada topic.
+Consumer group `notification-service`, desde el principio de cada topic: `identity.user.events`, `listing.property.events`, `visit.inquiry.events` y `visit.visit.events`.
 
 | Evento (`v1`) | Destinatario | Aviso |
 |---|---|---|
 | `UserRegistered` | `userId` | `WELCOME` |
 | `VisitRequested` | `agentId` | `VISIT_REQUESTED` |
 | `PropertyReserved` con `actor: SYSTEM` | `agentId` | `PROPERTY_RESERVED` |
+| `InquiryReceived` | `agentId` | `INQUIRY_RECEIVED` |
+| `VisitScheduled` | `clientId` | `VISIT_SCHEDULED` |
+| `VisitRejected` | `clientId` | `VISIT_REJECTED` |
+| `VisitCancelled` con `actor: AGENT` o `SYSTEM` | `clientId` | `VISIT_CANCELLED` |
+| `VisitCancelled` con `actor: CLIENT` | `agentId` | `VISIT_CANCELLED_BY_CLIENT` |
 
 - **Idempotente:** el aviso y el `eventId` en `processed_events` se guardan en la misma transacción.
-- **Anti-corruption layer:** `infrastructure/kafka` traduce el evento a un comando propio. Del payload de `UserRegistered` solo lee `userId`: nunca el email ni el nombre.
+- **Anti-corruption layer:** `infrastructure/kafka` traduce el evento a un comando propio. Del payload de `UserRegistered` solo lee `userId`, nunca el email ni el nombre. De una visita no lee el motivo: el texto del aviso es fijo.
 - **Se ignoran,** sin fallar, los `eventType` y las versiones desconocidas.
 - **Errores técnicos:** 3 reintentos con backoff, después `<topic>.dlq`, y sigue. Un mensaje ilegible, o con datos inválidos (`application.IsPermanent`), va directo a la DLQ.
 - **DLQ:** copia el mensaje entero, con el motivo, el topic, la partición y el offset en los headers. Por eso `identity.user.events.dlq` también lleva email y nombre, con la misma retención por defecto que su topic. El motivo es fijo: el detalle del error va solo al log.
-- **Pendientes:** los eventos que esperan el schema de visit están en el ADR 0007.
+- **`VisitCancelled` avisa a la otra parte:** quien canceló ya lo sabe. Un `actor` desconocido no avisa a nadie.
 
 ## Estructura
 

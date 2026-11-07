@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/AndreaSoto7/nur.microservices.inmobiliaria/services/notification-service/internal/application"
@@ -83,6 +84,25 @@ func TestConcurrentMigrationsDoNotCollide(t *testing.T) {
 
 	if got := failures.Load(); got != 0 {
 		t.Errorf("fallaron %d migraciones", got)
+	}
+}
+
+// El CHECK de la tabla tiene que aceptar todos los tipos del dominio: si no, el evento termina en la DLQ.
+func TestEveryNotificationTypeCanBeSaved(t *testing.T) {
+	repository, _ := newRepository(t)
+	types := []domain.NotificationType{
+		domain.TypeWelcome, domain.TypeVisitRequested, domain.TypePropertyReserved, domain.TypeInquiryReceived,
+		domain.TypeVisitScheduled, domain.TypeVisitRejected, domain.TypeVisitCancelled, domain.TypeVisitCancelledByClient,
+	}
+
+	for _, notificationType := range types {
+		notification, err := domain.NewNotification(domain.NewNotificationParams{RecipientID: userA, Type: notificationType}, testNow)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := repository.SaveForEvent(context.Background(), uuid.NewString(), notification); err != nil {
+			t.Errorf("%s: %v", notificationType, err)
+		}
 	}
 }
 

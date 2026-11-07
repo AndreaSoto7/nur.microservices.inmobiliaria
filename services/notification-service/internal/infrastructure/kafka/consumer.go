@@ -27,7 +27,7 @@ const (
 
 // Topics son los topics que consume el servicio (contracts/events/README.md).
 func Topics() []string {
-	return []string{"identity.user.events", "listing.property.events", "visit.visit.events"}
+	return []string{"identity.user.events", "listing.property.events", "visit.inquiry.events", "visit.visit.events"}
 }
 
 // Reader lee y confirma mensajes. Lo implementa el Reader de kafka-go.
@@ -46,6 +46,10 @@ type Policies interface {
 	OnUserRegistered(ctx context.Context, eventID, userID string) error
 	OnVisitRequested(ctx context.Context, eventID, agentID, propertyID, visitID string) error
 	OnPropertyReserved(ctx context.Context, eventID, agentID, propertyID, actor string) error
+	OnInquiryReceived(ctx context.Context, eventID, agentID, propertyID string) error
+	OnVisitScheduled(ctx context.Context, eventID, clientID, propertyID, visitID string) error
+	OnVisitRejected(ctx context.Context, eventID, clientID, propertyID, visitID string) error
+	OnVisitCancelled(ctx context.Context, eventID, clientID, agentID, propertyID, visitID, actor string) error
 }
 
 // Consumer procesa los mensajes uno por uno, y solo los confirma cuando se procesaron o quedaron en la DLQ.
@@ -195,47 +199,67 @@ var (
 	errInvalidPayload  = errors.New("payload ilegible")
 )
 
+// eventPayload reúne los campos que usa este servicio. Cada evento trae solo algunos, y lo demás se ignora:
+// de UserRegistered nunca se leen email ni nombre, y de una visita nunca se lee el motivo.
+type eventPayload struct {
+	UserID     string `json:"userId"`
+	PropertyID string `json:"propertyId"`
+	VisitID    string `json:"visitId"`
+	ClientID   string `json:"clientId"`
+	AgentID    string `json:"agentId"`
+	Actor      string `json:"actor"`
+}
+
 // handlerFor es el anti-corruption layer: traduce cada evento a una llamada a la política. Filtra por tipo y
-// versión, e ignora lo demás. Cada payload lee solo lo que necesita: de UserRegistered, nunca email ni nombre.
+// versión, e ignora lo demás.
 func (c *Consumer) handlerFor(event envelope) (func(context.Context) error, bool) {
 	const supportedVersion = 1
 	if event.EventVersion != supportedVersion {
 		return nil, false
 	}
+	policy, known := c.policyFor(event)
+	if !known {
+		return nil, false
+	}
+	return func(ctx context.Context) error {
+		var payload eventPayload
+		if err := json.Unmarshal(event.Payload, &payload); err != nil {
+			return errInvalidPayload
+		}
+		return policy(ctx, payload)
+	}, true
+}
+
+func (c *Consumer) policyFor(event envelope) (func(context.Context, eventPayload) error, bool) {
+	id := event.EventID
 	switch event.EventType {
 	case "UserRegistered":
-		return func(ctx context.Context) error {
-			var payload struct {
-				UserID string `json:"userId"`
-			}
-			if err := json.Unmarshal(event.Payload, &payload); err != nil {
-				return errInvalidPayload
-			}
-			return c.policies.OnUserRegistered(ctx, event.EventID, payload.UserID)
+		return func(ctx context.Context, p eventPayload) error {
+			return c.policies.OnUserRegistered(ctx, id, p.UserID)
 		}, true
 	case "VisitRequested":
-		return func(ctx context.Context) error {
-			var payload struct {
-				VisitID    string `json:"visitId"`
-				PropertyID string `json:"propertyId"`
-				AgentID    string `json:"agentId"`
-			}
-			if err := json.Unmarshal(event.Payload, &payload); err != nil {
-				return errInvalidPayload
-			}
-			return c.policies.OnVisitRequested(ctx, event.EventID, payload.AgentID, payload.PropertyID, payload.VisitID)
+		return func(ctx context.Context, p eventPayload) error {
+			return c.policies.OnVisitRequested(ctx, id, p.AgentID, p.PropertyID, p.VisitID)
 		}, true
 	case "PropertyReserved":
-		return func(ctx context.Context) error {
-			var payload struct {
-				PropertyID string `json:"propertyId"`
-				AgentID    string `json:"agentId"`
-				Actor      string `json:"actor"`
-			}
-			if err := json.Unmarshal(event.Payload, &payload); err != nil {
-				return errInvalidPayload
-			}
-			return c.policies.OnPropertyReserved(ctx, event.EventID, payload.AgentID, payload.PropertyID, payload.Actor)
+		return func(ctx context.Context, p eventPayload) error {
+			return c.policies.OnPropertyReserved(ctx, id, p.AgentID, p.PropertyID, p.Actor)
+		}, true
+	case "InquiryReceived":
+		return func(ctx context.Context, p eventPayload) error {
+			return c.policies.OnInquiryReceived(ctx, id, p.AgentID, p.PropertyID)
+		}, true
+	case "VisitScheduled":
+		return func(ctx context.Context, p eventPayload) error {
+			return c.policies.OnVisitScheduled(ctx, id, p.ClientID, p.PropertyID, p.VisitID)
+		}, true
+	case "VisitRejected":
+		return func(ctx context.Context, p eventPayload) error {
+			return c.policies.OnVisitRejected(ctx, id, p.ClientID, p.PropertyID, p.VisitID)
+		}, true
+	case "VisitCancelled":
+		return func(ctx context.Context, p eventPayload) error {
+			return c.policies.OnVisitCancelled(ctx, id, p.ClientID, p.AgentID, p.PropertyID, p.VisitID, p.Actor)
 		}, true
 	default:
 		return nil, false

@@ -52,7 +52,10 @@ func TestNewNotificationGeneratesIdentityAndStartsUnread(t *testing.T) {
 
 func TestEachTypeHasItsOwnMessage(t *testing.T) {
 	seen := map[string]NotificationType{}
-	for _, notificationType := range []NotificationType{TypeWelcome, TypeVisitRequested, TypePropertyReserved} {
+	for _, notificationType := range []NotificationType{
+		TypeWelcome, TypeVisitRequested, TypePropertyReserved, TypeInquiryReceived,
+		TypeVisitScheduled, TypeVisitRejected, TypeVisitCancelled, TypeVisitCancelledByClient,
+	} {
 		notification, err := NewNotification(NewNotificationParams{RecipientID: recipient, Type: notificationType}, now)
 		if err != nil {
 			t.Fatalf("%s: %v", notificationType, err)
