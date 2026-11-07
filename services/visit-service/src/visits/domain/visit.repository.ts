@@ -21,6 +21,7 @@ export type VisitPrincipal = { id: string; roles: readonly string[] };
 export type VisitDetails = {
   id: string;
   propertyId: string;
+  propertyTitle?: string;
   status: VisitStatus;
   proposedAt: Date;
   requestedAt: Date;

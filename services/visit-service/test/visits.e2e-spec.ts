@@ -137,6 +137,33 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     else process.env.JWT_JWKS_URL = previousJwksUrl;
   });
 
+  it('returns the property title from the local copy, even if it is no longer published', async () => {
+    const id = randomUUID();
+    const now = new Date();
+    await database.query(
+      `INSERT INTO visits
+         (id, property_id, client_id, agent_id, status, proposed_at, requested_at, updated_at)
+       VALUES ($1,$2,$3,$4,'REQUESTED',$5,$6,$6)`,
+      [id, pausedPropertyId, otherClientId, agentId, body.proposedAt, now],
+    );
+    const http = request(app.getHttpServer());
+
+    const detail = await http
+      .get(`${path}/${id}`)
+      .auth(otherToken, { type: 'bearer' })
+      .expect(200);
+    const list = await http
+      .get(path)
+      .auth(otherToken, { type: 'bearer' })
+      .query({ propertyId: pausedPropertyId })
+      .expect(200);
+
+    expect(detail.body).toMatchObject({ id, propertyTitle: 'Casa' });
+    expect(list.body).toMatchObject({
+      data: [{ id, propertyTitle: 'Casa' }],
+    });
+  });
+
   it('creates a single visit and lead, replays the result and protects its reading', async () => {
     const key = randomUUID();
     const http = request(app.getHttpServer());
