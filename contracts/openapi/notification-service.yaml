@@ -209,7 +209,7 @@ components:
     NotificationType:
       type: string
       description: Puede crecer con nuevos avisos; el cliente debe tolerar valores desconocidos.
-      enum: [WELCOME, VISIT_REQUESTED, PROPERTY_RESERVED]
+      enum: [WELCOME, VISIT_REQUESTED, PROPERTY_RESERVED, INQUIRY_RECEIVED, VISIT_SCHEDULED, VISIT_REJECTED, VISIT_CANCELLED, VISIT_CANCELLED_BY_CLIENT]
 
     Notification:
       type: object
