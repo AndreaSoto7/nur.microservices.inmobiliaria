@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | El aviso de visita realizada lleva a mis visitas. Probados contra el stack real, en navegador: marcar realizada, marcar alquilada y el catálogo con datos | este PR |
+| feat | El aviso de visita realizada lleva a mis visitas. Probados contra el stack real, en navegador: marcar realizada, marcar alquilada y el catálogo con datos | #109 |
 | feat | Cada aviso lleva a su pantalla según el tipo: mis visitas, solicitudes, consultas o la propiedad | #106 |
 | feat | Oportunidades: agregar notas y cerrar como ganada o perdida. Probada contra el stack real la cadena completa: cerrar como ganada reserva la propiedad por evento y avisa al agente | #101 |
 | feat | Consultas recibidas: quién preguntó, sobre qué propiedad, y el mensaje con sus datos de contacto al abrirla. Probado contra visit real | #100 |
