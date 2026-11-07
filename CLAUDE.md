@@ -72,7 +72,7 @@ Ningún servicio llama a otro por HTTP. El detalle de cada flecha está en el `C
 
 ## Convenciones globales
 
-- **Idioma:** código, endpoints, eventos, tablas y columnas en inglés. Documentación, PRs, issues y descripción de commits en español.
+- **Idioma:** código (incluidos los nombres de los tests y las rutas del frontend), endpoints, eventos, tablas y columnas en inglés. Documentación, comentarios, PRs, issues y descripción de commits en español. Los textos que ve el usuario en la interfaz y los mensajes de error van en español.
 - **IDs:** UUID como string, generados por el dominio. Nunca IDs autoincrementales expuestos.
 - **Fechas:** ISO-8601 en UTC (`2026-10-16T14:30:00Z`).
 - **Dinero:** `{ "amount": 125000.00, "currency": "BOB" }`. Una sola moneda, **BOB**. Nunca float en el dominio.

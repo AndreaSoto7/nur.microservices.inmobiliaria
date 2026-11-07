@@ -26,7 +26,7 @@ paths:
 
 - **Políticas (ADR 0005):** cada una tiene tests de aplicación del caso feliz, del rechazo por regla de estado (no falla, deja `WARN`) y del evento duplicado (procesarlo dos veces deja el mismo estado).
 - Formato **Arrange / Act / Assert**, un comportamiento por test.
-- El nombre del test describe la regla: `should_reject_publish_when_property_is_sold` o `"rechaza publicar si la propiedad está vendida"`.
+- El nombre del test describe la regla: `should_reject_publish_when_property_is_sold`, `test_rejects_publish_when_property_is_sold` o `"rejects publishing when the property is sold"`. Siempre en inglés, como el resto del código.
 - Los tests no dependen de que otro microservicio esté corriendo.
 - Los tests no dependen del orden ni de la hora real: inyecta un `Clock`.
 - Si arreglas un bug, primero escribe el test que lo reproduce.
