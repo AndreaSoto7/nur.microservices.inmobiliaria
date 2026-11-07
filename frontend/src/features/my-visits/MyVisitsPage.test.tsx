@@ -92,6 +92,22 @@ describe('MyVisitsPage', () => {
     expect(await screen.findByText('La propiedad se reservó.')).toBeInTheDocument()
   })
 
+  it.each([
+    ['PROPERTY_RESERVED', 'La propiedad fue reservada.'],
+    ['PROPERTY_UNAVAILABLE', 'La propiedad ya no está disponible.'],
+  ])('shows the system reason %s in Spanish', async (resolutionReason, text) => {
+    routeFetch({
+      ...sessionRoutes(currentUser),
+      ...withProperty,
+      [LIST]: () => jsonResponse(200, visitPage([visit({ status: 'REJECTED', resolutionReason })])),
+    })
+
+    renderApp('/my-visits')
+
+    expect(await screen.findByText(text)).toBeInTheDocument()
+    expect(screen.queryByText(resolutionReason)).not.toBeInTheDocument()
+  })
+
   it.each(['REQUESTED', 'COMPLETED', 'CANCELLED', 'REJECTED'] as const)(
     'a visit in status %s cannot be cancelled',
     async (status) => {
