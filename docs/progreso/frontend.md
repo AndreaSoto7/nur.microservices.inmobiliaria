@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| fix | Los motivos automáticos de una visita se muestran en español, y no como `PROPERTY_UNAVAILABLE` | este PR |
+| fix | Los motivos automáticos de una visita se muestran en español, y no como `PROPERTY_UNAVAILABLE` | #110 |
 | feat | El aviso de visita realizada lleva a mis visitas. Probados contra el stack real, en navegador: marcar realizada, marcar alquilada y el catálogo con datos | #109 |
 | feat | Cada aviso lleva a su pantalla según el tipo: mis visitas, solicitudes, consultas o la propiedad | #106 |
 | feat | Oportunidades: agregar notas y cerrar como ganada o perdida. Probada contra el stack real la cadena completa: cerrar como ganada reserva la propiedad por evento y avisa al agente | #101 |
