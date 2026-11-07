@@ -36,8 +36,13 @@ import { Visit, type VisitSlot, type VisitState } from '../domain/visit.js';
 
 type VisitRow = Omit<
   VisitDetails,
-  'scheduledStart' | 'scheduledEnd' | 'resolutionReason' | 'completedAt'
+  | 'propertyTitle'
+  | 'scheduledStart'
+  | 'scheduledEnd'
+  | 'resolutionReason'
+  | 'completedAt'
 > & {
+  propertyTitle: string | null;
   scheduledStart: Date | null;
   scheduledEnd: Date | null;
   resolutionReason: string | null;
@@ -45,6 +50,7 @@ type VisitRow = Omit<
 };
 
 const visitColumns = `id, property_id AS "propertyId", status,
+  (SELECT p.title FROM property_snapshots p WHERE p.property_id = visits.property_id) AS "propertyTitle",
   proposed_at AS "proposedAt", requested_at AS "requestedAt",
   scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd",
   CASE WHEN status = 'COMPLETED' THEN resolved_at END AS "completedAt",
@@ -52,6 +58,7 @@ const visitColumns = `id, property_id AS "propertyId", status,
 
 function visitDetails(row: VisitRow): VisitDetails {
   const {
+    propertyTitle,
     scheduledStart,
     scheduledEnd,
     resolutionReason,
@@ -60,6 +67,7 @@ function visitDetails(row: VisitRow): VisitDetails {
   } = row;
   return {
     ...details,
+    ...(propertyTitle !== null ? { propertyTitle } : {}),
     ...(scheduledStart && scheduledEnd ? { scheduledStart, scheduledEnd } : {}),
     ...(resolutionReason !== null ? { resolutionReason } : {}),
     ...(completedAt ? { completedAt } : {}),

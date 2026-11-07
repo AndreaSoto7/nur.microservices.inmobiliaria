@@ -32,7 +32,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 
 Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es entidad hija de `Lead`.
 
-**Modelo de lectura `PropertySnapshot`:** copia local de cada propiedad (`propertyId`, `agentId`, `status`, `operationType`, `title`, `zone`). Solo la escribe el consumidor de `listing.property.events`; ningún comando la modifica.
+**Modelo de lectura `PropertySnapshot`:** copia local de cada propiedad (`propertyId`, `agentId`, `status`, `operationType`, `title`, `zone`). Solo la escribe el consumidor de `listing.property.events`; ningún comando la modifica. Las consultas de visitas leen de aquí `propertyTitle`: así el título sigue disponible aunque la propiedad ya no esté publicada.
 
 ## Casos de uso (event storming → código)
 
