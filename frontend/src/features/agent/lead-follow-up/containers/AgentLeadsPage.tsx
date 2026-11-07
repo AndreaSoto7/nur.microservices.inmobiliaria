@@ -7,7 +7,7 @@ import { ErrorMessage } from '../../../../shared/ui/ErrorMessage'
 import { FilterSelect } from '../../../../shared/ui/FilterSelect'
 import { Pagination } from '../../../../shared/ui/Pagination'
 import { RowListSkeleton } from '../../../../shared/ui/RowListSkeleton'
-import { usePropertyTitles } from '../../../my-visits/usePropertyTitles'
+import { usePropertyTitles } from '../../usePropertyTitles'
 import { LeadRow } from '../components/LeadRow'
 import { useAgentLeads } from '../useAgentLeads'
 
@@ -27,10 +27,7 @@ export function AgentLeadsPage() {
     noteSavedLeadId,
     reservingLeadId,
   } = useAgentLeads()
-  const titles = usePropertyTitles(
-    (page?.data ?? []).map((lead) => lead.propertyId),
-    'agent',
-  )
+  const titles = usePropertyTitles((page?.data ?? []).map((lead) => lead.propertyId))
 
   const handleAddNote = useCallback(
     (leadId: string, note: string, onDone: () => void) =>

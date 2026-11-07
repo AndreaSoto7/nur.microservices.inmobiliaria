@@ -10,22 +10,17 @@ import {
   sentBodies,
   sessionRoutes,
 } from '../../test/http'
-import { detail, PROPERTY_ID } from '../../test/listingFixtures'
+import { PROPERTY_ID } from '../../test/listingFixtures'
 import { renderApp } from '../../test/renderApp'
 import { visit, VISIT_ID, visitPage } from '../../test/visitFixtures'
 
 const LIST = 'GET /api/v1/visits'
 const CANCEL_PATH = `/api/v1/visits/${VISIT_ID}/cancel`
-const CATALOG = `GET /api/v1/catalog/properties/${PROPERTY_ID}`
-const withProperty = {
-  [CATALOG]: () => jsonResponse(200, detail()),
-}
 
 describe('MyVisitsPage', () => {
   it('shows the status and the property title, with a link to its page', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
-      ...withProperty,
       [LIST]: () => jsonResponse(200, visitPage([visit()])),
     })
 
@@ -38,11 +33,22 @@ describe('MyVisitsPage', () => {
     expect(within(row).getByText('Fecha propuesta')).toBeInTheDocument()
   })
 
-  it('if the property is no longer in the catalog, says so and does not link', async () => {
+  it('keeps the title when the property is no longer in the catalog', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
-      [CATALOG]: () => jsonResponse(404, problem(404, 'PROPERTY_NOT_FOUND', 'No existe.')),
-      [LIST]: () => jsonResponse(200, visitPage([visit()])),
+      [LIST]: () => jsonResponse(200, visitPage([visit({ status: 'CANCELLED' })])),
+    })
+
+    renderApp('/my-visits')
+
+    expect(await screen.findByText('Casa con jardín en Equipetrol')).toBeInTheDocument()
+    expect(screen.queryByText('Propiedad no disponible')).not.toBeInTheDocument()
+  })
+
+  it('without a title, says the property is unavailable and does not link', async () => {
+    routeFetch({
+      ...sessionRoutes(currentUser),
+      [LIST]: () => jsonResponse(200, visitPage([visit({ propertyTitle: undefined })])),
     })
 
     renderApp('/my-visits')
@@ -55,7 +61,6 @@ describe('MyVisitsPage', () => {
   it('shows the slot of a scheduled visit', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
-      ...withProperty,
       [LIST]: () =>
         jsonResponse(
           200,
@@ -79,7 +84,6 @@ describe('MyVisitsPage', () => {
   it('shows the reason for a rejection', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
-      ...withProperty,
       [LIST]: () =>
         jsonResponse(
           200,
@@ -98,7 +102,6 @@ describe('MyVisitsPage', () => {
   ])('shows the system reason %s in Spanish', async (resolutionReason, text) => {
     routeFetch({
       ...sessionRoutes(currentUser),
-      ...withProperty,
       [LIST]: () => jsonResponse(200, visitPage([visit({ status: 'REJECTED', resolutionReason })])),
     })
 
@@ -113,7 +116,6 @@ describe('MyVisitsPage', () => {
     async (status) => {
       routeFetch({
         ...sessionRoutes(currentUser),
-        ...withProperty,
         [LIST]: () => jsonResponse(200, visitPage([visit({ status })])),
       })
 
@@ -128,7 +130,6 @@ describe('MyVisitsPage', () => {
     let status: 'SCHEDULED' | 'CANCELLED' = 'SCHEDULED'
     const fetchMock = routeFetch({
       ...sessionRoutes(currentUser),
-      ...withProperty,
       [LIST]: () => jsonResponse(200, visitPage([visit({ status })])),
       [`POST ${CANCEL_PATH}`]: () => {
         status = 'CANCELLED'
@@ -153,7 +154,6 @@ describe('MyVisitsPage', () => {
   it('cancelling without a reason sends an empty body', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(currentUser),
-      ...withProperty,
       [LIST]: () => jsonResponse(200, visitPage([visit({ status: 'SCHEDULED' })])),
       [`POST ${CANCEL_PATH}`]: () => jsonResponse(200, { id: VISIT_ID, status: 'CANCELLED' }),
     })
@@ -169,7 +169,6 @@ describe('MyVisitsPage', () => {
   it('allows backing out without calling the API', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(currentUser),
-      ...withProperty,
       [LIST]: () => jsonResponse(200, visitPage([visit({ status: 'SCHEDULED' })])),
     })
     const user = userEvent.setup()
@@ -185,7 +184,6 @@ describe('MyVisitsPage', () => {
   it('shows the reason when it is too late to cancel', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
-      ...withProperty,
       [LIST]: () => jsonResponse(200, visitPage([visit({ status: 'SCHEDULED' })])),
       [`POST ${CANCEL_PATH}`]: () =>
         jsonResponse(409, problem(409, 'VISIT_CANCELLATION_TOO_LATE', 'La visita ya empezó.')),

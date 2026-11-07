@@ -8,6 +8,7 @@ export function visit(overrides: Partial<Visit> = {}): Visit {
   return {
     id: VISIT_ID,
     propertyId: PROPERTY_ID,
+    propertyTitle: 'Casa con jardín en Equipetrol',
     status: 'REQUESTED',
     proposedAt: '2099-01-15T14:30:00Z',
     requestedAt: '2026-10-16T14:30:00Z',

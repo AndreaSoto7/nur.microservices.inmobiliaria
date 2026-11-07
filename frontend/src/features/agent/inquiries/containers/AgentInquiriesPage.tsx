@@ -4,17 +4,14 @@ import { EmptyState } from '../../../../shared/ui/EmptyState'
 import { ErrorMessage } from '../../../../shared/ui/ErrorMessage'
 import { Pagination } from '../../../../shared/ui/Pagination'
 import { RowListSkeleton } from '../../../../shared/ui/RowListSkeleton'
-import { usePropertyTitles } from '../../../my-visits/usePropertyTitles'
+import { usePropertyTitles } from '../../usePropertyTitles'
 import { InquiryRow } from '../components/InquiryRow'
 import { useAgentInquiries } from '../useAgentInquiries'
 import { InquiryDetailSection } from './InquiryDetailSection'
 
 export function AgentInquiriesPage() {
   const { goToPage, page, loading, error, retry } = useAgentInquiries()
-  const titles = usePropertyTitles(
-    (page?.data ?? []).map((inquiry) => inquiry.propertyId),
-    'agent',
-  )
+  const titles = usePropertyTitles((page?.data ?? []).map((inquiry) => inquiry.propertyId))
   const [openId, setOpenId] = useState<string | null>(null)
   const handleToggle = useCallback(
     (inquiryId: string) => setOpenId((current) => (current === inquiryId ? null : inquiryId)),

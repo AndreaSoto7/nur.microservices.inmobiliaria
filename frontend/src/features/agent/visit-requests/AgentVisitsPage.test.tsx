@@ -10,18 +10,13 @@ import {
   sentBodies,
   sessionRoutes,
 } from '../../../test/http'
-import { detail, PROPERTY_ID } from '../../../test/listingFixtures'
+import { PROPERTY_ID } from '../../../test/listingFixtures'
 import { renderApp } from '../../../test/renderApp'
 import { visit, VISIT_ID, visitPage } from '../../../test/visitFixtures'
 
 const LIST = 'GET /api/v1/visits'
-const OWN_PROPERTY = `GET /api/v1/properties/${PROPERTY_ID}`
 const action = (name: string) => `/api/v1/visits/${VISIT_ID}/${name}`
-const base = () => ({
-  ...sessionRoutes(agentUser),
-  [OWN_PROPERTY]: () =>
-    jsonResponse(200, detail({ status: 'DRAFT', title: 'Mi casa en borrador' })),
-})
+const base = () => sessionRoutes(agentUser)
 const withVisit = (overrides: Parameters<typeof visit>[0] = {}) => ({
   ...base(),
   [LIST]: () => jsonResponse(200, visitPage([visit(overrides)])),
@@ -38,12 +33,12 @@ const FUTURE = {
 }
 
 describe('AgentVisitsPage', () => {
-  it("shows the title of the agent's property even if unpublished", async () => {
-    routeFetch(withVisit())
+  it('shows the property title that comes with the visit', async () => {
+    routeFetch(withVisit({ propertyTitle: 'Mi casa vendida' }))
 
     renderApp('/agent/visit-requests')
 
-    expect(await screen.findByRole('link', { name: 'Mi casa en borrador' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Mi casa vendida' })).toHaveAttribute(
       'href',
       `/agent/properties/${PROPERTY_ID}`,
     )

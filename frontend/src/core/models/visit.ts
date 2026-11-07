@@ -12,6 +12,7 @@ export type VisitStatus = (typeof VISIT_STATUSES)[number]
 export interface Visit {
   id: string
   propertyId: string
+  propertyTitle?: string
   status: VisitStatus
   proposedAt: string
   requestedAt: string

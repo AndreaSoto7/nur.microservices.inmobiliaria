@@ -8,7 +8,6 @@ import { ErrorMessage } from '../../../../shared/ui/ErrorMessage'
 import { FilterSelect } from '../../../../shared/ui/FilterSelect'
 import { Pagination } from '../../../../shared/ui/Pagination'
 import { RowListSkeleton } from '../../../../shared/ui/RowListSkeleton'
-import { usePropertyTitles } from '../../../my-visits/usePropertyTitles'
 import { AgentVisitRow } from '../components/AgentVisitRow'
 import { useAgentVisits } from '../useAgentVisits'
 
@@ -26,10 +25,6 @@ export function AgentVisitsPage() {
     failedVisitId,
     actionError,
   } = useAgentVisits()
-  const titles = usePropertyTitles(
-    (page?.data ?? []).map((visit) => visit.propertyId),
-    'agent',
-  )
   const now = new Date()
 
   const handleSchedule = useCallback(
@@ -78,7 +73,7 @@ export function AgentVisitsPage() {
               <AgentVisitRow
                 key={visit.id}
                 visit={visit}
-                title={titles[visit.propertyId]}
+                title={visit.propertyTitle}
                 href={`/agent/properties/${visit.propertyId}`}
                 now={now}
                 busy={busyVisitId === visit.id}

@@ -70,6 +70,7 @@ frontend/src/
       usePropertyContact.ts (facade de solicitar visita y enviar consulta)
     agent/
       AgentLayout.tsx   menú común del panel de agente (smart)
+      usePropertyTitles.ts   título de cada propiedad, que las consultas y las oportunidades no traen
       properties-admin/
         containers/  AgentPropertiesPage.tsx (smart)
         components/  PropertyAdminList  PropertyActions  PropertyStatusBadge   (dumb)
@@ -97,7 +98,7 @@ frontend/src/
       useNotifications.ts   (facade de la página y del contador)
     my-visits/
       containers/  MyVisitsPage   (smart) · components/ MyVisitRow  VisitDetails  ReasonPanel   (dumb)
-      useMyVisits.ts (facade) · usePropertyTitles.ts (título de cada propiedad, que la visita no trae)
+      useMyVisits.ts (facade)
 ```
 
 | Smart (container) | Dumbs que usa |
@@ -134,7 +135,7 @@ frontend/src/
 ## Solicitudes de visita (agente)
 
 - Ruta `/agent/visit-requests`, dentro del panel de agente (`AgentLayout`). `/agent` lleva a sus propiedades. Todas las rutas del panel exigen rol `AGENT`.
-- El horario propuesto viene cargado con la fecha que pidió el interesado. El título sale de `GET /properties/{id}`, porque el agente también ve sus propiedades sin publicar.
+- El horario propuesto viene cargado con la fecha que pidió el interesado. El título viene en la visita.
 - "Marcar realizada" solo aparece cuando terminó el horario: antes, visit responde `VISIT_COMPLETION_TOO_EARLY`.
 - El error de una acción se muestra en su fila y el formulario sigue abierto, para corregir sin volver a escribir.
 
@@ -163,7 +164,7 @@ frontend/src/
 - Se envían desde el detalle, solo con rol `CLIENT` y si la propiedad está `PUBLISHED`. Sin sesión, un enlace lleva a ingresar y vuelve a la misma ficha.
 - **`Idempotency-Key` obligatorio en los POST de visit:** `useIdempotencyKey` reutiliza la clave si se reintenta lo mismo, para que un corte de red no duplique la solicitud, y usa otra si cambió el contenido, porque el servicio responde 422. `crypto.randomUUID` no existe fuera de HTTPS o localhost: `newIdempotencyKey` tiene alternativa para cuando se abre por la IP de la red local.
 - El `datetime-local` da hora local: se manda en UTC con `localInputToUtc`.
-- **Mis visitas** (`/my-visits`, solo `CLIENT`): el estado y la página viven en la URL. Una visita solo se cancela si está `SCHEDULED`. El contrato no trae el título de la propiedad: `usePropertyTitles` lo pide al catálogo, y si ya no está publicada muestra "Propiedad no disponible".
+- **Mis visitas** (`/my-visits`, solo `CLIENT`): el estado y la página viven en la URL. Una visita solo se cancela si está `SCHEDULED`. El título viene en la visita (`propertyTitle`, de la copia local de visit), así que se ve aunque la propiedad ya no esté publicada. Si falta, muestra "Propiedad no disponible".
 - **Motivos:** las políticas de visit dejan `PROPERTY_RESERVED` o `PROPERTY_UNAVAILABLE` como motivo. `visitReasonLabel` los pasa a español; el motivo que escribe una persona se muestra tal cual.
 
 ## Sesión y tokens
