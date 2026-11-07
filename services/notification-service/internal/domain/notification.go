@@ -23,6 +23,7 @@ const (
 	TypeVisitRejected          NotificationType = "VISIT_REJECTED"
 	TypeVisitCancelled         NotificationType = "VISIT_CANCELLED"
 	TypeVisitCancelledByClient NotificationType = "VISIT_CANCELLED_BY_CLIENT"
+	TypeVisitCompleted         NotificationType = "VISIT_COMPLETED"
 )
 
 // El texto es fijo por tipo: así un aviso nunca lleva datos personales.
@@ -35,6 +36,7 @@ var messages = map[NotificationType]string{
 	TypeVisitRejected:          "Tu solicitud de visita fue rechazada.",
 	TypeVisitCancelled:         "Tu visita fue cancelada.",
 	TypeVisitCancelledByClient: "Un interesado canceló su visita.",
+	TypeVisitCompleted:         "Tu visita quedó registrada como realizada.",
 }
 
 var (

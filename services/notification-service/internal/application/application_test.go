@@ -186,6 +186,9 @@ func TestVisitOutcomesNotifyTheClient(t *testing.T) {
 		{"rejected", func(p *EventPolicies) error {
 			return p.OnVisitRejected(context.Background(), eventOne, userA, property, visit)
 		}, domain.TypeVisitRejected},
+		{"completed", func(p *EventPolicies) error {
+			return p.OnVisitCompleted(context.Background(), eventOne, userA, property, visit)
+		}, domain.TypeVisitCompleted},
 	}
 
 	for _, tt := range tests {

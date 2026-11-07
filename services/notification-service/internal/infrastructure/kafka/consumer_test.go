@@ -135,6 +135,10 @@ func (p *fakePolicies) OnVisitCancelled(_ context.Context, event, client, agent,
 	return p.record("OnVisitCancelled", event, client, agent, propertyID, visitID, actor)
 }
 
+func (p *fakePolicies) OnVisitCompleted(_ context.Context, event, client, propertyID, visitID string) error {
+	return p.record("OnVisitCompleted", event, client, propertyID, visitID)
+}
+
 type harness struct {
 	reader   *fakeReader
 	dlq      *fakeDLQ
@@ -190,6 +194,9 @@ func TestEachEventReachesItsPolicyAndIsCommitted(t *testing.T) {
 		{"VisitCancelled", segmentio.Message{Topic: "visit.visit.events", Value: eventValue("VisitCancelled", 1,
 			fmt.Sprintf(`{"visitId":%q,"propertyId":%q,"clientId":%q,"agentId":%q,"actor":"CLIENT","reason":null}`, visit, property, userID, agentID))},
 			policyCall{"OnVisitCancelled", []string{eventID, userID, agentID, property, visit, "CLIENT"}}},
+		{"VisitCompleted", segmentio.Message{Topic: "visit.visit.events", Value: eventValue("VisitCompleted", 1,
+			fmt.Sprintf(`{"visitId":%q,"propertyId":%q,"clientId":%q,"agentId":%q,"completedAt":"2026-11-07T11:00:00Z"}`, visit, property, userID, agentID))},
+			policyCall{"OnVisitCompleted", []string{eventID, userID, property, visit}}},
 	}
 
 	for _, tt := range tests {

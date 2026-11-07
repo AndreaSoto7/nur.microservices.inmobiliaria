@@ -93,6 +93,7 @@ func TestEveryNotificationTypeCanBeSaved(t *testing.T) {
 	types := []domain.NotificationType{
 		domain.TypeWelcome, domain.TypeVisitRequested, domain.TypePropertyReserved, domain.TypeInquiryReceived,
 		domain.TypeVisitScheduled, domain.TypeVisitRejected, domain.TypeVisitCancelled, domain.TypeVisitCancelledByClient,
+		domain.TypeVisitCompleted,
 	}
 
 	for _, notificationType := range types {

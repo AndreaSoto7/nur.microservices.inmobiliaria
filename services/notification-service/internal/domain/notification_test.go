@@ -54,7 +54,7 @@ func TestEachTypeHasItsOwnMessage(t *testing.T) {
 	seen := map[string]NotificationType{}
 	for _, notificationType := range []NotificationType{
 		TypeWelcome, TypeVisitRequested, TypePropertyReserved, TypeInquiryReceived,
-		TypeVisitScheduled, TypeVisitRejected, TypeVisitCancelled, TypeVisitCancelledByClient,
+		TypeVisitScheduled, TypeVisitRejected, TypeVisitCancelled, TypeVisitCancelledByClient, TypeVisitCompleted,
 	} {
 		notification, err := NewNotification(NewNotificationParams{RecipientID: recipient, Type: notificationType}, now)
 		if err != nil {

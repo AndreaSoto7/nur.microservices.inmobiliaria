@@ -13,7 +13,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 | API | [`contracts/openapi/notification-service.yaml`](../../contracts/openapi/notification-service.yaml) |
 | Ruta del gateway | `/api/v1/notifications/**` (JWT) |
 | Publica | Nada |
-| Consume | `identity.user.events`, `listing.property.events`, `visit.visit.events` |
+| Consume | `identity.user.events`, `listing.property.events`, `visit.inquiry.events`, `visit.visit.events` |
 | Progreso | [`docs/progreso/notification-service.md`](../../docs/progreso/notification-service.md) |
 
 ## Qué hace y qué no
@@ -30,7 +30,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 - `MarkReadBy` es idempotente: marcar dos veces conserva la primera fecha.
 - `MarkReadBy` lo pide solo su destinatario. A cualquier otro le responde `ErrNotificationNotFound` (404): no se revela que existe.
 
-**Tipos (`NotificationType`):** `WELCOME`, `VISIT_REQUESTED`, `PROPERTY_RESERVED`, `INQUIRY_RECEIVED`, `VISIT_SCHEDULED`, `VISIT_REJECTED`, `VISIT_CANCELLED` y `VISIT_CANCELLED_BY_CLIENT`.
+**Tipos (`NotificationType`):** `WELCOME`, `VISIT_REQUESTED`, `PROPERTY_RESERVED`, `INQUIRY_RECEIVED`, `VISIT_SCHEDULED`, `VISIT_REJECTED`, `VISIT_CANCELLED`, `VISIT_CANCELLED_BY_CLIENT` y `VISIT_COMPLETED`.
 
 ## Casos de uso
 
@@ -54,6 +54,7 @@ Consumer group `notification-service`, desde el principio de cada topic: `identi
 | `VisitRejected` | `clientId` | `VISIT_REJECTED` |
 | `VisitCancelled` con `actor: AGENT` o `SYSTEM` | `clientId` | `VISIT_CANCELLED` |
 | `VisitCancelled` con `actor: CLIENT` | `agentId` | `VISIT_CANCELLED_BY_CLIENT` |
+| `VisitCompleted` | `clientId` | `VISIT_COMPLETED` |
 
 - **Idempotente:** el aviso y el `eventId` en `processed_events` se guardan en la misma transacción.
 - **Anti-corruption layer:** `infrastructure/kafka` traduce el evento a un comando propio. Del payload de `UserRegistered` solo lee `userId`, nunca el email ni el nombre. De una visita no lee el motivo: el texto del aviso es fijo.

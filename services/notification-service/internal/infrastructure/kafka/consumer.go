@@ -50,6 +50,7 @@ type Policies interface {
 	OnVisitScheduled(ctx context.Context, eventID, clientID, propertyID, visitID string) error
 	OnVisitRejected(ctx context.Context, eventID, clientID, propertyID, visitID string) error
 	OnVisitCancelled(ctx context.Context, eventID, clientID, agentID, propertyID, visitID, actor string) error
+	OnVisitCompleted(ctx context.Context, eventID, clientID, propertyID, visitID string) error
 }
 
 // Consumer procesa los mensajes uno por uno, y solo los confirma cuando se procesaron o quedaron en la DLQ.
@@ -260,6 +261,10 @@ func (c *Consumer) policyFor(event envelope) (func(context.Context, eventPayload
 	case "VisitCancelled":
 		return func(ctx context.Context, p eventPayload) error {
 			return c.policies.OnVisitCancelled(ctx, id, p.ClientID, p.AgentID, p.PropertyID, p.VisitID, p.Actor)
+		}, true
+	case "VisitCompleted":
+		return func(ctx context.Context, p eventPayload) error {
+			return c.policies.OnVisitCompleted(ctx, id, p.ClientID, p.PropertyID, p.VisitID)
 		}, true
 	default:
 		return nil, false
