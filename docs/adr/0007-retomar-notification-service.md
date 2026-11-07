@@ -55,11 +55,14 @@
 | `UserRegistered` | El usuario registrado | `WELCOME` | Se implementa ahora |
 | `VisitRequested` | El agente de la propiedad | `VISIT_REQUESTED` | Se implementa ahora |
 | `PropertyReserved` con `actor: SYSTEM` | El agente de la propiedad | `PROPERTY_RESERVED` | Se implementa ahora |
-| `InquiryReceived` | El agente de la propiedad | `INQUIRY_RECEIVED` | Espera el schema de visit |
-| `VisitScheduled`, `VisitRejected`, `VisitCancelled` | El cliente | `VISIT_SCHEDULED`, `VISIT_REJECTED`, `VISIT_CANCELLED` | Esperan el schema de visit |
+| `InquiryReceived` | El agente de la propiedad | `INQUIRY_RECEIVED` | Se implementa ahora |
+| `VisitScheduled`, `VisitRejected` | El cliente | `VISIT_SCHEDULED`, `VISIT_REJECTED` | Se implementa ahora |
+| `VisitCancelled` con `actor: AGENT` o `SYSTEM` | El cliente | `VISIT_CANCELLED` | Se implementa ahora |
+| `VisitCancelled` con `actor: CLIENT` | El agente de la propiedad | `VISIT_CANCELLED_BY_CLIENT` | Se implementa ahora |
 
 - **`PropertyReserved` solo con `actor: SYSTEM`:** si el agente la reservó desde la API, ya lo sabe. Con `SYSTEM` la reservó la política de `LeadClosed` (ADR 0005, sección 3.1), y sí es una novedad para él.
 - **`PropertySold` y `PropertyRented` no avisan:** los marca el propio agente, y a los clientes les llega el `VisitCancelled` de sus visitas.
+- **Si el cliente cancela, se avisa al agente:** el cliente ya lo sabe, y al agente se le libera un horario. Si cancela el agente o el sistema, se avisa al cliente.
 - **Los eventos sin schema no se implementan todavía:** el catálogo los nombra, pero su payload lo define el responsable de visit (contract-first). Agregar cada uno es una fila más en la traducción del consumidor.
 
 ## Justificación
