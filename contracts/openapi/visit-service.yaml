@@ -1053,6 +1053,10 @@ components:
       properties:
         id: {$ref: '#/components/schemas/Uuid'}
         propertyId: {$ref: '#/components/schemas/Uuid'}
+        propertyTitle:
+          type: string
+          maxLength: 150
+          description: Título según la copia local de la propiedad. Sigue disponible aunque ya no esté publicada; falta si visit no recibió el título.
         status: {$ref: '#/components/schemas/VisitStatus'}
         proposedAt: {$ref: '#/components/schemas/UtcDateTime'}
         requestedAt: {$ref: '#/components/schemas/UtcDateTime'}
