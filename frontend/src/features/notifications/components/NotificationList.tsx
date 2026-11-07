@@ -4,25 +4,26 @@ import type { AppNotification } from '../../../core/models/notification'
 import { formatDateTime } from '../../../shared/format/date'
 import { Button } from '../../../shared/ui/Button'
 import { StatusBadge } from '../../../shared/ui/StatusBadge'
+import type { NotificationLink } from '../notificationLink'
 
 interface NotificationListProps {
   notifications: AppNotification[]
   /** A dónde lleva cada aviso, si lleva a algún lado: lo decide el container. */
-  hrefFor: (notification: AppNotification) => string | null
+  linkFor: (notification: AppNotification) => NotificationLink | null
   markingId: string | null
   onMarkRead: (notificationId: string) => void
 }
 
 export const NotificationList = memo(function NotificationList({
   notifications,
-  hrefFor,
+  linkFor,
   markingId,
   onMarkRead,
 }: NotificationListProps) {
   return (
     <ul className="row-list">
       {notifications.map((notification) => {
-        const href = hrefFor(notification)
+        const link = linkFor(notification)
         const unread = notification.readAt === null
         return (
           <li key={notification.id} className="card row-card">
@@ -33,11 +34,11 @@ export const NotificationList = memo(function NotificationList({
               </div>
               {unread && <StatusBadge label="Sin leer" tone="warning" />}
             </div>
-            {(href || unread) && (
+            {(link || unread) && (
               <div className="action-bar">
-                {href && (
-                  <Link to={href} className="button button--secondary">
-                    Ver propiedad
+                {link && (
+                  <Link to={link.href} className="button button--secondary">
+                    {link.label}
                   </Link>
                 )}
                 {unread && (

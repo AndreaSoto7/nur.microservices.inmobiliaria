@@ -28,7 +28,7 @@ const pageOf = (items: AppNotification[], meta: { number?: number; totalPages?: 
 })
 
 describe('NotificationsPage', () => {
-  it('shows the notification, marks it as unread and links to the property', async () => {
+  it('shows the notification, marks it as unread and links to its screen', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
       [LIST]: () => jsonResponse(200, pageOf([notification()])),
@@ -39,9 +39,9 @@ describe('NotificationsPage', () => {
     const item = await screen.findByRole('listitem')
     expect(within(item).getByText('Recibiste una nueva solicitud de visita.')).toBeInTheDocument()
     expect(within(item).getByText('Sin leer')).toBeInTheDocument()
-    expect(within(item).getByRole('link', { name: 'Ver propiedad' })).toHaveAttribute(
+    expect(within(item).getByRole('link', { name: 'Ver solicitudes' })).toHaveAttribute(
       'href',
-      `/properties/${PROPERTY_ID}`,
+      '/agent/visit-requests',
     )
   })
 

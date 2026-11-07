@@ -155,6 +155,7 @@ frontend/src/
 
 - Ruta `/notifications`, para cualquier usuario con sesión. El filtro "Solo sin leer" y la página viven en la URL.
 - `type` es `string` y no un enum: el contrato pide tolerar tipos nuevos, y el texto ya viene en `message`.
+- `notificationLink` decide a qué pantalla lleva cada aviso según su tipo. Con un tipo desconocido lleva a la ficha pública de la propiedad, o a ningún lado si no hay propiedad.
 - El contador de la cabecera se vuelve a pedir cada 60 s, porque los avisos nacen de eventos y nadie le avisa al navegador. Se monta solo con sesión. Si notification no responde, el enlace sigue ahí sin número.
 
 ## Consultas y visitas (interesado)

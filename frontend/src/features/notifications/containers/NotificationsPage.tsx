@@ -1,14 +1,11 @@
-import type { AppNotification } from '../../../core/models/notification'
 import { Button } from '../../../shared/ui/Button'
 import { EmptyState } from '../../../shared/ui/EmptyState'
 import { ErrorMessage } from '../../../shared/ui/ErrorMessage'
 import { Pagination } from '../../../shared/ui/Pagination'
 import { RowListSkeleton } from '../../../shared/ui/RowListSkeleton'
 import { NotificationList } from '../components/NotificationList'
+import { notificationLink } from '../notificationLink'
 import { useNotificationsPage } from '../useNotifications'
-
-const propertyHref = (notification: AppNotification) =>
-  notification.propertyId ? `/properties/${notification.propertyId}` : null
 
 export function NotificationsPage() {
   const {
@@ -51,7 +48,7 @@ export function NotificationsPage() {
           {markError && <ErrorMessage message={markError} />}
           <NotificationList
             notifications={page.data}
-            hrefFor={propertyHref}
+            linkFor={notificationLink}
             markingId={markingId}
             onMarkRead={markRead}
           />
