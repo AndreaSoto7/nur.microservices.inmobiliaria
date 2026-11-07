@@ -31,27 +31,27 @@ const base = () => ({
 })
 
 describe('AgentInquiriesPage', () => {
-  it('lista quién consultó y sobre qué propiedad', async () => {
+  it('lists who asked and about which property', async () => {
     routeFetch({ ...base(), [LIST]: listOf([summary]) })
 
-    renderApp('/agente/consultas')
+    renderApp('/agent/inquiries')
 
     const row = await screen.findByRole('listitem')
     expect(within(row).getByRole('heading', { name: 'María Pérez' })).toBeInTheDocument()
     expect(await within(row).findByRole('link', { name: 'Mi casa' })).toHaveAttribute(
       'href',
-      `/agente/propiedades/${PROPERTY_ID}`,
+      `/agent/properties/${PROPERTY_ID}`,
     )
   })
 
-  it('pide el mensaje solo al abrir la consulta y muestra cómo contactar', async () => {
+  it('fetches the message only when opening the inquiry and shows how to get in touch', async () => {
     const fetchMock = routeFetch({
       ...base(),
       [LIST]: listOf([summary]),
       [DETAIL]: () => jsonResponse(200, full),
     })
     const user = userEvent.setup()
-    renderApp('/agente/consultas')
+    renderApp('/agent/inquiries')
 
     const toggle = await screen.findByRole('button', { name: /^Ver consulta/ })
     const asked = () =>
@@ -67,14 +67,14 @@ describe('AgentInquiriesPage', () => {
     expect(screen.getByRole('link', { name: '70000000' })).toHaveAttribute('href', 'tel:70000000')
   })
 
-  it('funciona sin teléfono, que es opcional', async () => {
+  it('works without phone, which is optional', async () => {
     routeFetch({
       ...base(),
       [LIST]: listOf([summary]),
       [DETAIL]: () => jsonResponse(200, { ...full, contactPhone: undefined }),
     })
     const user = userEvent.setup()
-    renderApp('/agente/consultas')
+    renderApp('/agent/inquiries')
 
     await user.click(await screen.findByRole('button', { name: /^Ver consulta/ }))
 
@@ -82,14 +82,14 @@ describe('AgentInquiriesPage', () => {
     expect(screen.queryByText('Teléfono')).not.toBeInTheDocument()
   })
 
-  it('se puede cerrar la consulta abierta', async () => {
+  it('the open inquiry can be closed', async () => {
     routeFetch({
       ...base(),
       [LIST]: listOf([summary]),
       [DETAIL]: () => jsonResponse(200, full),
     })
     const user = userEvent.setup()
-    renderApp('/agente/consultas')
+    renderApp('/agent/inquiries')
 
     await user.click(await screen.findByRole('button', { name: /^Ver consulta/ }))
     await screen.findByText('¿Se permiten mascotas?')
@@ -98,29 +98,29 @@ describe('AgentInquiriesPage', () => {
     expect(screen.queryByText('¿Se permiten mascotas?')).not.toBeInTheDocument()
   })
 
-  it('muestra el error si no se pudo abrir la consulta', async () => {
+  it('shows the error when the inquiry could not be opened', async () => {
     routeFetch({
       ...base(),
       [LIST]: listOf([summary]),
       [DETAIL]: () => jsonResponse(500, problem(500, 'INTERNAL_ERROR', 'Falló el servidor.')),
     })
     const user = userEvent.setup()
-    renderApp('/agente/consultas')
+    renderApp('/agent/inquiries')
 
     await user.click(await screen.findByRole('button', { name: /^Ver consulta/ }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Falló el servidor.')
   })
 
-  it('explica si todavía no recibió consultas', async () => {
+  it('explains when no inquiries have been received yet', async () => {
     routeFetch({ ...base(), [LIST]: listOf([]) })
 
-    renderApp('/agente/consultas')
+    renderApp('/agent/inquiries')
 
     expect(await screen.findByText('Todavía no recibiste consultas')).toBeInTheDocument()
   })
 
-  it('muestra el error y permite reintentar si la lista no carga', async () => {
+  it('shows the error and allows retrying when the list does not load', async () => {
     let attempts = 0
     routeFetch({
       ...base(),
@@ -132,7 +132,7 @@ describe('AgentInquiriesPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp('/agente/consultas')
+    renderApp('/agent/inquiries')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No disponible.')
     await user.click(screen.getByRole('button', { name: 'Reintentar' }))

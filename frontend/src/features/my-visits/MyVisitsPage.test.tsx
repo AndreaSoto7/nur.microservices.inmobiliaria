@@ -22,37 +22,37 @@ const withProperty = {
 }
 
 describe('MyVisitsPage', () => {
-  it('muestra el estado y el título de la propiedad, con enlace a su ficha', async () => {
+  it('shows the status and the property title, with a link to its page', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
       ...withProperty,
       [LIST]: () => jsonResponse(200, visitPage([visit()])),
     })
 
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     const link = await screen.findByRole('link', { name: 'Casa con jardín en Equipetrol' })
-    expect(link).toHaveAttribute('href', `/propiedades/${PROPERTY_ID}`)
+    expect(link).toHaveAttribute('href', `/properties/${PROPERTY_ID}`)
     const row = screen.getByRole('listitem')
     expect(within(row).getByText('Solicitada')).toBeInTheDocument()
     expect(within(row).getByText('Fecha propuesta')).toBeInTheDocument()
   })
 
-  it('si la propiedad ya no está en el catálogo, lo dice y no enlaza', async () => {
+  it('if the property is no longer in the catalog, says so and does not link', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
       [CATALOG]: () => jsonResponse(404, problem(404, 'PROPERTY_NOT_FOUND', 'No existe.')),
       [LIST]: () => jsonResponse(200, visitPage([visit()])),
     })
 
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     const row = await screen.findByRole('listitem')
     expect(await within(row).findByText('Propiedad no disponible')).toBeInTheDocument()
     expect(within(row).queryByRole('link')).not.toBeInTheDocument()
   })
 
-  it('muestra el horario de una visita programada', async () => {
+  it('shows the slot of a scheduled visit', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
       ...withProperty,
@@ -69,14 +69,14 @@ describe('MyVisitsPage', () => {
         ),
     })
 
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     const row = await screen.findByRole('listitem')
     expect(within(row).getByText('Programada')).toBeInTheDocument()
     expect(within(row).getByText('Horario')).toBeInTheDocument()
   })
 
-  it('muestra el motivo de un rechazo', async () => {
+  it('shows the reason for a rejection', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
       ...withProperty,
@@ -87,13 +87,13 @@ describe('MyVisitsPage', () => {
         ),
     })
 
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     expect(await screen.findByText('La propiedad se reservó.')).toBeInTheDocument()
   })
 
   it.each(['REQUESTED', 'COMPLETED', 'CANCELLED', 'REJECTED'] as const)(
-    'una visita en estado %s no se puede cancelar',
+    'a visit in status %s cannot be cancelled',
     async (status) => {
       routeFetch({
         ...sessionRoutes(currentUser),
@@ -101,14 +101,14 @@ describe('MyVisitsPage', () => {
         [LIST]: () => jsonResponse(200, visitPage([visit({ status })])),
       })
 
-      renderApp('/mis-visitas')
+      renderApp('/my-visits')
 
       await screen.findByRole('listitem')
       expect(screen.queryByRole('button', { name: /^Cancelar visita/ })).not.toBeInTheDocument()
     },
   )
 
-  it('cancela una visita programada con motivo y actualiza la lista', async () => {
+  it('cancels a scheduled visit with a reason and refreshes the list', async () => {
     let status: 'SCHEDULED' | 'CANCELLED' = 'SCHEDULED'
     const fetchMock = routeFetch({
       ...sessionRoutes(currentUser),
@@ -120,7 +120,7 @@ describe('MyVisitsPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     await user.click(await screen.findByRole('button', { name: /^Cancelar visita/ }))
     await user.type(screen.getByLabelText('Motivo (opcional)'), '  Surgió un imprevisto  ')
@@ -134,7 +134,7 @@ describe('MyVisitsPage', () => {
     expect(call?.[1]?.headers).toHaveProperty('Idempotency-Key')
   })
 
-  it('cancelar sin motivo manda un body vacío', async () => {
+  it('cancelling without a reason sends an empty body', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(currentUser),
       ...withProperty,
@@ -142,7 +142,7 @@ describe('MyVisitsPage', () => {
       [`POST ${CANCEL_PATH}`]: () => jsonResponse(200, { id: VISIT_ID, status: 'CANCELLED' }),
     })
     const user = userEvent.setup()
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     await user.click(await screen.findByRole('button', { name: /^Cancelar visita/ }))
     await user.click(screen.getByRole('button', { name: 'Sí, cancelar' }))
@@ -150,14 +150,14 @@ describe('MyVisitsPage', () => {
     await waitFor(() => expect(sentBodies(fetchMock, 'POST', CANCEL_PATH)).toEqual([{}]))
   })
 
-  it('permite arrepentirse sin llamar a la API', async () => {
+  it('allows backing out without calling the API', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(currentUser),
       ...withProperty,
       [LIST]: () => jsonResponse(200, visitPage([visit({ status: 'SCHEDULED' })])),
     })
     const user = userEvent.setup()
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     await user.click(await screen.findByRole('button', { name: /^Cancelar visita/ }))
     await user.click(screen.getByRole('button', { name: 'No, volver' }))
@@ -166,7 +166,7 @@ describe('MyVisitsPage', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/cancel'))).toBe(false)
   })
 
-  it('muestra el motivo si ya es tarde para cancelar', async () => {
+  it('shows the reason when it is too late to cancel', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
       ...withProperty,
@@ -175,7 +175,7 @@ describe('MyVisitsPage', () => {
         jsonResponse(409, problem(409, 'VISIT_CANCELLATION_TOO_LATE', 'La visita ya empezó.')),
     })
     const user = userEvent.setup()
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     await user.click(await screen.findByRole('button', { name: /^Cancelar visita/ }))
     await user.click(screen.getByRole('button', { name: 'Sí, cancelar' }))
@@ -183,13 +183,13 @@ describe('MyVisitsPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('La visita ya empezó.')
   })
 
-  it('filtra por estado y lo manda a la API, ordenando por lo más reciente', async () => {
+  it('filters by status and sends it to the API, sorting by most recent', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(currentUser),
       [LIST]: () => jsonResponse(200, visitPage([])),
     })
     const user = userEvent.setup()
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     await user.selectOptions(await screen.findByLabelText('Estado'), 'SCHEDULED')
 
@@ -201,19 +201,19 @@ describe('MyVisitsPage', () => {
     expect(urls.every((url) => url.includes('sort=requestedAt%2Cdesc'))).toBe(true)
   })
 
-  it('explica qué hacer si no tiene visitas', async () => {
+  it('explains what to do when there are no visits', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
       [LIST]: () => jsonResponse(200, visitPage([])),
     })
 
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     expect(await screen.findByText('Todavía no solicitaste visitas')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Ver el catálogo' })).toHaveAttribute('href', '/')
   })
 
-  it('muestra el error y permite reintentar si la lista no carga', async () => {
+  it('shows the error and allows retrying when the list does not load', async () => {
     let attempts = 0
     routeFetch({
       ...sessionRoutes(currentUser),
@@ -225,7 +225,7 @@ describe('MyVisitsPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No disponible.')
     await user.click(screen.getByRole('button', { name: 'Reintentar' }))
@@ -233,13 +233,13 @@ describe('MyVisitsPage', () => {
     expect(await screen.findByText('Todavía no solicitaste visitas')).toBeInTheDocument()
   })
 
-  it('el enlace aparece para un interesado y un agente no puede entrar', async () => {
+  it('the link shows up for a client and an agent cannot get in', async () => {
     routeFetch({
       ...sessionRoutes(agentUser),
       [LIST]: () => jsonResponse(200, visitPage([])),
     })
 
-    renderApp('/mis-visitas')
+    renderApp('/my-visits')
 
     expect(await screen.findByText('Sin permiso')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Mis visitas' })).not.toBeInTheDocument()

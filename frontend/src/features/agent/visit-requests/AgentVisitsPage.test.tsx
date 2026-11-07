@@ -38,19 +38,19 @@ const FUTURE = {
 }
 
 describe('AgentVisitsPage', () => {
-  it('muestra el título de su propiedad aunque esté sin publicar', async () => {
+  it("shows the title of the agent's property even if unpublished", async () => {
     routeFetch(withVisit())
 
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     expect(await screen.findByRole('link', { name: 'Mi casa en borrador' })).toHaveAttribute(
       'href',
-      `/agente/propiedades/${PROPERTY_ID}`,
+      `/agent/properties/${PROPERTY_ID}`,
     )
     expect(within(screen.getByRole('listitem')).getByText('Solicitada')).toBeInTheDocument()
   })
 
-  it('programa una solicitud proponiendo la fecha del interesado, en UTC', async () => {
+  it("schedules a request proposing the client's date, in UTC", async () => {
     let status: 'REQUESTED' | 'SCHEDULED' = 'REQUESTED'
     const fetchMock = routeFetch({
       ...base(),
@@ -61,7 +61,7 @@ describe('AgentVisitsPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     await user.click(await screen.findByRole('button', { name: /^Programar/ }))
     await user.click(screen.getByRole('button', { name: 'Confirmar horario' }))
@@ -76,14 +76,14 @@ describe('AgentVisitsPage', () => {
     expect(call?.[1]?.headers).toHaveProperty('Idempotency-Key')
   })
 
-  it('si el horario choca, lo dice en la fila y conserva el formulario abierto', async () => {
+  it('if the slot conflicts, says so in the row and keeps the form open', async () => {
     routeFetch({
       ...withVisit(),
       [`POST ${action('schedule')}`]: () =>
         jsonResponse(409, problem(409, 'VISIT_SCHEDULE_CONFLICT', 'Ese horario ya está ocupado.')),
     })
     const user = userEvent.setup()
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     await user.click(await screen.findByRole('button', { name: /^Programar/ }))
     await user.click(screen.getByRole('button', { name: 'Confirmar horario' }))
@@ -93,7 +93,7 @@ describe('AgentVisitsPage', () => {
     expect(within(row).getByLabelText('Fecha y hora de la visita')).toBeInTheDocument()
   })
 
-  it('rechaza una solicitud con su motivo', async () => {
+  it('rejects a request with its reason', async () => {
     let status: 'REQUESTED' | 'REJECTED' = 'REQUESTED'
     const fetchMock = routeFetch({
       ...base(),
@@ -104,7 +104,7 @@ describe('AgentVisitsPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     await user.click(await screen.findByRole('button', { name: /^Rechazar/ }))
     await user.type(screen.getByLabelText('Motivo'), 'Ya no está disponible ese día')
@@ -118,10 +118,10 @@ describe('AgentVisitsPage', () => {
     ])
   })
 
-  it('no rechaza sin motivo, que el contrato exige', async () => {
+  it('does not reject without a reason, which the contract requires', async () => {
     const fetchMock = routeFetch(withVisit())
     const user = userEvent.setup()
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     await user.click(await screen.findByRole('button', { name: /^Rechazar/ }))
     await user.click(screen.getByRole('button', { name: 'Sí, rechazar' }))
@@ -130,13 +130,13 @@ describe('AgentVisitsPage', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/reject'))).toBe(false)
   })
 
-  it('cancela una visita programada', async () => {
+  it('cancels a scheduled visit', async () => {
     const fetchMock = routeFetch({
       ...withVisit(FUTURE),
       [`POST ${action('cancel')}`]: () => jsonResponse(200, { id: VISIT_ID, status: 'CANCELLED' }),
     })
     const user = userEvent.setup()
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     await user.click(await screen.findByRole('button', { name: /^Cancelar visita/ }))
     await user.click(screen.getByRole('button', { name: 'Sí, cancelar' }))
@@ -144,23 +144,23 @@ describe('AgentVisitsPage', () => {
     await waitFor(() => expect(sentBodies(fetchMock, 'POST', action('cancel'))).toEqual([{}]))
   })
 
-  it('solo ofrece marcar como realizada cuando ya terminó el horario', async () => {
+  it('only offers marking as completed once the slot has ended', async () => {
     routeFetch(withVisit(FUTURE))
 
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     await screen.findByRole('button', { name: /^Cancelar visita/ })
     expect(screen.queryByRole('button', { name: /^Marcar realizada/ })).not.toBeInTheDocument()
   })
 
-  it('marca como realizada una visita que ya terminó', async () => {
+  it('marks as completed a visit that already ended', async () => {
     const fetchMock = routeFetch({
       ...withVisit(PAST),
       [`POST ${action('complete')}`]: () =>
         jsonResponse(200, { id: VISIT_ID, status: 'COMPLETED' }),
     })
     const user = userEvent.setup()
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     await user.click(await screen.findByRole('button', { name: /^Marcar realizada/ }))
 
@@ -168,24 +168,24 @@ describe('AgentVisitsPage', () => {
   })
 
   it.each(['COMPLETED', 'CANCELLED', 'REJECTED'] as const)(
-    'una visita en estado %s no tiene acciones',
+    'a visit in status %s has no actions',
     async (status) => {
       routeFetch(withVisit({ status }))
 
-      renderApp('/agente/solicitudes')
+      renderApp('/agent/visit-requests')
 
       const row = await screen.findByRole('listitem')
       expect(within(row).queryByRole('button')).not.toBeInTheDocument()
     },
   )
 
-  it('filtra por estado y explica el resultado vacío', async () => {
+  it('filters by status and explains the empty result', async () => {
     const fetchMock = routeFetch({
       ...base(),
       [LIST]: () => jsonResponse(200, visitPage([])),
     })
     const user = userEvent.setup()
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     expect(await screen.findByText('Todavía no recibiste solicitudes')).toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('Estado'), 'REQUESTED')
@@ -196,7 +196,7 @@ describe('AgentVisitsPage', () => {
     )
   })
 
-  it('muestra el error y permite reintentar si la lista no carga', async () => {
+  it('shows the error and allows retrying when the list does not load', async () => {
     let attempts = 0
     routeFetch({
       ...base(),
@@ -208,7 +208,7 @@ describe('AgentVisitsPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No disponible.')
     await user.click(screen.getByRole('button', { name: 'Reintentar' }))
@@ -217,11 +217,11 @@ describe('AgentVisitsPage', () => {
   })
 })
 
-describe('panel de agente', () => {
-  it('reúne sus pantallas en un menú propio y marca dónde está', async () => {
+describe('agent dashboard', () => {
+  it('groups its screens in its own menu and highlights the current one', async () => {
     routeFetch({ ...base(), [LIST]: () => jsonResponse(200, visitPage([])) })
 
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     const menu = await screen.findByRole('navigation', { name: 'Panel de agente' })
     expect(within(menu).getByRole('link', { name: 'Solicitudes' })).toHaveAttribute(
@@ -230,11 +230,11 @@ describe('panel de agente', () => {
     )
     expect(within(menu).getByRole('link', { name: 'Mis propiedades' })).toHaveAttribute(
       'href',
-      '/agente/propiedades',
+      '/agent/properties',
     )
   })
 
-  it('/agente lleva a sus propiedades', async () => {
+  it("/agent leads to the agent's properties", async () => {
     routeFetch({
       ...base(),
       'GET /api/v1/properties': () =>
@@ -244,26 +244,26 @@ describe('panel de agente', () => {
         }),
     })
 
-    renderApp('/agente')
+    renderApp('/agent')
 
     expect(await screen.findByRole('heading', { name: 'Mis propiedades' })).toBeInTheDocument()
   })
 
-  it('la cabecera enlaza al panel solo para un agente', async () => {
+  it('the header links to the dashboard only for an agent', async () => {
     routeFetch({ ...base(), [LIST]: () => jsonResponse(200, visitPage([])) })
 
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     expect(await screen.findByRole('link', { name: 'Panel de agente' })).toHaveAttribute(
       'href',
-      '/agente',
+      '/agent',
     )
   })
 
-  it('un interesado no puede entrar', async () => {
+  it('a client cannot get in', async () => {
     routeFetch(sessionRoutes(currentUser))
 
-    renderApp('/agente/solicitudes')
+    renderApp('/agent/visit-requests')
 
     expect(await screen.findByText('Sin permiso')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Panel de agente' })).not.toBeInTheDocument()

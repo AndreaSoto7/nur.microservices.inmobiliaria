@@ -26,7 +26,7 @@ export function LoginPage() {
         <p className="auth-card__lead">Usa el email y la contraseña de tu cuenta.</p>
         <LoginForm onSubmit={handleSubmit} submitting={submitting} error={error} />
         <p className="auth-card__footer">
-          ¿No tienes cuenta? <Link to="/registro">Créala aquí</Link>
+          ¿No tienes cuenta? <Link to="/register">Créala aquí</Link>
         </p>
       </div>
     </section>

@@ -5,7 +5,7 @@ import { useUnreadCount } from '../useNotifications'
 export function NotificationsNavLink() {
   const count = useUnreadCount()
   return (
-    <NavLink to="/avisos">
+    <NavLink to="/notifications">
       Avisos
       {count > 0 && (
         <>

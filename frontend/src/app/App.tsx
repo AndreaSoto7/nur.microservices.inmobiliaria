@@ -23,11 +23,11 @@ export function App() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route index element={<CatalogPage />} />
-        <Route path="propiedades/:propertyId" element={<PropertyDetailPage />} />
+        <Route path="properties/:propertyId" element={<PropertyDetailPage />} />
         <Route path="login" element={<LoginPage />} />
-        <Route path="registro" element={<RegisterPage />} />
+        <Route path="register" element={<RegisterPage />} />
         <Route
-          path="cuenta"
+          path="account"
           element={
             <RequireAuth>
               <AccountPage />
@@ -35,7 +35,7 @@ export function App() {
           }
         />
         <Route
-          path="avisos"
+          path="notifications"
           element={
             <RequireAuth>
               <NotificationsPage />
@@ -43,7 +43,7 @@ export function App() {
           }
         />
         <Route
-          path="mis-visitas"
+          path="my-visits"
           element={
             <RequireAuth roles={['CLIENT']}>
               <MyVisitsPage />
@@ -51,7 +51,7 @@ export function App() {
           }
         />
         <Route
-          path="favoritos"
+          path="favorites"
           element={
             <RequireAuth roles={['CLIENT', 'AGENT']}>
               <FavoritesPage />
@@ -59,20 +59,20 @@ export function App() {
           }
         />
         <Route
-          path="agente"
+          path="agent"
           element={
             <RequireAuth roles={['AGENT']}>
               <AgentLayout />
             </RequireAuth>
           }
         >
-          <Route index element={<Navigate to="propiedades" replace />} />
-          <Route path="propiedades" element={<AgentPropertiesPage />} />
-          <Route path="propiedades/nueva" element={<PropertyCreatePage />} />
-          <Route path="propiedades/:propertyId" element={<PropertyEditPage />} />
-          <Route path="solicitudes" element={<AgentVisitsPage />} />
-          <Route path="consultas" element={<AgentInquiriesPage />} />
-          <Route path="oportunidades" element={<AgentLeadsPage />} />
+          <Route index element={<Navigate to="properties" replace />} />
+          <Route path="properties" element={<AgentPropertiesPage />} />
+          <Route path="properties/new" element={<PropertyCreatePage />} />
+          <Route path="properties/:propertyId" element={<PropertyEditPage />} />
+          <Route path="visit-requests" element={<AgentVisitsPage />} />
+          <Route path="inquiries" element={<AgentInquiriesPage />} />
+          <Route path="leads" element={<AgentLeadsPage />} />
         </Route>
         <Route
           path="*"

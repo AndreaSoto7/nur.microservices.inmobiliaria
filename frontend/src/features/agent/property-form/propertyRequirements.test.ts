@@ -5,43 +5,43 @@ import { imagesError, publishBlockers } from './propertyRequirements'
 const file = (type: string, size = 1) => new File([new Uint8Array(size)], 'foto', { type })
 
 describe('publishBlockers', () => {
-  it('no hay nada que completar en una propiedad con datos y fotos', () => {
+  it('there is nothing to complete on a property with data and photos', () => {
     expect(publishBlockers(detail())).toEqual([])
   })
 
-  it('una superficie faltante bloquea aunque el resto esté', () => {
+  it('a missing area blocks even if everything else is there', () => {
     expect(publishBlockers(detail({ areaM2: null }))).toEqual([
       'Completa dormitorios, baños y superficie.',
     ])
   })
 
-  it('cero dormitorios es un dato válido, no un faltante', () => {
+  it('zero bedrooms is a valid value, not a missing one', () => {
     expect(publishBlockers(detail({ bedrooms: 0 }))).toEqual([])
   })
 
-  it('sin fotos no se puede publicar', () => {
+  it('cannot be published without photos', () => {
     expect(publishBlockers(detail({ images: [] }))).toEqual(['Agrega al menos una foto.'])
   })
 })
 
 describe('imagesError', () => {
-  it('acepta JPG y PNG', () => {
+  it('accepts JPG and PNG', () => {
     expect(imagesError([file('image/jpeg'), file('image/png')], 0)).toBeUndefined()
   })
 
-  it('rechaza otros formatos', () => {
+  it('rejects other formats', () => {
     expect(imagesError([file('image/webp')], 0)).toMatch(/JPG o PNG/)
   })
 
-  it('rechaza una foto de más de 5 MB', () => {
+  it('rejects a photo larger than 5 MB', () => {
     expect(imagesError([file('image/png', 5 * 1024 * 1024 + 1)], 0)).toMatch(/5 MB/)
   })
 
-  it('acepta una foto de exactamente 5 MB', () => {
+  it('accepts a photo of exactly 5 MB', () => {
     expect(imagesError([file('image/png', 5 * 1024 * 1024)], 0)).toBeUndefined()
   })
 
-  it('no deja pasar del máximo contando las que ya tiene', () => {
+  it('does not allow exceeding the maximum counting the existing ones', () => {
     expect(imagesError([file('image/png'), file('image/png')], 4)).toBe(
       'Puedes agregar hasta 1 foto.',
     )

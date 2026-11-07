@@ -14,7 +14,7 @@ export function PropertyCreatePage() {
   async function handleSubmit(values: PropertyFormValues) {
     try {
       const { id } = await createProperty(toCreateRequest(values))
-      navigate(`/agente/propiedades/${id}`, { replace: true })
+      navigate(`/agent/properties/${id}`, { replace: true })
     } catch {
       // El error ya queda en el estado de la mutación y lo muestra el formulario.
     }
@@ -22,7 +22,7 @@ export function PropertyCreatePage() {
 
   return (
     <section className="page page--medium">
-      <Link to="/agente/propiedades" className="back-link">
+      <Link to="/agent/properties" className="back-link">
         ← Mis propiedades
       </Link>
       <div className="card editor__section">

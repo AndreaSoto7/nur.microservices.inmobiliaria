@@ -38,6 +38,6 @@ nginx sirve el build con CSP y cabeceras de seguridad. La URL del gateway se fij
 | Ruta        | Pantalla                                             | Acceso     |
 | ----------- | ---------------------------------------------------- | ---------- |
 | `/`         | Inicio (el catálogo llega cuando listing lo exponga) | Público    |
-| `/registro` | Crear cuenta como interesado o agente                | Público    |
+| `/register` | Crear cuenta como interesado o agente                | Público    |
 | `/login`    | Ingresar                                             | Público    |
-| `/cuenta`   | Mi cuenta                                            | Con sesión |
+| `/account`  | Mi cuenta                                            | Con sesión |

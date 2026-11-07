@@ -7,11 +7,11 @@ const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 describe('newIdempotencyKey', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it('genera un UUID v4', () => {
+  it('generates a v4 UUID', () => {
     expect(newIdempotencyKey()).toMatch(UUID_V4)
   })
 
-  it('funciona sin randomUUID, que no existe fuera de HTTPS o localhost', () => {
+  it('works without randomUUID, which does not exist outside HTTPS or localhost', () => {
     const { getRandomValues } = crypto
     vi.stubGlobal('crypto', { getRandomValues: getRandomValues.bind(crypto) })
 
@@ -20,13 +20,13 @@ describe('newIdempotencyKey', () => {
 })
 
 describe('useIdempotencyKey', () => {
-  it('reintentar lo mismo reutiliza la clave', () => {
+  it('retrying the same request reuses the key', () => {
     const { result } = renderHook(() => useIdempotencyKey())
 
     expect(result.current({ a: 1 })).toBe(result.current({ a: 1 }))
   })
 
-  it('cambiar el contenido usa otra clave: el servicio responde 422 si se reutiliza', () => {
+  it('changing the content uses another key: the service responds 422 if it is reused', () => {
     const { result } = renderHook(() => useIdempotencyKey())
 
     expect(result.current({ a: 1 })).not.toBe(result.current({ a: 2 }))

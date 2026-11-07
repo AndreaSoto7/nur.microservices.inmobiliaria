@@ -8,7 +8,7 @@ import { PropertyGridSkeleton } from '../../catalog/components/PropertyGridSkele
 import { FavoriteList } from '../components/FavoriteList'
 import { useFavoritesPage } from '../useFavorites'
 
-const detailHref = (property: PropertySummary) => `/propiedades/${property.id}`
+const detailHref = (property: PropertySummary) => `/properties/${property.id}`
 
 export function FavoritesPage() {
   const { page, loading, error, retry, goToPage, removeFavorite, removingId, removeError } =

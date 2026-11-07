@@ -12,7 +12,7 @@ import { toEditRequest, valuesFromDetail, type PropertyFormValues } from '../pro
 import { useEditProperty } from '../usePropertyForm'
 
 const BACK_LINK = (
-  <Link to="/agente/propiedades" className="back-link">
+  <Link to="/agent/properties" className="back-link">
     ← Mis propiedades
   </Link>
 )

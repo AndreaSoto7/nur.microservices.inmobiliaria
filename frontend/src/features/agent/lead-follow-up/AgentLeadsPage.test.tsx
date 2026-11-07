@@ -39,10 +39,10 @@ const base = () => ({
 })
 
 describe('AgentLeadsPage', () => {
-  it('muestra la propiedad y el estado de cada oportunidad', async () => {
+  it('shows the property and status of each lead', async () => {
     routeFetch({ ...base(), [LIST]: () => listOf([lead()]) })
 
-    renderApp('/agente/oportunidades')
+    renderApp('/agent/leads')
 
     const row = await screen.findByRole('listitem')
     expect(await within(row).findByRole('link', { name: 'Mi casa' })).toBeInTheDocument()
@@ -52,31 +52,27 @@ describe('AgentLeadsPage', () => {
   it.each([
     ['WON', 'Ganada'],
     ['LOST', 'Perdida'],
-  ] as const)(
-    'una oportunidad cerrada como %s dice %s y no tiene acciones',
-    async (outcome, label) => {
-      routeFetch({
-        ...base(),
-        [LIST]: () =>
-          listOf([lead({ status: 'CLOSED', outcome, closedAt: '2026-10-17T14:30:00Z' })]),
-      })
+  ] as const)('a lead closed as %s says %s and has no actions', async (outcome, label) => {
+    routeFetch({
+      ...base(),
+      [LIST]: () => listOf([lead({ status: 'CLOSED', outcome, closedAt: '2026-10-17T14:30:00Z' })]),
+    })
 
-      renderApp('/agente/oportunidades')
+    renderApp('/agent/leads')
 
-      const row = await screen.findByRole('listitem')
-      expect(within(row).getByText(label)).toBeInTheDocument()
-      expect(within(row).queryByRole('button')).not.toBeInTheDocument()
-    },
-  )
+    const row = await screen.findByRole('listitem')
+    expect(within(row).getByText(label)).toBeInTheDocument()
+    expect(within(row).queryByRole('button')).not.toBeInTheDocument()
+  })
 
-  it('registra una nota de seguimiento y confirma que se guardó', async () => {
+  it('records a follow-up note and confirms it was saved', async () => {
     const fetchMock = routeFetch({
       ...base(),
       [LIST]: () => listOf([lead()]),
       [`POST ${FOLLOW_UP}`]: () => jsonResponse(201, { id: 'nota-1' }),
     })
     const user = userEvent.setup()
-    renderApp('/agente/oportunidades')
+    renderApp('/agent/leads')
 
     await user.click(await screen.findByRole('button', { name: /^Agregar nota/ }))
     await user.type(screen.getByLabelText('Nota'), '  Pidió más detalles  ')
@@ -89,7 +85,7 @@ describe('AgentLeadsPage', () => {
     expect(call?.[1]?.headers).toHaveProperty('Idempotency-Key')
   })
 
-  it('si la nota falla, lo dice en la fila y conserva lo escrito', async () => {
+  it('if the note fails, says so in the row and keeps what was written', async () => {
     routeFetch({
       ...base(),
       [LIST]: () => listOf([lead()]),
@@ -97,7 +93,7 @@ describe('AgentLeadsPage', () => {
         jsonResponse(409, problem(409, 'LEAD_NOT_OPEN', 'La oportunidad ya está cerrada.')),
     })
     const user = userEvent.setup()
-    renderApp('/agente/oportunidades')
+    renderApp('/agent/leads')
 
     await user.click(await screen.findByRole('button', { name: /^Agregar nota/ }))
     await user.type(screen.getByLabelText('Nota'), 'Hola')
@@ -108,7 +104,7 @@ describe('AgentLeadsPage', () => {
     expect(within(row).getByLabelText('Nota')).toHaveValue('Hola')
   })
 
-  it('cierra como ganada con nota y avisa que la reserva llega después', async () => {
+  it('closes as won with a note and warns that the reservation comes later', async () => {
     let closed = false
     const fetchMock = routeFetch({
       ...base(),
@@ -119,7 +115,7 @@ describe('AgentLeadsPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp('/agente/oportunidades')
+    renderApp('/agent/leads')
 
     await user.click(await screen.findByRole('button', { name: /^Cerrar oportunidad/ }))
     await user.click(screen.getByRole('radio', { name: 'Ganada' }))
@@ -133,7 +129,7 @@ describe('AgentLeadsPage', () => {
     expect(sentBodies(fetchMock, 'POST', CLOSE)).toEqual([{ outcome: 'WON', note: 'Confirmó' }])
   })
 
-  it('cerrar como perdida no promete una reserva y omite la nota vacía', async () => {
+  it('closing as lost does not promise a reservation and omits the empty note', async () => {
     let closed = false
     const fetchMock = routeFetch({
       ...base(),
@@ -144,7 +140,7 @@ describe('AgentLeadsPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp('/agente/oportunidades')
+    renderApp('/agent/leads')
 
     await user.click(await screen.findByRole('button', { name: /^Cerrar oportunidad/ }))
     await user.click(screen.getByRole('radio', { name: 'Perdida' }))
@@ -157,10 +153,10 @@ describe('AgentLeadsPage', () => {
     expect(sentBodies(fetchMock, 'POST', CLOSE)).toEqual([{ outcome: 'LOST' }])
   })
 
-  it('exige elegir el resultado antes de cerrar', async () => {
+  it('requires choosing the outcome before closing', async () => {
     const fetchMock = routeFetch({ ...base(), [LIST]: () => listOf([lead()]) })
     const user = userEvent.setup()
-    renderApp('/agente/oportunidades')
+    renderApp('/agent/leads')
 
     await user.click(await screen.findByRole('button', { name: /^Cerrar oportunidad/ }))
     await user.click(screen.getByRole('button', { name: 'Confirmar cierre' }))
@@ -168,10 +164,10 @@ describe('AgentLeadsPage', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/close'))).toBe(false)
   })
 
-  it('filtra por estado y explica el resultado vacío', async () => {
+  it('filters by status and explains the empty result', async () => {
     const fetchMock = routeFetch({ ...base(), [LIST]: () => listOf([]) })
     const user = userEvent.setup()
-    renderApp('/agente/oportunidades')
+    renderApp('/agent/leads')
 
     expect(await screen.findByText('Todavía no tienes oportunidades')).toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('Estado'), 'CLOSED')
@@ -180,7 +176,7 @@ describe('AgentLeadsPage', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('status=CLOSED'))).toBe(true)
   })
 
-  it('muestra el error y permite reintentar si la lista no carga', async () => {
+  it('shows the error and allows retrying when the list does not load', async () => {
     let attempts = 0
     routeFetch({
       ...base(),
@@ -192,7 +188,7 @@ describe('AgentLeadsPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp('/agente/oportunidades')
+    renderApp('/agent/leads')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No disponible.')
     await user.click(screen.getByRole('button', { name: 'Reintentar' }))

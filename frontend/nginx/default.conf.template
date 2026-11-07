@@ -23,7 +23,7 @@ server {
         try_files $uri =404;
     }
 
-    # Rutas del router (/login, /cuenta, ...): todas sirven index.html, que nunca se cachea para que
+    # Rutas del router (/login, /account, ...): todas sirven index.html, que nunca se cachea para que
     # un deploy nuevo se vea al recargar.
     location / {
         include /etc/nginx/conf.d/security-headers.inc;

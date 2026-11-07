@@ -62,7 +62,7 @@ export function PropertyContactSection({
         {visit.sent ? (
           <p className="notice notice--success" role="status">
             Solicitud enviada. El agente va a confirmar el horario.{' '}
-            <Link to="/mis-visitas">Ver mis visitas</Link>
+            <Link to="/my-visits">Ver mis visitas</Link>
           </p>
         ) : (
           <VisitRequestForm

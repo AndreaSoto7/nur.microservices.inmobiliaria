@@ -10,8 +10,8 @@ function requestedQuery(fetchMock: ReturnType<typeof mockFetch>, call: number): 
   return new URL(url).searchParams
 }
 
-describe('catálogo público', () => {
-  it('muestra las propiedades del catálogo con precio, tipo, zona y portada', async () => {
+describe('public catalog', () => {
+  it('shows the catalog properties with price, type, zone and cover', async () => {
     mockFetch(
       jsonResponse(
         200,
@@ -33,7 +33,7 @@ describe('catálogo público', () => {
     expect(screen.getByText('2 propiedades')).toBeInTheDocument()
   })
 
-  it('usa los filtros de la URL al consultar el catálogo', async () => {
+  it('uses the URL filters when querying the catalog', async () => {
     const fetchMock = mockFetch(jsonResponse(200, page([summary()])))
 
     renderApp('/?zone=Equipetrol&operation=RENT&features=POOL,GARAGE&page=2')
@@ -49,7 +49,7 @@ describe('catálogo público', () => {
     expect(screen.getByLabelText('Zona')).toHaveValue('Equipetrol')
   })
 
-  it('al buscar con filtros vuelve a la página 1 y pide lo nuevo', async () => {
+  it('searching with filters goes back to page 1 and fetches the new results', async () => {
     const fetchMock = mockFetch(
       jsonResponse(200, page([summary()], { totalPages: 3, totalElements: 30 })),
       jsonResponse(200, page([summary({ id: 'filtrada', title: 'Con piscina' })])),
@@ -71,7 +71,7 @@ describe('catálogo público', () => {
     expect(query.get('page')).toBe('1')
   })
 
-  it('pagina con Siguiente', async () => {
+  it('paginates with Siguiente', async () => {
     const fetchMock = mockFetch(
       jsonResponse(200, page([summary()], { number: 1, totalPages: 2, totalElements: 13 })),
       jsonResponse(
@@ -89,7 +89,7 @@ describe('catálogo público', () => {
     expect(requestedQuery(fetchMock, 1).get('page')).toBe('2')
   })
 
-  it('si la foto de portada no carga muestra "Sin foto" en vez de una imagen rota', async () => {
+  it('if the cover photo does not load shows "Sin foto" instead of a broken image', async () => {
     mockFetch(jsonResponse(200, page([summary({ bathrooms: 1, bedrooms: 1 })])))
     renderApp('/')
 
@@ -99,7 +99,7 @@ describe('catálogo público', () => {
     expect(screen.getByText('1 dormitorio · 1 baño · 240.5 m²')).toBeInTheDocument()
   })
 
-  it('muestra un estado vacío si no hay resultados', async () => {
+  it('shows an empty state when there are no results', async () => {
     mockFetch(jsonResponse(200, page([])))
 
     renderApp('/?zone=Ninguna')
@@ -107,7 +107,7 @@ describe('catálogo público', () => {
     expect(await screen.findByText('No hay propiedades con esos filtros')).toBeInTheDocument()
   })
 
-  it('sin filtros, el estado vacío no habla de filtros', async () => {
+  it('without filters, the empty state does not mention filters', async () => {
     mockFetch(jsonResponse(200, page([])))
 
     renderApp('/')
@@ -116,7 +116,7 @@ describe('catálogo público', () => {
     expect(screen.queryByText('No hay propiedades con esos filtros')).not.toBeInTheDocument()
   })
 
-  it('cambiar el orden aplica de inmediato y vuelve a la página 1', async () => {
+  it('changing the sort applies immediately and goes back to page 1', async () => {
     const fetchMock = mockFetch(
       jsonResponse(200, page([summary()], { number: 2, totalPages: 2 })),
       jsonResponse(200, page([summary({ title: 'La más barata' })])),
@@ -133,7 +133,7 @@ describe('catálogo público', () => {
     expect(query.get('page')).toBe('1')
   })
 
-  it('abre "Más filtros" y ofrece limpiar solo si hay filtros aplicados', async () => {
+  it('opens "Más filtros" and offers clearing only when filters are applied', async () => {
     mockFetch(jsonResponse(200, page([summary()])))
 
     renderApp('/?minPrice=1000&features=POOL')
@@ -143,7 +143,7 @@ describe('catálogo público', () => {
     expect(screen.getByRole('button', { name: 'Limpiar filtros' })).toBeInTheDocument()
   })
 
-  it('sin filtros, "Más filtros" queda cerrado y no ofrece limpiar', async () => {
+  it('without filters, "Más filtros" stays closed and does not offer clearing', async () => {
     mockFetch(jsonResponse(200, page([summary()])))
 
     renderApp('/')
@@ -153,7 +153,7 @@ describe('catálogo público', () => {
     expect(screen.queryByRole('button', { name: 'Limpiar filtros' })).not.toBeInTheDocument()
   })
 
-  it('muestra el error del problem+json y permite reintentar', async () => {
+  it('shows the problem+json error and allows retrying', async () => {
     mockFetch(
       jsonResponse(503, problem(503, 'GATEWAY_UNAVAILABLE', 'El servicio no está disponible.')),
       jsonResponse(200, page([summary()])),
@@ -167,7 +167,7 @@ describe('catálogo público', () => {
     expect(await screen.findByRole('list', { name: 'Propiedades' })).toBeInTheDocument()
   })
 
-  it('la tarjeta lleva al detalle de la propiedad', async () => {
+  it('the card leads to the property detail', async () => {
     mockFetch(jsonResponse(200, page([summary()])), jsonResponse(200, detail()))
     const user = userEvent.setup()
     renderApp('/')

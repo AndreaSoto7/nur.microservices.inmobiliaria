@@ -72,7 +72,7 @@ export function AgentLeadsPage() {
                 key={lead.id}
                 lead={lead}
                 title={titles[lead.propertyId]}
-                href={`/agente/propiedades/${lead.propertyId}`}
+                href={`/agent/properties/${lead.propertyId}`}
                 busy={busyLeadId === lead.id}
                 error={failedLeadId === lead.id ? actionError : undefined}
                 noteSaved={noteSavedLeadId === lead.id}

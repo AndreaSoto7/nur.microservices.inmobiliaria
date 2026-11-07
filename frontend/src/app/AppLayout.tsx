@@ -18,16 +18,16 @@ export function AppLayout() {
   const links =
     status === 'authenticated' ? (
       <>
-        {hasRole('AGENT') && <NavLink to="/agente">Panel de agente</NavLink>}
-        {hasRole('CLIENT') && <NavLink to="/mis-visitas">Mis visitas</NavLink>}
-        {(hasRole('CLIENT') || hasRole('AGENT')) && <NavLink to="/favoritos">Favoritos</NavLink>}
+        {hasRole('AGENT') && <NavLink to="/agent">Panel de agente</NavLink>}
+        {hasRole('CLIENT') && <NavLink to="/my-visits">Mis visitas</NavLink>}
+        {(hasRole('CLIENT') || hasRole('AGENT')) && <NavLink to="/favorites">Favoritos</NavLink>}
         <NotificationsNavLink />
-        <NavLink to="/cuenta">Mi cuenta</NavLink>
+        <NavLink to="/account">Mi cuenta</NavLink>
       </>
     ) : status === 'anonymous' ? (
       <>
         <NavLink to="/login">Ingresar</NavLink>
-        <NavLink to="/registro" className="button button--primary">
+        <NavLink to="/register" className="button button--primary">
           Crear cuenta
         </NavLink>
       </>

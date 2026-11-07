@@ -5,10 +5,10 @@ export function AgentLayout() {
   return (
     <>
       <nav className="subnav" aria-label="Panel de agente">
-        <NavLink to="/agente/propiedades">Mis propiedades</NavLink>
-        <NavLink to="/agente/solicitudes">Solicitudes</NavLink>
-        <NavLink to="/agente/consultas">Consultas</NavLink>
-        <NavLink to="/agente/oportunidades">Oportunidades</NavLink>
+        <NavLink to="/agent/properties">Mis propiedades</NavLink>
+        <NavLink to="/agent/visit-requests">Solicitudes</NavLink>
+        <NavLink to="/agent/inquiries">Consultas</NavLink>
+        <NavLink to="/agent/leads">Oportunidades</NavLink>
       </nav>
       <Outlet />
     </>

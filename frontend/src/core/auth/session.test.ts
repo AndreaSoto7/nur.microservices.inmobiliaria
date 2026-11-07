@@ -4,7 +4,7 @@ import { refreshSession } from './session'
 import { tokenStore } from './tokenStore'
 
 describe('refreshSession', () => {
-  it('canjea el refresh token una sola vez aunque lo pidan varias llamadas a la vez', async () => {
+  it('exchanges the refresh token only once even when several calls ask at the same time', async () => {
     tokenStore.setTokens(tokens('viejo'))
     const fetchMock = mockFetch(jsonResponse(200, tokens('nuevo')))
 
@@ -16,7 +16,7 @@ describe('refreshSession', () => {
     expect(tokenStore.getRefreshToken()).toBe('refresh-nuevo')
   })
 
-  it('borra la sesión si identity rechaza el refresh token', async () => {
+  it('clears the session when identity rejects the refresh token', async () => {
     tokenStore.setTokens(tokens())
     mockFetch(
       jsonResponse(401, problem(401, 'AUTH_INVALID_REFRESH_TOKEN', 'Inicia sesión de nuevo.')),
@@ -28,7 +28,7 @@ describe('refreshSession', () => {
     expect(tokenStore.getRefreshToken()).toBeNull()
   })
 
-  it('conserva la sesión si el gateway responde 5xx (solo un 401 la cierra)', async () => {
+  it('keeps the session when the gateway responds 5xx (only a 401 closes it)', async () => {
     tokenStore.setTokens(tokens())
     mockFetch(jsonResponse(503, problem(503, 'GATEWAY_UNAVAILABLE', 'Servicio no disponible.')))
 
@@ -37,7 +37,7 @@ describe('refreshSession', () => {
     expect(tokenStore.getRefreshToken()).toBe('refresh-1')
   })
 
-  it('si se cierra la sesión durante el canje, no la revive y revoca el par nuevo', async () => {
+  it('if the session is closed during the exchange, does not revive it and revokes the new pair', async () => {
     tokenStore.setTokens(tokens('viejo'))
     let answerRefresh: (response: Response) => void = () => undefined
     const fetchMock = vi.fn<typeof fetch>()
@@ -56,7 +56,7 @@ describe('refreshSession', () => {
     expect(fetchMock.mock.calls[1][1]?.body).toBe('{"refreshToken":"refresh-nuevo"}')
   })
 
-  it('cierra la sesión cuando otra pestaña la cierra', () => {
+  it('closes the session when another tab closes it', () => {
     tokenStore.setTokens(tokens())
     const onCleared = vi.fn()
     const unsubscribe = tokenStore.onCleared(onCleared)
@@ -70,7 +70,7 @@ describe('refreshSession', () => {
     unsubscribe()
   })
 
-  it('sin refresh token no llama a la API', async () => {
+  it('without refresh token does not call the API', async () => {
     const fetchMock = mockFetch()
 
     await expect(refreshSession()).resolves.toBe(false)

@@ -20,7 +20,7 @@ const NO_FAVORITES = () =>
     data: [],
     page: { number: 1, size: 100, totalElements: 0, totalPages: 0 },
   })
-const path = `/propiedades/${PROPERTY_ID}`
+const path = `/properties/${PROPERTY_ID}`
 const routes = (status: 'PUBLISHED' | 'RESERVED' = 'PUBLISHED') => ({
   ...sessionRoutes(currentUser),
   [DETAIL]: () => jsonResponse(200, detail({ status })),
@@ -39,8 +39,8 @@ async function openInquiryForm(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByText('Enviar una consulta'))
 }
 
-describe('solicitar una visita desde el detalle', () => {
-  it('manda la fecha en UTC, sin nota vacía y con Idempotency-Key', async () => {
+describe('requesting a visit from the detail page', () => {
+  it('sends the date in UTC, without an empty note and with Idempotency-Key', async () => {
     const fetchMock = routeFetch({
       ...routes(),
       'POST /api/v1/visits': () => jsonResponse(201, { id: 'visita-1' }),
@@ -59,7 +59,7 @@ describe('solicitar una visita desde el detalle', () => {
     expect(keysSentTo(fetchMock, '/api/v1/visits')[0]).toMatch(/^[0-9a-f-]{36}$/)
   })
 
-  it('incluye la nota si se escribió', async () => {
+  it('includes the note when one was written', async () => {
     const fetchMock = routeFetch({
       ...routes(),
       'POST /api/v1/visits': () => jsonResponse(201, { id: 'visita-1' }),
@@ -78,7 +78,7 @@ describe('solicitar una visita desde el detalle', () => {
     })
   })
 
-  it('reintentar tras un fallo reutiliza la clave, para no duplicar la solicitud', async () => {
+  it('retrying after a failure reuses the key, so the request is not duplicated', async () => {
     let attempts = 0
     const fetchMock = routeFetch({
       ...routes(),
@@ -103,7 +103,7 @@ describe('solicitar una visita desde el detalle', () => {
     expect(first).toBe(second)
   })
 
-  it('muestra el motivo si ya hay una solicitud activa', async () => {
+  it('shows the reason when there is already an active request', async () => {
     routeFetch({
       ...routes(),
       'POST /api/v1/visits': () =>
@@ -123,8 +123,8 @@ describe('solicitar una visita desde el detalle', () => {
   })
 })
 
-describe('enviar una consulta desde el detalle', () => {
-  it('propone los datos de la cuenta y omite el teléfono vacío', async () => {
+describe('sending an inquiry from the detail page', () => {
+  it('prefills the account data and omits the empty phone', async () => {
     const fetchMock = routeFetch({
       ...routes(),
       'POST /api/v1/inquiries': () => jsonResponse(201, { id: 'consulta-1' }),
@@ -150,7 +150,7 @@ describe('enviar una consulta desde el detalle', () => {
     expect(keysSentTo(fetchMock, '/api/v1/inquiries')[0]).toMatch(/^[0-9a-f-]{36}$/)
   })
 
-  it('incluye el teléfono si se escribió', async () => {
+  it('includes the phone when one was written', async () => {
     const fetchMock = routeFetch({
       ...routes(),
       'POST /api/v1/inquiries': () => jsonResponse(201, { id: 'consulta-1' }),
@@ -169,7 +169,7 @@ describe('enviar una consulta desde el detalle', () => {
     })
   })
 
-  it('muestra junto al campo los errores de validación', async () => {
+  it('shows the validation errors next to the field', async () => {
     routeFetch({
       ...routes(),
       'POST /api/v1/inquiries': () =>
@@ -190,8 +190,8 @@ describe('enviar una consulta desde el detalle', () => {
   })
 })
 
-describe('quién puede contactar', () => {
-  it('sin sesión invita a ingresar y vuelve a la misma ficha', async () => {
+describe('who can get in touch', () => {
+  it('without a session invites to sign in and returns to the same page', async () => {
     routeFetch({ [DETAIL]: () => jsonResponse(200, detail()) })
 
     renderApp(path)
@@ -204,7 +204,7 @@ describe('quién puede contactar', () => {
     expect(screen.queryByText('Solicitar una visita')).not.toBeInTheDocument()
   })
 
-  it('un agente no solicita visitas', async () => {
+  it('an agent does not request visits', async () => {
     routeFetch({
       ...sessionRoutes(agentUser),
       [DETAIL]: () => jsonResponse(200, detail()),
@@ -218,7 +218,7 @@ describe('quién puede contactar', () => {
     expect(screen.queryByText('Enviar una consulta')).not.toBeInTheDocument()
   })
 
-  it('una propiedad reservada no recibe solicitudes ni consultas', async () => {
+  it('a reserved property receives neither requests nor inquiries', async () => {
     routeFetch(routes('RESERVED'))
 
     renderApp(path)
@@ -228,7 +228,7 @@ describe('quién puede contactar', () => {
     expect(screen.queryByText('Enviar una consulta')).not.toBeInTheDocument()
   })
 
-  it('sin sesión tampoco invita a ingresar si la propiedad está reservada', async () => {
+  it('without a session it does not invite to sign in either when the property is reserved', async () => {
     routeFetch({ [DETAIL]: () => jsonResponse(200, detail({ status: 'RESERVED' })) })
 
     renderApp(path)

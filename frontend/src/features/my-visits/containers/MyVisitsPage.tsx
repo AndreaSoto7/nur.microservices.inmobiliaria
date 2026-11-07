@@ -65,7 +65,7 @@ export function MyVisitsPage() {
                 key={visit.id}
                 visit={visit}
                 title={titles[visit.propertyId]}
-                href={`/propiedades/${visit.propertyId}`}
+                href={`/properties/${visit.propertyId}`}
                 cancelling={cancellingId === visit.id}
                 onCancel={handleCancel}
               />

@@ -8,7 +8,7 @@ import { NotificationList } from '../components/NotificationList'
 import { useNotificationsPage } from '../useNotifications'
 
 const propertyHref = (notification: AppNotification) =>
-  notification.propertyId ? `/propiedades/${notification.propertyId}` : null
+  notification.propertyId ? `/properties/${notification.propertyId}` : null
 
 export function NotificationsPage() {
   const {

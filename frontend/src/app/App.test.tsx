@@ -5,19 +5,19 @@ import { tokenStore } from '../core/auth/tokenStore'
 import { currentUser, jsonResponse, mockFetch, problem, tokens } from '../test/http'
 import { renderApp } from '../test/renderApp'
 
-describe('flujo de sesión', () => {
-  it('manda a login al entrar a una ruta protegida sin sesión', async () => {
+describe('session flow', () => {
+  it('redirects to login when opening a protected route without a session', async () => {
     mockFetch()
 
-    renderApp('/cuenta')
+    renderApp('/account')
 
     expect(await screen.findByRole('heading', { name: 'Ingresar' })).toBeInTheDocument()
   })
 
-  it('después de ingresar vuelve a la ruta protegida y muestra el perfil', async () => {
+  it('after signing in returns to the protected route and shows the profile', async () => {
     const fetchMock = mockFetch(jsonResponse(200, tokens()), jsonResponse(200, currentUser))
     const user = userEvent.setup()
-    renderApp('/cuenta')
+    renderApp('/account')
 
     await user.type(await screen.findByLabelText('Email'), 'ana@example.com')
     await user.type(screen.getByLabelText('Contraseña'), 'secreta123')
@@ -29,7 +29,7 @@ describe('flujo de sesión', () => {
     expect(tokenStore.getRefreshToken()).toBe('refresh-1')
   })
 
-  it('muestra el detail del problem+json si las credenciales son inválidas', async () => {
+  it('shows the problem+json detail when the credentials are invalid', async () => {
     mockFetch(
       jsonResponse(
         401,
@@ -46,23 +46,23 @@ describe('flujo de sesión', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Email o contraseña incorrectos.')
   })
 
-  it('recupera la sesión al recargar si hay un refresh token guardado', async () => {
+  it('restores the session on reload when a refresh token is stored', async () => {
     localStorage.setItem('inmobiliaria.refreshToken', 'refresh-guardado')
     mockFetch(jsonResponse(200, tokens('nuevo')), jsonResponse(200, currentUser))
 
-    renderApp('/cuenta')
+    renderApp('/account')
 
     expect(await screen.findByRole('heading', { name: 'Mi cuenta' })).toBeInTheDocument()
   })
 
-  it('registra la cuenta con el rol elegido e inicia sesión', async () => {
+  it('registers the account with the chosen role and signs in', async () => {
     const fetchMock = mockFetch(
       jsonResponse(201, { id: currentUser.id }),
       jsonResponse(200, tokens()),
       jsonResponse(200, { ...currentUser, roles: ['AGENT'] }),
     )
     const user = userEvent.setup()
-    renderApp('/registro')
+    renderApp('/register')
 
     await fillRegisterForm(user)
 
@@ -75,7 +75,7 @@ describe('flujo de sesión', () => {
     expect(fetchMock.mock.calls[1][0]).toBe('http://localhost:8080/api/v1/auth/login')
   })
 
-  it('muestra junto al campo el error de validación que devuelve la API', async () => {
+  it('shows the validation error returned by the API next to the field', async () => {
     mockFetch(
       jsonResponse(400, {
         ...problem(400, 'VALIDATION_ERROR', 'Uno o más campos no son válidos.'),
@@ -83,7 +83,7 @@ describe('flujo de sesión', () => {
       }),
     )
     const user = userEvent.setup()
-    renderApp('/registro')
+    renderApp('/register')
 
     await fillRegisterForm(user)
 

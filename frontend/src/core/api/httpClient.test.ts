@@ -7,7 +7,7 @@ import { ApiError } from './problem'
 describe('apiRequest', () => {
   afterEach(() => setRefreshHandler(null))
 
-  it('envía el body como JSON al gateway y devuelve la respuesta', async () => {
+  it('sends the body as JSON to the gateway and returns the response', async () => {
     const fetchMock = mockFetch(jsonResponse(201, { id: 'abc' }))
 
     const result = await apiRequest<{ id: string }>('/api/v1/auth/register', {
@@ -21,7 +21,7 @@ describe('apiRequest', () => {
     expect(init?.body).toBe('{"email":"ana@example.com"}')
   })
 
-  it('manda el access token solo en las llamadas autenticadas', async () => {
+  it('sends the access token only on authenticated calls', async () => {
     tokenStore.setTokens(tokens())
     const fetchMock = mockFetch(jsonResponse(200, {}), jsonResponse(200, {}))
 
@@ -34,7 +34,7 @@ describe('apiRequest', () => {
     expect(headersOf(1).Authorization).toBeUndefined()
   })
 
-  it('convierte un problem+json en ApiError con su detail y code', async () => {
+  it('turns a problem+json into an ApiError with its detail and code', async () => {
     mockFetch(
       jsonResponse(
         409,
@@ -51,7 +51,7 @@ describe('apiRequest', () => {
     expect((error as ApiError).code).toBe('USER_EMAIL_ALREADY_REGISTERED')
   })
 
-  it('con 401 en una llamada autenticada renueva la sesión y repite la llamada', async () => {
+  it('on 401 in an authenticated call refreshes the session and retries the call', async () => {
     tokenStore.setTokens(tokens('viejo'))
     const refresh = vi.fn(async () => {
       tokenStore.setTokens(tokens('nuevo'))
@@ -71,7 +71,7 @@ describe('apiRequest', () => {
     expect(retryHeaders.Authorization).toBe('Bearer access-nuevo')
   })
 
-  it('no intenta renovar cuando el 401 es de una llamada pública (credenciales inválidas)', async () => {
+  it('does not try to refresh when the 401 comes from a public call (invalid credentials)', async () => {
     const refresh = vi.fn(async () => true)
     setRefreshHandler(refresh)
     mockFetch(
@@ -87,7 +87,7 @@ describe('apiRequest', () => {
     expect(refresh).not.toHaveBeenCalled()
   })
 
-  it('acepta una respuesta exitosa sin body aunque no sea 204', async () => {
+  it('accepts a successful response without body even if it is not 204', async () => {
     mockFetch(new Response(null, { status: 201, headers: { Location: '/api/v1/favorites/1' } }))
 
     await expect(apiRequest('/api/v1/favorites', { method: 'POST', body: {} })).resolves.toBe(
@@ -95,7 +95,7 @@ describe('apiRequest', () => {
     )
   })
 
-  it('agrega los headers propios de la llamada', async () => {
+  it("adds the call's own headers", async () => {
     const fetchMock = mockFetch(jsonResponse(201, { id: 'abc' }))
 
     await apiRequest('/api/v1/visits', {
@@ -107,7 +107,7 @@ describe('apiRequest', () => {
     expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({ 'Idempotency-Key': 'clave-1' })
   })
 
-  it('manda un FormData tal cual, para que el navegador ponga el boundary del multipart', async () => {
+  it('sends a FormData as is, so the browser sets the multipart boundary', async () => {
     const fetchMock = mockFetch(jsonResponse(201, { imageIds: ['a'] }))
     const form = new FormData()
     form.append('files', new File(['x'], 'foto.png', { type: 'image/png' }))
@@ -119,7 +119,7 @@ describe('apiRequest', () => {
     expect(init?.headers).not.toHaveProperty('Content-Type')
   })
 
-  it('traduce un fallo de red a ApiError con status 0', async () => {
+  it('turns a network failure into an ApiError with status 0', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
 
     await expect(apiRequest('/api/v1/users/me')).rejects.toMatchObject({ status: 0 })

@@ -13,7 +13,7 @@ import { PropertyAdminList } from '../components/PropertyAdminList'
 import { useAgentProperties } from '../useAgentProperties'
 import { usePropertyTransition } from '../usePropertyTransition'
 
-const editHref = (property: PropertySummary) => `/agente/propiedades/${property.id}`
+const editHref = (property: PropertySummary) => `/agent/properties/${property.id}`
 
 export function AgentPropertiesPage() {
   const { status, changeStatus, goToPage, page, loading, error, retry } = useAgentProperties()
@@ -31,7 +31,7 @@ export function AgentPropertiesPage() {
     <section className="page">
       <div className="page-header">
         <h1>Mis propiedades</h1>
-        <Link to="/agente/propiedades/nueva" className="button button--primary">
+        <Link to="/agent/properties/new" className="button button--primary">
           Nueva propiedad
         </Link>
       </div>

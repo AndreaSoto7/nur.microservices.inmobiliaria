@@ -15,7 +15,7 @@ import { useCatalog } from '../useCatalog'
 export function CatalogPage() {
   const { filters, filtersKey, applyFilters, goToPage, page, loading, refreshing, error, retry } =
     useCatalog()
-  const hrefFor = useCallback((property: PropertySummary) => `/propiedades/${property.id}`, [])
+  const hrefFor = useCallback((property: PropertySummary) => `/properties/${property.id}`, [])
   const handleSortChange = useCallback(
     (sort: CatalogSort) => applyFilters({ ...filters, sort }),
     [applyFilters, filters],

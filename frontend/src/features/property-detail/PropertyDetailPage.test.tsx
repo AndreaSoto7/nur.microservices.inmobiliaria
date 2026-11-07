@@ -5,11 +5,11 @@ import { jsonResponse, mockFetch, problem } from '../../test/http'
 import { detail, PROPERTY_ID } from '../../test/listingFixtures'
 import { renderApp } from '../../test/renderApp'
 
-describe('detalle público de una propiedad', () => {
-  it('muestra la ficha, el precio y las características', async () => {
+describe('public property detail', () => {
+  it('shows the listing, the price and the features', async () => {
     const fetchMock = mockFetch(jsonResponse(200, detail({ operationType: 'RENT' })))
 
-    renderApp(`/propiedades/${PROPERTY_ID}`)
+    renderApp(`/properties/${PROPERTY_ID}`)
 
     expect(
       await screen.findByRole('heading', { name: 'Casa con jardín en Equipetrol' }),
@@ -24,10 +24,10 @@ describe('detalle público de una propiedad', () => {
     expect(screen.getByText(/Casa de dos plantas/)).toBeInTheDocument()
   })
 
-  it('ordena la galería por posición y cambia la foto con las miniaturas', async () => {
+  it('sorts the gallery by position and switches the photo with the thumbnails', async () => {
     mockFetch(jsonResponse(200, detail()))
     const user = userEvent.setup()
-    renderApp(`/propiedades/${PROPERTY_ID}`)
+    renderApp(`/properties/${PROPERTY_ID}`)
 
     const main = await screen.findByRole('img', { name: /foto 1 de 2/ })
     expect(main).toHaveAttribute('src', expect.stringContaining('/images/img-1'))
@@ -44,20 +44,20 @@ describe('detalle público de una propiedad', () => {
     )
   })
 
-  it('avisa que está reservada', async () => {
+  it('warns that it is reserved', async () => {
     mockFetch(jsonResponse(200, detail({ status: 'RESERVED' })))
 
-    renderApp(`/propiedades/${PROPERTY_ID}`)
+    renderApp(`/properties/${PROPERTY_ID}`)
 
     expect(await screen.findByText(/Reservada: no recibe visitas nuevas/)).toBeInTheDocument()
   })
 
-  it('con 404 explica que ya no está disponible, sin reintentar', async () => {
+  it('on 404 explains that it is no longer available, without retrying', async () => {
     const fetchMock = mockFetch(
       jsonResponse(404, problem(404, 'PROPERTY_NOT_FOUND', 'La propiedad no existe')),
     )
 
-    renderApp(`/propiedades/${PROPERTY_ID}`)
+    renderApp(`/properties/${PROPERTY_ID}`)
 
     expect(await screen.findByText('Esta propiedad no está disponible')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledOnce()

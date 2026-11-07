@@ -79,7 +79,7 @@ export function AgentVisitsPage() {
                 key={visit.id}
                 visit={visit}
                 title={titles[visit.propertyId]}
-                href={`/agente/propiedades/${visit.propertyId}`}
+                href={`/agent/properties/${visit.propertyId}`}
                 now={now}
                 busy={busyVisitId === visit.id}
                 error={failedVisitId === visit.id ? actionError : undefined}

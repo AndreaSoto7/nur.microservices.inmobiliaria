@@ -120,11 +120,11 @@ frontend/src/
 - `PropertyFilters` edita un borrador y avisa al buscar; el container le pasa `key={filtersKey}` para reiniciarlo cuando cambia la URL. Buscar vuelve a la página 1. El orden está junto a los resultados y aplica al momento, sin pasar por el borrador.
 - `keepPreviousData`: al cambiar de página se sigue viendo la anterior hasta que llega la nueva.
 - Las rutas de imágenes vienen relativas al gateway: `gatewayUrl()` de `core/config.ts` las vuelve absolutas. Si una foto no carga, la tarjeta muestra "Sin foto".
-- Detalle en `/propiedades/:propertyId` (`GET /api/v1/catalog/properties/{id}`): solo `PUBLISHED` o `RESERVED`; un 404 se muestra como "no disponible" y no se reintenta.
+- Detalle en `/properties/:propertyId` (`GET /api/v1/catalog/properties/{id}`): solo `PUBLISHED` o `RESERVED`; un 404 se muestra como "no disponible" y no se reintenta.
 
 ## Mis propiedades (agente)
 
-- Rutas `/agente/propiedades`, `/agente/propiedades/nueva` y `/agente/propiedades/:propertyId`, solo con rol `AGENT`. El filtro de estado y la página viven en la URL.
+- Rutas `/agent/properties`, `/agent/properties/new` y `/agent/properties/:propertyId`, solo con rol `AGENT`. El filtro de estado y la página viven en la URL.
 - `availableActions` solo evita ofrecer acciones imposibles: las reglas las hace cumplir listing, y sus 409 se muestran con su `detail`. Vender y alquilar son irreversibles, por eso piden confirmación.
 - El tipo y la operación no se editan (contrato). El `PUT` reemplaza la ubicación completa: al guardar se conservan la latitud y la longitud, aunque el formulario no las muestre.
 - Publicar exige dormitorios, baños, superficie y al menos una foto: `PublishChecklist` lo explica y el botón queda desactivado hasta completarlo.
@@ -133,27 +133,27 @@ frontend/src/
 
 ## Solicitudes de visita (agente)
 
-- Ruta `/agente/solicitudes`, dentro del panel de agente (`AgentLayout`). `/agente` lleva a sus propiedades. Todas las rutas del panel exigen rol `AGENT`.
+- Ruta `/agent/visit-requests`, dentro del panel de agente (`AgentLayout`). `/agent` lleva a sus propiedades. Todas las rutas del panel exigen rol `AGENT`.
 - El horario propuesto viene cargado con la fecha que pidió el interesado. El título sale de `GET /properties/{id}`, porque el agente también ve sus propiedades sin publicar.
 - "Marcar realizada" solo aparece cuando terminó el horario: antes, visit responde `VISIT_COMPLETION_TOO_EARLY`.
 - El error de una acción se muestra en su fila y el formulario sigue abierto, para corregir sin volver a escribir.
 
 ## Consultas y oportunidades (agente)
 
-- Rutas `/agente/consultas` y `/agente/oportunidades`. El mensaje de una consulta se pide recién al abrirla.
+- Rutas `/agent/inquiries` y `/agent/leads`. El mensaje de una consulta se pide recién al abrirla.
 - Cerrar una oportunidad como ganada dispara `LeadClosed`, y listing reserva la propiedad al recibirlo. La pantalla dice que queda reservada "en unos instantes" y no asume el cambio.
 - **Límites del contrato:** no hay endpoint para listar las notas de seguimiento, así que se guardan pero no se muestran. Una oportunidad solo trae `clientId`, sin nombre, y por eso la fila no dice quién es el interesado.
 
 ## Favoritos
 
-- Ruta `/favoritos`, para `CLIENT` o `AGENT`. La página vive en la URL.
+- Ruta `/favorites`, para `CLIENT` o `AGENT`. La página vive en la URL.
 - El contrato no dice si una propiedad es favorita: se deriva de `GET /favorites` con `size=100`, el máximo. Con más de 100 favoritos, el botón del detalle podría ofrecer guardar una que ya está guardada.
 - `FAVORITE_ALREADY_EXISTS` y `FAVORITE_NOT_FOUND` no se muestran como error: lo que se pedía ya es cierto, por ejemplo por un cambio en otra pestaña.
 - Solo se guarda una propiedad `PUBLISHED`, pero se puede quitar en cualquier estado. Si ya no es visible, la lista avisa "Ya no está disponible".
 
 ## Avisos
 
-- Ruta `/avisos`, para cualquier usuario con sesión. El filtro "Solo sin leer" y la página viven en la URL.
+- Ruta `/notifications`, para cualquier usuario con sesión. El filtro "Solo sin leer" y la página viven en la URL.
 - `type` es `string` y no un enum: el contrato pide tolerar tipos nuevos, y el texto ya viene en `message`.
 - El contador de la cabecera se vuelve a pedir cada 60 s, porque los avisos nacen de eventos y nadie le avisa al navegador. Se monta solo con sesión. Si notification no responde, el enlace sigue ahí sin número.
 
@@ -162,7 +162,7 @@ frontend/src/
 - Se envían desde el detalle, solo con rol `CLIENT` y si la propiedad está `PUBLISHED`. Sin sesión, un enlace lleva a ingresar y vuelve a la misma ficha.
 - **`Idempotency-Key` obligatorio en los POST de visit:** `useIdempotencyKey` reutiliza la clave si se reintenta lo mismo, para que un corte de red no duplique la solicitud, y usa otra si cambió el contenido, porque el servicio responde 422. `crypto.randomUUID` no existe fuera de HTTPS o localhost: `newIdempotencyKey` tiene alternativa para cuando se abre por la IP de la red local.
 - El `datetime-local` da hora local: se manda en UTC con `localInputToUtc`.
-- **Mis visitas** (`/mis-visitas`, solo `CLIENT`): el estado y la página viven en la URL. Una visita solo se cancela si está `SCHEDULED`. El contrato no trae el título de la propiedad: `usePropertyTitles` lo pide al catálogo, y si ya no está publicada muestra "Propiedad no disponible".
+- **Mis visitas** (`/my-visits`, solo `CLIENT`): el estado y la página viven en la URL. Una visita solo se cancela si está `SCHEDULED`. El contrato no trae el título de la propiedad: `usePropertyTitles` lo pide al catálogo, y si ya no está publicada muestra "Propiedad no disponible".
 
 ## Sesión y tokens
 

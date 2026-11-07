@@ -19,44 +19,44 @@ const listWith =
     jsonResponse(200, page(items))
 
 describe('AgentPropertiesPage', () => {
-  it('lista las propiedades del agente con su estado y su precio', async () => {
+  it("lists the agent's properties with their status and price", async () => {
     routeFetch({ ...sessionRoutes(agentUser), [LIST]: listWith(summary({ status: 'DRAFT' })) })
 
-    renderApp('/agente/propiedades')
+    renderApp('/agent/properties')
 
     const row = await screen.findByRole('listitem')
     expect(
       within(row).getByRole('link', { name: 'Casa con jardín en Equipetrol' }),
-    ).toHaveAttribute('href', `/agente/propiedades/${PROPERTY_ID}`)
+    ).toHaveAttribute('href', `/agent/properties/${PROPERTY_ID}`)
     expect(within(row).getByText('Borrador')).toBeInTheDocument()
     expect(within(row).getByText('Bs 1.285.000')).toBeInTheDocument()
     expect(screen.getByText('1 propiedad')).toBeInTheDocument()
   })
 
-  it('explica cómo empezar si el agente no tiene propiedades', async () => {
+  it('explains how to start when the agent has no properties', async () => {
     routeFetch({ ...sessionRoutes(agentUser), [LIST]: listWith() })
 
-    renderApp('/agente/propiedades')
+    renderApp('/agent/properties')
 
     expect(await screen.findByText('Todavía no tienes propiedades')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Nueva propiedad' })).toHaveAttribute(
       'href',
-      '/agente/propiedades/nueva',
+      '/agent/properties/new',
     )
   })
 
-  it('distingue "sin propiedades" de "ninguna en ese estado"', async () => {
+  it('tells "no properties" apart from "none in that status"', async () => {
     routeFetch({ ...sessionRoutes(agentUser), [LIST]: listWith() })
 
-    renderApp('/agente/propiedades?status=PAUSED')
+    renderApp('/agent/properties?status=PAUSED')
 
     expect(await screen.findByText('No tienes propiedades en estado Pausada')).toBeInTheDocument()
   })
 
-  it('filtra por estado desde la URL y lo manda a la API', async () => {
+  it('filters by status from the URL and sends it to the API', async () => {
     const fetchMock = routeFetch({ ...sessionRoutes(agentUser), [LIST]: listWith() })
     const user = userEvent.setup()
-    renderApp('/agente/propiedades')
+    renderApp('/agent/properties')
 
     await user.selectOptions(await screen.findByLabelText('Estado'), 'SOLD')
 
@@ -67,7 +67,7 @@ describe('AgentPropertiesPage', () => {
     ).toBe(true)
   })
 
-  it('publica un borrador y vuelve a consultar la lista', async () => {
+  it('publishes a draft and fetches the list again', async () => {
     let status: 'DRAFT' | 'PUBLISHED' = 'DRAFT'
     const fetchMock = routeFetch({
       ...sessionRoutes(agentUser),
@@ -78,7 +78,7 @@ describe('AgentPropertiesPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp('/agente/propiedades')
+    renderApp('/agent/properties')
 
     await user.click(await screen.findByRole('button', { name: /^Publicar/ }))
 
@@ -88,13 +88,13 @@ describe('AgentPropertiesPage', () => {
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(true)
   })
 
-  it('pide confirmación antes de marcar como vendida y permite arrepentirse', async () => {
+  it('asks for confirmation before marking as sold and allows backing out', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(agentUser),
       [LIST]: listWith(summary()),
     })
     const user = userEvent.setup()
-    renderApp('/agente/propiedades')
+    renderApp('/agent/properties')
 
     await user.click(await screen.findByRole('button', { name: /^Marcar vendida/ }))
     expect(screen.getByText(/no se puede deshacer/)).toBeInTheDocument()
@@ -104,14 +104,14 @@ describe('AgentPropertiesPage', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/mark-sold'))).toBe(false)
   })
 
-  it('marca como vendida al confirmar', async () => {
+  it('marks as sold on confirmation', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(agentUser),
       [LIST]: listWith(summary()),
       [`POST /api/v1/properties/${PROPERTY_ID}/mark-sold`]: () => jsonResponse(204),
     })
     const user = userEvent.setup()
-    renderApp('/agente/propiedades')
+    renderApp('/agent/properties')
 
     await user.click(await screen.findByRole('button', { name: /^Marcar vendida/ }))
     await user.click(screen.getByRole('button', { name: 'Sí, marcar vendida' }))
@@ -120,7 +120,7 @@ describe('AgentPropertiesPage', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/mark-sold'))).toBe(true)
   })
 
-  it('muestra el detail del problem+json si la transición falla', async () => {
+  it('shows the problem+json detail when the transition fails', async () => {
     routeFetch({
       ...sessionRoutes(agentUser),
       [LIST]: listWith(summary({ status: 'DRAFT' })),
@@ -131,7 +131,7 @@ describe('AgentPropertiesPage', () => {
         ),
     })
     const user = userEvent.setup()
-    renderApp('/agente/propiedades')
+    renderApp('/agent/properties')
 
     await user.click(await screen.findByRole('button', { name: /^Publicar/ }))
 
@@ -140,7 +140,7 @@ describe('AgentPropertiesPage', () => {
     )
   })
 
-  it('muestra el error y permite reintentar si la lista no carga', async () => {
+  it('shows the error and allows retrying when the list does not load', async () => {
     let attempts = 0
     routeFetch({
       ...sessionRoutes(agentUser),
@@ -152,7 +152,7 @@ describe('AgentPropertiesPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp('/agente/propiedades')
+    renderApp('/agent/properties')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Falló el servidor.')
     await user.click(screen.getByRole('button', { name: 'Reintentar' }))
@@ -160,18 +160,18 @@ describe('AgentPropertiesPage', () => {
     expect(await screen.findByRole('listitem')).toBeInTheDocument()
   })
 
-  it('no deja entrar a un interesado', async () => {
+  it('does not let a client in', async () => {
     routeFetch(sessionRoutes(currentUser))
 
-    renderApp('/agente/propiedades')
+    renderApp('/agent/properties')
 
     expect(await screen.findByText('Sin permiso')).toBeInTheDocument()
   })
 
-  it('el menú del panel enlaza a sus propiedades', async () => {
+  it("the dashboard menu links to the agent's properties", async () => {
     routeFetch({ ...sessionRoutes(agentUser), [LIST]: listWith() })
 
-    renderApp('/agente/propiedades')
+    renderApp('/agent/properties')
 
     expect(await screen.findByRole('link', { name: 'Mis propiedades' })).toBeInTheDocument()
   })

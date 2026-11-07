@@ -22,14 +22,14 @@ describe('PropertyCreatePage', () => {
     await user.type(screen.getByLabelText('Zona'), 'Urubó')
   }
 
-  it('crea el borrador con el formato del contrato y abre su edición', async () => {
+  it('creates the draft with the contract format and opens its edit page', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(agentUser),
       'POST /api/v1/properties': () => jsonResponse(201, { id: PROPERTY_ID }),
       [`GET ${PROPERTY_PATH}`]: () => jsonResponse(200, detail({ status: 'DRAFT' })),
     })
     const user = userEvent.setup()
-    renderApp('/agente/propiedades/nueva')
+    renderApp('/agent/properties/new')
 
     await fillRequiredFields(user)
     await user.click(screen.getByRole('button', { name: 'Crear borrador' }))
@@ -47,7 +47,7 @@ describe('PropertyCreatePage', () => {
     ])
   })
 
-  it('muestra junto a cada campo los errores de validación de la API', async () => {
+  it('shows the API validation errors next to each field', async () => {
     routeFetch({
       ...sessionRoutes(agentUser),
       'POST /api/v1/properties': () =>
@@ -57,7 +57,7 @@ describe('PropertyCreatePage', () => {
         }),
     })
     const user = userEvent.setup()
-    renderApp('/agente/propiedades/nueva')
+    renderApp('/agent/properties/new')
 
     await fillRequiredFields(user)
     await user.click(screen.getByRole('button', { name: 'Crear borrador' }))
@@ -65,14 +65,14 @@ describe('PropertyCreatePage', () => {
     expect(await screen.findByText('Debe ser mayor a 0.')).toBeInTheDocument()
     expect(screen.getByLabelText(/^Precio/)).toHaveAttribute('aria-invalid', 'true')
   })
-  it('avisa que puede haberse creado si el servidor no respondió a tiempo', async () => {
+  it('warns that it may have been created when the server did not respond in time', async () => {
     routeFetch({
       ...sessionRoutes(agentUser),
       'POST /api/v1/properties': () =>
         jsonResponse(504, problem(504, 'GATEWAY_UPSTREAM_TIMEOUT', 'El servicio tardó demasiado.')),
     })
     const user = userEvent.setup()
-    renderApp('/agente/propiedades/nueva')
+    renderApp('/agent/properties/new')
 
     await fillRequiredFields(user)
     await user.click(screen.getByRole('button', { name: 'Crear borrador' }))
@@ -84,7 +84,7 @@ describe('PropertyCreatePage', () => {
 })
 
 describe('PropertyEditPage', () => {
-  it('guarda los cambios sin perder datos que el formulario no muestra', async () => {
+  it('saves the changes without losing data the form does not show', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(agentUser),
       [`GET ${PROPERTY_PATH}`]: () =>
@@ -98,7 +98,7 @@ describe('PropertyEditPage', () => {
       [`PUT ${PROPERTY_PATH}`]: () => jsonResponse(204),
     })
     const user = userEvent.setup()
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     const title = await screen.findByLabelText('Título')
     await user.clear(title)
@@ -116,19 +116,19 @@ describe('PropertyEditPage', () => {
     ])
   })
 
-  it('no deja cambiar el tipo ni la operación', async () => {
+  it('does not allow changing the type or the operation', async () => {
     routeFetch({
       ...sessionRoutes(agentUser),
       [`GET ${PROPERTY_PATH}`]: () => jsonResponse(200, detail({ status: 'DRAFT' })),
     })
 
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     expect(await screen.findByLabelText('Tipo')).toBeDisabled()
     expect(screen.getByLabelText('Operación')).toBeDisabled()
   })
 
-  it('permite cambiar el estado desde la edición', async () => {
+  it('allows changing the status from the edit page', async () => {
     let status: 'DRAFT' | 'PUBLISHED' = 'DRAFT'
     routeFetch({
       ...sessionRoutes(agentUser),
@@ -139,7 +139,7 @@ describe('PropertyEditPage', () => {
       },
     })
     const user = userEvent.setup()
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     await user.click(await screen.findByRole('button', { name: /^Publicar/ }))
 
@@ -147,35 +147,35 @@ describe('PropertyEditPage', () => {
   })
 
   it.each(['SOLD', 'RENTED'] as const)(
-    'una propiedad en estado %s ya no se edita',
+    'a property in status %s can no longer be edited',
     async (status) => {
       routeFetch({
         ...sessionRoutes(agentUser),
         [`GET ${PROPERTY_PATH}`]: () => jsonResponse(200, detail({ status })),
       })
 
-      renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+      renderApp(`/agent/properties/${PROPERTY_ID}`)
 
       expect(await screen.findByText(/ya no se puede editar/)).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Guardar cambios' })).not.toBeInTheDocument()
     },
   )
 
-  it('un 404 se muestra como propiedad no encontrada', async () => {
+  it('a 404 is shown as property not found', async () => {
     routeFetch({
       ...sessionRoutes(agentUser),
       [`GET ${PROPERTY_PATH}`]: () =>
         jsonResponse(404, problem(404, 'PROPERTY_NOT_FOUND', 'No existe.')),
     })
 
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     expect(await screen.findByRole('heading', { name: 'Propiedad no encontrada' })).toBeVisible()
   })
 })
 
-describe('PropertyEditPage: características', () => {
-  it('guarda dormitorios, baños, superficie y extras con el formato del contrato', async () => {
+describe('PropertyEditPage: features', () => {
+  it('saves bedrooms, bathrooms, area and extras with the contract format', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(agentUser),
       [`GET ${PROPERTY_PATH}`]: () =>
@@ -186,7 +186,7 @@ describe('PropertyEditPage: características', () => {
       [`PUT ${PROPERTY_PATH}/features`]: () => jsonResponse(204),
     })
     const user = userEvent.setup()
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     await user.type(await screen.findByLabelText('Dormitorios'), '3')
     await user.type(screen.getByLabelText('Baños'), '2')
@@ -201,17 +201,17 @@ describe('PropertyEditPage: características', () => {
   })
 })
 
-describe('PropertyEditPage: fotos', () => {
+describe('PropertyEditPage: photos', () => {
   const png = (name: string) => new File(['x'], name, { type: 'image/png' })
 
-  it('sube las fotos elegidas como multipart, en el campo files', async () => {
+  it('uploads the chosen photos as multipart, in the files field', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(agentUser),
       [`GET ${PROPERTY_PATH}`]: () => jsonResponse(200, detail({ status: 'DRAFT', images: [] })),
       [`POST ${PROPERTY_PATH}/images`]: () => jsonResponse(201, { imageIds: ['a'] }),
     })
     const user = userEvent.setup()
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     await user.upload(await screen.findByLabelText(/^Agregar fotos/), [png('a.png'), png('b.png')])
     await user.click(screen.getByRole('button', { name: 'Subir 2 fotos' }))
@@ -223,13 +223,13 @@ describe('PropertyEditPage: fotos', () => {
     })
   })
 
-  it('rechaza un formato no permitido sin llamar a la API', async () => {
+  it('rejects a disallowed format without calling the API', async () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(agentUser),
       [`GET ${PROPERTY_PATH}`]: () => jsonResponse(200, detail({ status: 'DRAFT', images: [] })),
     })
     const user = userEvent.setup({ applyAccept: false })
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     await user.upload(
       await screen.findByLabelText(/^Agregar fotos/),
@@ -241,7 +241,7 @@ describe('PropertyEditPage: fotos', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/images'))).toBe(false)
   })
 
-  it('muestra el error de la API si la subida falla', async () => {
+  it('shows the API error when the upload fails', async () => {
     routeFetch({
       ...sessionRoutes(agentUser),
       [`GET ${PROPERTY_PATH}`]: () => jsonResponse(200, detail({ status: 'DRAFT', images: [] })),
@@ -249,7 +249,7 @@ describe('PropertyEditPage: fotos', () => {
         jsonResponse(409, problem(409, 'PROPERTY_IMAGE_LIMIT', 'Ya tiene el máximo de fotos.')),
     })
     const user = userEvent.setup()
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     await user.upload(await screen.findByLabelText(/^Agregar fotos/), png('a.png'))
     await user.click(screen.getByRole('button', { name: 'Subir 1 foto' }))
@@ -257,7 +257,7 @@ describe('PropertyEditPage: fotos', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Ya tiene el máximo de fotos.')
   })
 
-  it('no ofrece subir más si ya tiene el máximo', async () => {
+  it('does not offer to upload more when it already has the maximum', async () => {
     const images = [0, 1, 2, 3, 4].map((position) => ({
       id: `img-${position}`,
       position,
@@ -268,47 +268,47 @@ describe('PropertyEditPage: fotos', () => {
       [`GET ${PROPERTY_PATH}`]: () => jsonResponse(200, detail({ images })),
     })
 
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     expect(await screen.findByText('5 de 5 fotos')).toBeInTheDocument()
     expect(screen.queryByLabelText(/^Agregar fotos/)).not.toBeInTheDocument()
   })
 
-  it('avisa que las fotos de un borrador no se pueden previsualizar', async () => {
+  it("warns that a draft's photos cannot be previewed", async () => {
     routeFetch({
       ...sessionRoutes(agentUser),
       [`GET ${PROPERTY_PATH}`]: () => jsonResponse(200, detail({ status: 'DRAFT' })),
     })
 
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     expect(await screen.findByText(/se ven cuando la propiedad está publicada/)).toBeInTheDocument()
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
   })
 })
 
-describe('PropertyEditPage: requisitos para publicar', () => {
-  it('dice qué falta y no deja publicar hasta completarlo', async () => {
+describe('PropertyEditPage: publishing requirements', () => {
+  it('says what is missing and does not allow publishing until it is complete', async () => {
     routeFetch({
       ...sessionRoutes(agentUser),
       [`GET ${PROPERTY_PATH}`]: () =>
         jsonResponse(200, detail({ status: 'DRAFT', images: [], bedrooms: null })),
     })
 
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     expect(await screen.findByText('Agrega al menos una foto.')).toBeInTheDocument()
     expect(screen.getByText('Completa dormitorios, baños y superficie.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Publicar/ })).toBeDisabled()
   })
 
-  it('una propiedad completa se puede publicar', async () => {
+  it('a complete property can be published', async () => {
     routeFetch({
       ...sessionRoutes(agentUser),
       [`GET ${PROPERTY_PATH}`]: () => jsonResponse(200, detail({ status: 'DRAFT' })),
     })
 
-    renderApp(`/agente/propiedades/${PROPERTY_ID}`)
+    renderApp(`/agent/properties/${PROPERTY_ID}`)
 
     expect(await screen.findByRole('button', { name: /^Publicar/ })).toBeEnabled()
     expect(screen.queryByText('Para publicar falta:')).not.toBeInTheDocument()

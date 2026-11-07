@@ -20,10 +20,10 @@ const favorites = (saved: boolean) => ({
   data: saved ? [{ property: summary(), savedAt: '2026-10-16T14:30:00Z' }] : [],
   page: { number: 1, size: 100, totalElements: saved ? 1 : 0, totalPages: 1 },
 })
-const path = `/propiedades/${PROPERTY_ID}`
+const path = `/properties/${PROPERTY_ID}`
 
-describe('favorito en el detalle de una propiedad', () => {
-  it('sin sesión invita a ingresar, sin consultar favoritos', async () => {
+describe('favorite on a property detail', () => {
+  it('without a session invites to sign in, without fetching favorites', async () => {
     const fetchMock = routeFetch({ [DETAIL]: () => jsonResponse(200, detail()) })
 
     renderApp(path)
@@ -35,7 +35,7 @@ describe('favorito en el detalle de una propiedad', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/favorites'))).toBe(false)
   })
 
-  it('guarda la propiedad y pasa a ofrecer quitarla', async () => {
+  it('saves the property and switches to offering its removal', async () => {
     let saved = false
     const fetchMock = routeFetch({
       ...sessionRoutes(currentUser),
@@ -57,7 +57,7 @@ describe('favorito en el detalle de una propiedad', () => {
     ])
   })
 
-  it('quita una propiedad ya guardada', async () => {
+  it('removes an already saved property', async () => {
     let saved = true
     routeFetch({
       ...sessionRoutes(currentUser),
@@ -76,7 +76,7 @@ describe('favorito en el detalle de una propiedad', () => {
     expect(await screen.findByRole('button', { name: 'Guardar en favoritos' })).toBeInTheDocument()
   })
 
-  it('no muestra error si ya estaba guardada desde otra pestaña', async () => {
+  it('shows no error when it was already saved from another tab', async () => {
     let saved = false
     routeFetch({
       ...sessionRoutes(currentUser),
@@ -96,7 +96,7 @@ describe('favorito en el detalle de una propiedad', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('no muestra error si ya se había quitado desde otra pestaña', async () => {
+  it('shows no error when it was already removed from another tab', async () => {
     let saved = true
     routeFetch({
       ...sessionRoutes(currentUser),
@@ -116,7 +116,7 @@ describe('favorito en el detalle de una propiedad', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('muestra el error si no se pudo guardar', async () => {
+  it('shows the error when it could not be saved', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
       [DETAIL]: () => jsonResponse(200, detail()),
@@ -132,7 +132,7 @@ describe('favorito en el detalle de una propiedad', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Ya no está publicada.')
   })
 
-  it('una propiedad reservada no se puede guardar', async () => {
+  it('a reserved property cannot be saved', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
       [DETAIL]: () => jsonResponse(200, detail({ status: 'RESERVED' })),
@@ -145,7 +145,7 @@ describe('favorito en el detalle de una propiedad', () => {
     expect(screen.queryByRole('button', { name: 'Guardar en favoritos' })).not.toBeInTheDocument()
   })
 
-  it('una propiedad reservada que ya estaba guardada se puede quitar', async () => {
+  it('a reserved property that was already saved can be removed', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
       [DETAIL]: () => jsonResponse(200, detail({ status: 'RESERVED' })),
