@@ -59,7 +59,7 @@ python infra/scripts/demo.py admin    # crea la cuenta de administrador
   2. `LeadClosed` (`WON`) hace que listing reserve la propiedad.
   3. `PropertyReserved` hace que visit rechace la solicitud pendiente y mantenga la programada.
   4. `PropertySold` hace que visit cancele la visita programada.
-  5. notification crea los avisos de cada usuario.
+  5. Cada usuario recibe su bienvenida. La agente recibe las dos solicitudes y el aviso de reserva. Ana recibe los avisos de programación y cancelación de su visita, y Beto recibe el de rechazo de la suya. La demo comprueba el tipo de aviso en la cuenta del destinatario y compara la propiedad y la visita cuando corresponden.
 
   Si una reacción no llega en 45 s, el script termina con código 1 y dice cuál falló. Cada request lleva un `X-Correlation-Id` que empieza con `demo-`, para buscarlo en los logs. Los eventos se ven en la UI de Kafka.
 - El gateway limita login y registro por minuto (`RATE_LIMIT_AUTH_PER_MINUTE`). Si responde 429, el script espera lo que indica `Retry-After` y reintenta.

@@ -23,7 +23,7 @@ import urllib.request
 import uuid
 import zlib
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 DEFAULT_GATEWAY = "http://localhost:8080"
 DEFAULT_CONSUL = "http://127.0.0.1:8500"
@@ -112,7 +112,7 @@ def wait_until(
 
 
 def utc_in(days: int, hour: int) -> str:
-    moment = (datetime.now(UTC) + timedelta(days=days)).replace(hour=hour, minute=0, second=0, microsecond=0)
+    moment = (datetime.now(timezone.utc) + timedelta(days=days)).replace(hour=hour, minute=0, second=0, microsecond=0)
     return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
@@ -372,6 +372,27 @@ def notifications(gw: Gateway, user: User) -> list[dict]:
     return page["data"]
 
 
+def wait_for_notification(
+    gw: Gateway, user: User, notification_type: str, *, property_id: str | None = None, visit_id: str | None = None
+) -> None:
+    def matching_notification():
+        return next(
+            (
+                item for item in notifications(gw, user)
+                if item["type"] == notification_type
+                and item.get("propertyId") == property_id
+                and item.get("visitId") == visit_id
+            ),
+            None,
+        )
+
+    description = f"{notification_type} para {user.email}"
+    if visit_id is not None:
+        description += f" (visita {visit_id})"
+    received = wait_until(description, matching_notification)
+    print(f"     {received['message']}")
+
+
 # --- Comandos ---
 
 
@@ -473,9 +494,13 @@ def chains(gw: Gateway) -> None:
 
     print("\nAvisos · identity, listing y visit → notification")
     for user in (agent, ana, beto):
-        received = wait_until(f"avisos de {user.email}", lambda u=user: notifications(gw, u))
-        for item in received:
-            print(f"     [{item['type']}] {item['message']}")
+        wait_for_notification(gw, user, "WELCOME")
+    wait_for_notification(gw, agent, "VISIT_REQUESTED", property_id=property_id, visit_id=ana_visit)
+    wait_for_notification(gw, agent, "VISIT_REQUESTED", property_id=property_id, visit_id=beto_visit)
+    wait_for_notification(gw, agent, "PROPERTY_RESERVED", property_id=property_id)
+    wait_for_notification(gw, ana, "VISIT_SCHEDULED", property_id=property_id, visit_id=ana_visit)
+    wait_for_notification(gw, beto, "VISIT_REJECTED", property_id=property_id, visit_id=beto_visit)
+    wait_for_notification(gw, ana, "VISIT_CANCELLED", property_id=property_id, visit_id=ana_visit)
     print("\nTodas las cadenas respondieron. Los eventos se ven en la UI de Kafka: http://127.0.0.1:8090")
 
 
