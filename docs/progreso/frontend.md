@@ -8,7 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Panel de administrador: lista de usuarios con filtro por rol, cambiar roles, desactivar y activar. Probado contra el stack real, en navegador y con CSP | este PR |
+| feat | Panel de administrador: lista de usuarios con filtro por rol, cambiar roles, desactivar y activar. Probado contra el stack real, en navegador y con CSP | #117 |
 | feat | Las visitas muestran el título que trae `propertyTitle`: ya no sale "Propiedad no disponible" al venderse o alquilarse la propiedad, ni se pide cada título aparte. Probado contra el stack real | #114 |
 | fix | Los motivos automáticos de una visita se muestran en español, y no como `PROPERTY_UNAVAILABLE` | #110 |
 | feat | El aviso de visita realizada lleva a mis visitas. Probados contra el stack real, en navegador: marcar realizada, marcar alquilada y el catálogo con datos | #109 |
