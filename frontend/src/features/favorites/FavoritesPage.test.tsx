@@ -26,7 +26,6 @@ describe('FavoritesPage', () => {
 
     const link = await screen.findByRole('link', { name: /Casa con jardín en Equipetrol/ })
     expect(link).toHaveAttribute('href', `/properties/${PROPERTY_ID}`)
-    expect(screen.getByRole('link', { name: 'Favoritos' })).toBeInTheDocument()
   })
 
   it('explains what to do when there are no favorites', async () => {

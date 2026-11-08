@@ -15,24 +15,36 @@ export function AppLayout() {
     navigate('/', { replace: true })
   }, [logout, navigate])
 
-  const links =
-    status === 'authenticated' ? (
-      <>
-        {hasRole('ADMIN') && <NavLink to="/admin/users">Usuarios</NavLink>}
-        {hasRole('AGENT') && <NavLink to="/agent">Panel de agente</NavLink>}
-        {hasRole('CLIENT') && <NavLink to="/my-visits">Mis visitas</NavLink>}
-        {(hasRole('CLIENT') || hasRole('AGENT')) && <NavLink to="/favorites">Favoritos</NavLink>}
-        <NotificationsNavLink />
-        <NavLink to="/account">Mi cuenta</NavLink>
-      </>
-    ) : status === 'anonymous' ? (
-      <>
-        <NavLink to="/login">Ingresar</NavLink>
-        <NavLink to="/register" className="button button--primary">
-          Crear cuenta
-        </NavLink>
-      </>
-    ) : null
+  const links = (
+    <>
+      <NavLink to="/" end>
+        Inicio
+      </NavLink>
+      {status === 'authenticated' && (
+        <>
+          {hasRole('ADMIN') && <NavLink to="/admin/users">Usuarios</NavLink>}
+          {hasRole('AGENT') && <NavLink to="/agent">Panel de agente</NavLink>}
+          {hasRole('CLIENT') && <NavLink to="/my-visits">Mis visitas</NavLink>}
+          <NotificationsNavLink />
+        </>
+      )}
+      {status === 'anonymous' && (
+        <>
+          <NavLink to="/login">Ingresar</NavLink>
+          <NavLink to="/register" className="button button--primary">
+            Crear cuenta
+          </NavLink>
+        </>
+      )}
+    </>
+  )
+
+  const menuItems = (
+    <>
+      {(hasRole('CLIENT') || hasRole('AGENT')) && <NavLink to="/favorites">Favoritos</NavLink>}
+      <NavLink to="/account">Mi cuenta</NavLink>
+    </>
+  )
 
   return (
     <>
@@ -44,6 +56,7 @@ export function AppLayout() {
           </Link>
         }
         links={links}
+        menuItems={menuItems}
         userName={user?.fullName ?? null}
         loading={status === 'loading'}
         onLogout={handleLogout}

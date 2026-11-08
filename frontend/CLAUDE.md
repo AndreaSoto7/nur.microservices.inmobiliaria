@@ -49,7 +49,7 @@ Paleta, tokens, tipografía, estados de pantalla y accesibilidad: [`docs/convenc
 
 ```
 frontend/src/
-  app/             raíz de composición: App.tsx (rutas), AppLayout (smart), components/AppHeader (dumb)
+  app/             raíz de composición: App.tsx (rutas), AppLayout (smart), components/AppHeader y UserMenu (dumb)
   core/            cliente HTTP (vía gateway), auth (token, refresh), rutas protegidas, modelos de la API
     api/           httpClient.ts (apiRequest; admite headers propios y FormData), problem.ts (ApiError a partir del problem+json), catalogApi.ts, propertiesApi.ts, favoritesApi.ts, notificationsApi.ts, visitsApi.ts, inquiriesApi.ts, leadsApi.ts, idempotency.ts
     auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
@@ -163,6 +163,11 @@ frontend/src/
 - Sobre la propia cuenta no se ofrece desactivar ni quitarse el rol de administrador. Es comodidad de UI: la regla la hace cumplir identity (`USER_OWN_ACCOUNT_PROTECTED`).
 - La `key` de cada fila incluye roles y estado: al guardar, la fila se reinicia y el panel se cierra. Si falla, el panel sigue abierto para corregir.
 - Los cambios llegan a los demás servicios cuando la persona renueva su token, en 15 minutos como máximo, y la pantalla lo avisa.
+
+## Cabecera
+
+- A la vista: Inicio, la sección principal de cada rol y la campanita de avisos. Favoritos, Mi cuenta y Cerrar sesión están en el menú con el nombre del usuario.
+- El menú es un botón con `aria-expanded` que despliega enlaces. Se cierra al elegir una opción, con Escape (el foco vuelve al botón) y al hacer clic afuera.
 
 ## Avisos
 
