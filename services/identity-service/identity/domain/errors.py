@@ -29,6 +29,26 @@ class EmailAlreadyRegistered(DomainError):
     code = "USER_EMAIL_ALREADY_REGISTERED"
 
 
+class AdminRequired(DomainError):
+    code = "USER_ADMIN_REQUIRED"
+
+    def __init__(self, message: str = "Solo un administrador puede hacer esto.") -> None:
+        super().__init__(message)
+
+
+class UserNotFound(DomainError):
+    code = "USER_NOT_FOUND"
+
+    def __init__(self, message: str = "El usuario no existe.") -> None:
+        super().__init__(message)
+
+
+class OwnAccountProtected(DomainError):
+    """Un administrador no se quita su rol ni se desactiva: así nunca faltan administradores."""
+
+    code = "USER_OWN_ACCOUNT_PROTECTED"
+
+
 INVALID_CREDENTIALS_MESSAGE = "Email o contraseña incorrectos."
 
 
