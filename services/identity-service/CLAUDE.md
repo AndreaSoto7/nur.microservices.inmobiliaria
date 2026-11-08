@@ -19,7 +19,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 
 ## Qué hace y qué no
 
-- **Hace:** registro, login, refresh y logout, `GET /users/me`, roles y emisión de JWT RS256 con JWKS.
+- **Hace:** registro, login, refresh y logout, `GET /users/me`, roles, administración de usuarios (solo `ADMIN`) y emisión de JWT RS256 con JWKS.
 - **No hace:** validar permisos de dominio de otros servicios (cada uno valida el token con el JWKS) ni guardar datos de propiedades o visitas.
 
 ## Dominio
@@ -34,10 +34,20 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 |---|---|---|---|
 | `registerUserCommand` | `RegisterUserCommand` ✅ | Email único; contraseña ≥ 8; rol inicial `CLIENT` | `UserRegistered` ✅ |
 | `loginCommand` | `AuthenticateUserCommand` ✅ | Credenciales válidas; sin enumeración de emails | `UserLoggedIn` (solo si se construye audit-service) |
-| `assignRoleCommand` | `AssignUserRolesCommand` (pendiente) | Solo `ADMIN`; roles válidos | `UserRolesAssigned` (solo si se construye audit-service) |
+| `assignRoleCommand` | `AssignUserRolesCommand` ✅ | Solo `ADMIN`; roles válidos; nadie se quita su propio `ADMIN` | `UserRolesAssigned` (solo si se construye audit-service) |
+| — | `DeactivateUserCommand` ✅, `ActivateUserCommand` ✅ | Solo `ADMIN`; nadie se desactiva a sí mismo | — |
+| — | `ListUsersQuery` ✅ | Solo `ADMIN`; lee con el puerto `UserDirectory`, que nunca carga la contraseña | — |
 | — | `RefreshTokensCommand` ✅, `LogoutCommand` ✅, `GetCurrentUserQuery` ✅ | Rotación por familia; tope de 30 días | — |
 
 ✅ = implementado.
+
+## Administración de usuarios
+
+- **El rol se comprueba en la base** en cada caso de uso (`application/authorization.py`), no en el claim del token: a un administrador destituido no le sirve un token anterior.
+- **Un administrador no se quita su propio `ADMIN` ni se desactiva:** así el sistema no se queda sin administradores por accidente. Si dos administradores se destituyen entre sí a la vez sí podría pasar: se recupera con `createsuperuser`.
+- **El primer administrador** no se puede obtener por registro público. Se crea con `DJANGO_SUPERUSER_PASSWORD=… python manage.py createsuperuser --noinput --email … --full_name …`. En Docker: `python infra/scripts/demo.py admin`.
+- **Los cambios tardan hasta 15 minutos en llegar a los demás servicios:** es lo que dura el access token, que ellos validan sin consultar a identity. Identity ya no renueva la sesión de una cuenta desactivada.
+- Cada cambio deja un log con los IDs del administrador y del usuario, sin email ni nombre.
 
 ## Eventos
 
@@ -115,6 +125,5 @@ python manage.py run_maintenance     # limpieza periódica (--once para una vez)
 
 ## Pendiente
 
-- `AssignUserRolesCommand` (solo `ADMIN`).
 - Si se construye audit-service: publicar `UserLoggedIn` y `UserRolesAssigned` (sin email ni nombre).
 - Antes de exponer identity: rate limit de login y registro en el gateway.
