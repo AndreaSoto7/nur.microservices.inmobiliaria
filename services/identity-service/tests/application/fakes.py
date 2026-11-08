@@ -1,15 +1,17 @@
 """Dobles de prueba de los puertos: repositorio en memoria, hasher, emisor de tokens y reloj."""
 
+import dataclasses
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from identity.application.dto import TokenPair
+from identity.application.dto import TokenPair, UserDirectoryEntry, UserDirectoryPage
 from identity.domain.email import Email
 from identity.domain.errors import EmailAlreadyRegistered, InvalidRefreshToken
 from identity.domain.events import UserRegistered
 from identity.domain.password import RawPassword
 from identity.domain.refresh_token import RefreshToken, RefreshTokenLedger
 from identity.domain.repository import UserRepository
+from identity.domain.role import Role
 from identity.domain.user import User
 
 
@@ -36,6 +38,34 @@ class InMemoryUserRepository(UserRepository):
             raise EmailAlreadyRegistered("Ya existe un usuario con ese email.")
         self.users[user.email.value] = user
         self.saved_events.extend(user.pull_events())
+
+    def update_roles(self, user: User) -> None:
+        stored = self.users[user.email.value]
+        self.users[user.email.value] = dataclasses.replace(stored, roles=user.roles)
+
+    def update_active(self, user: User) -> None:
+        stored = self.users[user.email.value]
+        self.users[user.email.value] = dataclasses.replace(stored, is_active=user.is_active)
+
+    def list_users(self, *, page: int, size: int, role: Role | None) -> UserDirectoryPage:
+        found = [user for user in self.users.values() if role is None or role in user.roles]
+        offset = (page - 1) * size
+        return UserDirectoryPage(
+            data=[
+                UserDirectoryEntry(
+                    id=user.id,
+                    email=user.email.value,
+                    full_name=user.full_name.value,
+                    roles=sorted(item.value for item in user.roles),
+                    active=user.is_active,
+                    registered_at=user.registered_at,
+                )
+                for user in found[offset : offset + size]
+            ],
+            number=page,
+            size=size,
+            total_elements=len(found),
+        )
 
 
 class FakePasswordHasher:

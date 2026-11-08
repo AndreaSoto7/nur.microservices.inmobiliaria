@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Administración de usuarios, parte 1: reglas del dominio, casos de uso y persistencia. El rol se comprueba en la base, y nadie se quita su propio `ADMIN` ni se desactiva | este PR |
 | docs | Contrato de la administración de usuarios: listar, cambiar roles, desactivar y activar, solo `ADMIN` | #113 |
 | fix | Re-hash: una falla al guardar no impide el login, y no pisa una contraseña que cambió mientras tanto | #33 |
 | feat | Limpieza periódica de `used_refresh_tokens`, `revoked_refresh_families` y `outbox` (`run_maintenance`) | #32 |

@@ -3,10 +3,19 @@
 from datetime import datetime
 from typing import Protocol
 
-from identity.application.dto import TokenPair
+from identity.application.dto import TokenPair, UserDirectoryPage
 from identity.domain.password import RawPassword
 from identity.domain.refresh_token import RefreshToken
+from identity.domain.role import Role
 from identity.domain.user import User
+
+
+class UserDirectory(Protocol):
+    """Lado de lectura de los usuarios: no carga el aggregate, y por eso nunca lee la contraseña."""
+
+    def list_users(self, *, page: int, size: int, role: Role | None) -> UserDirectoryPage:
+        """Los más recientes primero."""
+        ...
 
 
 class Clock(Protocol):

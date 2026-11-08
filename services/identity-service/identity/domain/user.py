@@ -4,7 +4,12 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from identity.domain.email import Email
-from identity.domain.errors import InvalidCredentials, RoleNotAllowed
+from identity.domain.errors import (
+    AdminRequired,
+    InvalidCredentials,
+    OwnAccountProtected,
+    RoleNotAllowed,
+)
 from identity.domain.events import UserRegistered
 from identity.domain.full_name import FullName
 from identity.domain.role import ROLE_NOT_ALLOWED_MESSAGE, SELF_REGISTRABLE_ROLES, Role
@@ -71,6 +76,26 @@ class User:
         # Mismo error que una contraseña incorrecta: no se revela que la cuenta existe.
         if not self.is_active:
             raise InvalidCredentials()
+
+    def ensure_is_admin(self) -> None:
+        if Role.ADMIN not in self.roles:
+            raise AdminRequired()
+
+    def assign_roles(self, roles: frozenset[Role], *, assigned_by: UUID) -> "User":
+        """El mismo usuario con otros roles. Reemplaza la lista completa."""
+        if not roles:
+            raise RoleNotAllowed("Un usuario tiene al menos un rol.")
+        if assigned_by == self.id and Role.ADMIN not in roles:
+            raise OwnAccountProtected("No puedes quitarte el rol de administrador.")
+        return dataclasses.replace(self, roles=roles)
+
+    def deactivate(self, *, deactivated_by: UUID) -> "User":
+        if deactivated_by == self.id:
+            raise OwnAccountProtected("No puedes desactivar tu propia cuenta.")
+        return dataclasses.replace(self, is_active=False)
+
+    def activate(self) -> "User":
+        return dataclasses.replace(self, is_active=True)
 
     def with_password_hash(self, password_hash: str) -> "User":
         """El mismo usuario con otro hash. La contraseña no cambia: solo cómo se guarda."""

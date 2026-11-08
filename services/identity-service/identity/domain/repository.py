@@ -22,5 +22,13 @@ class UserRepository(ABC):
         """Actualiza el hash solo si sigue siendo `previous_hash`. Una falla no impide el login."""
 
     @abstractmethod
+    def update_roles(self, user: User) -> None:
+        """Guarda solo los roles: otro cambio simultáneo en la cuenta no se pisa."""
+
+    @abstractmethod
+    def update_active(self, user: User) -> None:
+        """Guarda solo si la cuenta está activa: otro cambio simultáneo no se pisa."""
+
+    @abstractmethod
     def add(self, user: User) -> None:
         """Guarda un usuario nuevo. Lanza EmailAlreadyRegistered si el email ya existe."""
