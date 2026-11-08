@@ -46,8 +46,10 @@ Con el stack levantado, `infra/scripts/demo.py` trabaja solo contra el gateway, 
 ```bash
 python infra/scripts/demo.py seed     # carga datos para mostrar la UI
 python infra/scripts/demo.py chains   # recorre las políticas del ADR 0005 en vivo
+python infra/scripts/demo.py admin    # crea la cuenta de administrador
 ```
 
+- **`admin`** crea a `admin@demo.test`, con la misma contraseña, para entrar al panel "Usuarios". El registro público nunca da ese rol, así que ejecuta `createsuperuser` dentro del contenedor de identity y necesita el CLI de docker. Si la cuenta ya existe, no hace nada.
 - **`seed`** crea a la agente `agente@demo.test` y al interesado `cliente@demo.test`, con la contraseña `demo-inmobiliaria`, que se cambia con `DEMO_PASSWORD`.
   - Carga seis propiedades publicadas, con características y fotos. Las fotos son PNG generados por el script, así que no hay binarios en el repo.
   - Guarda dos favoritos, envía una consulta y deja una visita pendiente y otra programada.

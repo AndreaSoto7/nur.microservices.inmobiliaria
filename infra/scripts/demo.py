@@ -4,10 +4,11 @@
     python infra/scripts/demo.py seed     # agente, interesado, propiedades con fotos, favoritos y visitas
     python infra/scripts/demo.py chains   # recorre las políticas entre listing y visit y muestra cada reacción
     python infra/scripts/demo.py balance  # réplicas en Consul y round robin del gateway (--failover: Circuit Breaker)
+    python infra/scripts/demo.py admin    # crea la cuenta de administrador para el panel de usuarios
 
 Solo usa la biblioteca estándar (Python 3.10 o más nuevo). Necesita el stack levantado
-(`docker compose -f infra/docker-compose.yml up -d --build`). Las cuentas de `seed` son de la demo local:
-la contraseña se cambia con la variable `DEMO_PASSWORD`. `balance` además usa el CLI de docker.
+(`docker compose -f infra/docker-compose.yml up -d --build`). Las cuentas de `seed` y `admin` son de la demo local:
+la contraseña se cambia con la variable `DEMO_PASSWORD`. `balance` y `admin` además usan el CLI de docker.
 """
 
 import argparse
@@ -29,6 +30,7 @@ DEFAULT_CONSUL = "http://127.0.0.1:8500"
 DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "demo-inmobiliaria")
 AGENT_EMAIL = "agente@demo.test"
 CLIENT_EMAIL = "cliente@demo.test"
+ADMIN_EMAIL = "admin@demo.test"
 MAX_RATE_LIMIT_RETRIES = 6
 POLL_INTERVAL_SECONDS = 0.5
 EVENT_TIMEOUT_SECONDS = 45
@@ -650,9 +652,28 @@ def _receives_traffic(gw: Gateway, service: str, replica: Replica) -> bool:
     return any(served.get(correlation_id, (0, ""))[1] == replica.address for correlation_id in ids)
 
 
+def create_admin(gw: Gateway) -> None:
+    """El registro público nunca da el rol ADMIN: se crea con el comando de Django, dentro del contenedor."""
+    credentials = {"email": ADMIN_EMAIL, "password": DEMO_PASSWORD}
+    if gw.call("POST", "/api/v1/auth/login", credentials).status == 200:
+        print("El administrador ya existe.")
+    else:
+        ids = docker("ps", "-q", "--filter", "label=com.docker.compose.service=identity-service").split()
+        if not ids:
+            raise DemoError("No encuentro el contenedor de identity-service")
+        # Por el entorno, no como argumento: así la contraseña no aparece en la lista de procesos.
+        os.environ["DJANGO_SUPERUSER_PASSWORD"] = DEMO_PASSWORD
+        # fmt: off
+        docker("exec", "-e", "DJANGO_SUPERUSER_PASSWORD", ids[0], "python", "manage.py", "createsuperuser",
+               "--noinput", "--email", ADMIN_EMAIL, "--full_name", "Admin Demo")
+        # fmt: on
+        print("Administrador creado.")
+    print(f"Entra en http://localhost:5173 con {ADMIN_EMAIL} y ve a «Usuarios».")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["seed", "chains", "balance"])
+    parser.add_argument("command", choices=["seed", "chains", "balance", "admin"])
     parser.add_argument("--gateway", default=DEFAULT_GATEWAY, help=f"URL del gateway (por defecto {DEFAULT_GATEWAY})")
     parser.add_argument("--consul", default=DEFAULT_CONSUL, help=f"URL de Consul (por defecto {DEFAULT_CONSUL})")
     parser.add_argument("--service", default="listing-service", choices=sorted(BALANCE_PATHS), help="para balance")
@@ -664,6 +685,8 @@ def main() -> int:
     try:
         if args.command == "balance":
             balance(gw, args)
+        elif args.command == "admin":
+            create_admin(gw)
         else:
             (seed if args.command == "seed" else chains)(gw)
     except DemoError as error:

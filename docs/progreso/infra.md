@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | `demo.py admin`: crea la cuenta de administrador de la demo para el panel de usuarios | este PR |
 | feat | `demo.py balance`: réplicas sanas en Consul y reparto round robin del gateway, leído de su log por `X-Correlation-Id`; con `--failover`, Circuit Breaker ante una réplica caída y su recuperación | #103 |
 | feat | `infra/scripts/demo.py`: `seed` carga cuentas, propiedades con fotos, favoritos, una consulta y visitas; `chains` recorre en vivo las políticas del ADR 0005 (publicar, ganar la oportunidad, reservar y vender) y los avisos, a través del gateway | #102 |
 | feat | visit-service en el compose (`visit-db`, `visit-migrate` y `visit-service`), con `VISIT_DB_PASSWORD` y puertos de depuración 8003 y 5435 | #96 |
