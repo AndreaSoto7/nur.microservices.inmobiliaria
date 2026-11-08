@@ -1,6 +1,7 @@
 import { Link, Navigate, Route, Routes } from 'react-router'
 import { RequireAuth } from '../core/auth/RequireAuth'
 import { AccountPage } from '../features/account/containers/AccountPage'
+import { AdminUsersPage } from '../features/admin/containers/AdminUsersPage'
 import { AgentInquiriesPage } from '../features/agent/inquiries/containers/AgentInquiriesPage'
 import { AgentLeadsPage } from '../features/agent/lead-follow-up/containers/AgentLeadsPage'
 import { AgentLayout } from '../features/agent/AgentLayout'
@@ -55,6 +56,14 @@ export function App() {
           element={
             <RequireAuth roles={['CLIENT', 'AGENT']}>
               <FavoritesPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="admin/users"
+          element={
+            <RequireAuth roles={['ADMIN']}>
+              <AdminUsersPage />
             </RequireAuth>
           }
         />

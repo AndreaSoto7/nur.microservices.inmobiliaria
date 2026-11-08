@@ -1,11 +1,6 @@
 import { memo } from 'react'
-import type { CurrentUser, Role } from '../../../core/models/identity'
-
-const ROLE_LABELS: Record<Role, string> = {
-  CLIENT: 'Interesado',
-  AGENT: 'Agente',
-  ADMIN: 'Administrador',
-}
+import type { CurrentUser } from '../../../core/models/identity'
+import { ROLE_LABELS } from '../../../shared/format/role'
 
 const dateFormatter = new Intl.DateTimeFormat('es-BO', { dateStyle: 'long' })
 
