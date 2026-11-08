@@ -1,6 +1,6 @@
 # frontend — React + Vite + TypeScript
 
-Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están todas las pantallas del enunciado: registro, login, "Mi cuenta", catálogo, detalle, favoritos, avisos, consultas y visitas del interesado, y el panel de agente. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están todas las pantallas del enunciado: registro, login, "Mi cuenta", catálogo, detalle, favoritos, avisos, consultas y visitas del interesado, el panel de agente y la administración de usuarios. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
@@ -23,6 +23,7 @@ Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, qu
 | Avisos | notification: `/api/v1/notifications` (ADR 0007) |
 | Mis propiedades, galería (agente) | listing: `/api/v1/properties/**` |
 | Consultas, visitas, oportunidades | visit: `/api/v1/inquiries`, `/api/v1/visits`, `/api/v1/leads` |
+| Administración de usuarios | identity: `/api/v1/users/**` (solo `ADMIN`) |
 
 Nunca se llama a un microservicio directo.
 
@@ -96,6 +97,9 @@ frontend/src/
     notifications/
       containers/  NotificationsPage  NotificationsNavLink   (smart) · components/ NotificationList   (dumb)
       useNotifications.ts   (facade de la página y del contador)
+    admin/
+      containers/  AdminUsersPage   (smart) · components/ AdminUserRow  RolesForm   (dumb)
+      useAdminUsers.ts (facade; rol y página en la URL)
     my-visits/
       containers/  MyVisitsPage   (smart) · components/ MyVisitRow  VisitDetails  ReasonPanel   (dumb)
       useMyVisits.ts (facade)
@@ -107,6 +111,7 @@ frontend/src/
 | `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `FavoriteControl`, `PropertyContactSection` |
 | `PropertyContactSection` | `VisitRequestForm` (`onSubmitRequest`), `InquiryForm` (`onSubmitInquiry`) |
 | `NotificationsPage` | `NotificationList` (`onMarkRead`), `Pagination` |
+| `AdminUsersPage` | `AdminUserRow` (`onAssignRoles`, `onDeactivate`, `onActivate`), `RolesForm`, `FilterSelect`, `Pagination` |
 | `MyVisitsPage` | `MyVisitRow` (`onCancel`), `VisitDetails`, `ReasonPanel`, `FilterSelect`, `Pagination` |
 | `FavoritesPage`, `FavoriteControl` | `FavoriteList` (`onRemove`), `FavoriteToggle` (`onToggle`), `Pagination` |
 | `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `FilterSelect` (`onChange`) |
@@ -151,6 +156,13 @@ frontend/src/
 - El contrato no dice si una propiedad es favorita: se deriva de `GET /favorites` con `size=100`, el máximo. Con más de 100 favoritos, el botón del detalle podría ofrecer guardar una que ya está guardada.
 - `FAVORITE_ALREADY_EXISTS` y `FAVORITE_NOT_FOUND` no se muestran como error: lo que se pedía ya es cierto, por ejemplo por un cambio en otra pestaña.
 - Solo se guarda una propiedad `PUBLISHED`, pero se puede quitar en cualquier estado. Si ya no es visible, la lista avisa "Ya no está disponible".
+
+## Administración de usuarios
+
+- Ruta `/admin/users`, solo con rol `ADMIN`. El filtro de rol y la página viven en la URL.
+- Sobre la propia cuenta no se ofrece desactivar ni quitarse el rol de administrador. Es comodidad de UI: la regla la hace cumplir identity (`USER_OWN_ACCOUNT_PROTECTED`).
+- La `key` de cada fila incluye roles y estado: al guardar, la fila se reinicia y el panel se cierra. Si falla, el panel sigue abierto para corregir.
+- Los cambios llegan a los demás servicios cuando la persona renueva su token, en 15 minutos como máximo, y la pantalla lo avisa.
 
 ## Avisos
 

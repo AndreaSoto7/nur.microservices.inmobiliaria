@@ -1,6 +1,7 @@
 // Reflejo de contracts/openapi/identity-service.yaml. No agregues campos que no estén ahí.
 
-export type Role = 'CLIENT' | 'AGENT' | 'ADMIN'
+export const ROLES = ['CLIENT', 'AGENT', 'ADMIN'] as const
+export type Role = (typeof ROLES)[number]
 
 /** Al registrarse solo se puede pedir CLIENT o AGENT. */
 export type RegistrableRole = Exclude<Role, 'ADMIN'>
@@ -34,4 +35,9 @@ export interface CurrentUser {
   fullName: string
   roles: Role[]
   registeredAt: string
+}
+
+/** Lo que un administrador ve de una cuenta. */
+export interface AdminUser extends CurrentUser {
+  active: boolean
 }
