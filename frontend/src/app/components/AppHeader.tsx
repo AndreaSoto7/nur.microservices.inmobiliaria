@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import type { ReactNode } from 'react'
-import { Button } from '../../shared/ui/Button'
+import { UserMenu } from './UserMenu'
 
 interface AppHeaderProps {
   /** Nombre del usuario con sesión, o null si es anónimo. */
@@ -10,6 +10,7 @@ interface AppHeaderProps {
   /** Los links los pone el container: este componente no conoce el router. */
   brand: ReactNode
   links: ReactNode
+  menuItems: ReactNode
 }
 
 export const AppHeader = memo(function AppHeader({
@@ -18,6 +19,7 @@ export const AppHeader = memo(function AppHeader({
   onLogout,
   brand,
   links,
+  menuItems,
 }: AppHeaderProps) {
   return (
     <header className="app-header">
@@ -25,12 +27,9 @@ export const AppHeader = memo(function AppHeader({
       <nav aria-label="Principal" className="app-header__nav">
         {links}
         {!loading && userName && (
-          <>
-            <span className="app-header__user">Hola, {userName}</span>
-            <Button variant="secondary" onClick={onLogout}>
-              Cerrar sesión
-            </Button>
-          </>
+          <UserMenu userName={userName} onLogout={onLogout}>
+            {menuItems}
+          </UserMenu>
         )}
       </nav>
     </header>

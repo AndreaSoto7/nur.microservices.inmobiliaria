@@ -24,7 +24,7 @@ describe('session flow', () => {
     await user.click(screen.getByRole('button', { name: 'Ingresar' }))
 
     expect(await screen.findByRole('heading', { name: 'Mi cuenta' })).toBeInTheDocument()
-    expect(screen.getByText('Ana Pérez')).toBeInTheDocument()
+    expect(screen.getByText('Ana Pérez', { selector: 'dd' })).toBeInTheDocument()
     expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:8080/api/v1/auth/login')
     expect(tokenStore.getRefreshToken()).toBe('refresh-1')
   })
@@ -66,7 +66,7 @@ describe('session flow', () => {
 
     await fillRegisterForm(user)
 
-    expect(await screen.findByText('Hola, Ana Pérez')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Menú de Ana Pérez' })).toBeInTheDocument()
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
       fullName: 'Ana Pérez',
       email: 'ana@example.com',
