@@ -8,6 +8,8 @@ valida el dominio, con sus propios códigos (USER_WEAK_PASSWORD, USER_ROLE_NOT_A
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from identity.domain.role import Role
+
 
 class StrictCharField(serializers.CharField):
     """CharField convierte números a texto. El contrato pide string: lo demás responde 400."""
@@ -65,6 +67,54 @@ class CurrentUserSerializer(serializers.Serializer):
     full_name = serializers.CharField()
     roles = serializers.ListField(child=serializers.CharField())
     registered_at = serializers.DateTimeField()
+
+
+_ROLE_CHOICES = [role.value for role in Role]
+
+
+class ListUsersParamsSerializer(serializers.Serializer):
+    page = serializers.IntegerField(min_value=1, default=1)
+    size = serializers.IntegerField(min_value=1, max_value=100, default=20)
+    role = serializers.ChoiceField(choices=_ROLE_CHOICES, required=False)
+
+
+class AdminUserSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    email = serializers.EmailField()
+    full_name = serializers.CharField()
+    roles = serializers.ListField(child=serializers.CharField())
+    active = serializers.BooleanField()
+    registered_at = serializers.DateTimeField()
+
+
+class PageMetadataSerializer(serializers.Serializer):
+    number = serializers.IntegerField()
+    size = serializers.IntegerField()
+    total_elements = serializers.IntegerField()
+    total_pages = serializers.IntegerField()
+
+
+class AdminUserPageSerializer(serializers.Serializer):
+    data = AdminUserSerializer(many=True)
+    page = PageMetadataSerializer()
+
+
+class AssignUserRolesRequestSerializer(serializers.Serializer):
+    roles = serializers.ListField(
+        child=serializers.ChoiceField(choices=_ROLE_CHOICES), allow_empty=False
+    )
+
+    def validate_roles(self, roles: list[str]) -> list[str]:
+        if len(set(roles)) != len(roles):
+            raise serializers.ValidationError("No repitas roles.")
+        return roles
+
+    def validate(self, attrs: dict) -> dict:
+        # El contrato no admite otros campos: un campo de más nunca se ignora en silencio.
+        unknown = set(self.initial_data) - set(self.fields)
+        if unknown:
+            raise serializers.ValidationError(dict.fromkeys(unknown, "Campo no permitido."))
+        return attrs
 
 
 class JwkSerializer(serializers.Serializer):

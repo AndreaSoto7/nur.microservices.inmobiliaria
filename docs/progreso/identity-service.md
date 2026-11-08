@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Administración de usuarios, parte 2: API para listar, cambiar roles, desactivar y activar. Probada contra el stack real y PostgreSQL | #116 |
 | feat | Administración de usuarios, parte 1: reglas del dominio, casos de uso y persistencia. El rol se comprueba en la base, y nadie se quita su propio `ADMIN` ni se desactiva | #115 |
 | docs | Contrato de la administración de usuarios: listar, cambiar roles, desactivar y activar, solo `ADMIN` | #113 |
 | fix | Re-hash: una falla al guardar no impide el login, y no pisa una contraseña que cambió mientras tanto | #33 |
@@ -37,6 +38,7 @@
 - [x] Publicar `UserRegistered` con outbox y relay a Kafka
 - [x] Borrar periódicamente las filas ya publicadas de `outbox`
 - [x] Duración máxima de la sesión: 30 días desde el login
+- [x] Administrar usuarios y roles (`AssignUserRolesCommand`, activar y desactivar cuentas)
 
 **Depende de otros**
 

@@ -3,12 +3,16 @@
 from django.urls import path
 
 from identity.presentation.views import (
+    ActivateUserView,
     CurrentUserView,
+    DeactivateUserView,
     JwksView,
     LoginView,
     LogoutView,
     RefreshTokensView,
     RegisterUserView,
+    UserRolesView,
+    UsersView,
 )
 
 urlpatterns = [
@@ -17,5 +21,9 @@ urlpatterns = [
     path("auth/refresh", RefreshTokensView.as_view(), name="auth-refresh"),
     path("auth/logout", LogoutView.as_view(), name="auth-logout"),
     path("users/me", CurrentUserView.as_view(), name="users-me"),
+    path("users", UsersView.as_view(), name="users"),
+    path("users/<uuid:user_id>/roles", UserRolesView.as_view(), name="user-roles"),
+    path("users/<uuid:user_id>/deactivate", DeactivateUserView.as_view(), name="user-deactivate"),
+    path("users/<uuid:user_id>/activate", ActivateUserView.as_view(), name="user-activate"),
     path("auth/.well-known/jwks.json", JwksView.as_view(), name="auth-jwks"),
 ]

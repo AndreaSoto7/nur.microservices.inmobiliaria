@@ -8,12 +8,8 @@ from django.urls import Resolver404, resolve
 
 CONTRACT = Path(__file__).resolve().parents[4] / "contracts/openapi/identity-service.yaml"
 # Operaciones del contrato que todavía no se implementan. Se quitan al implementarlas.
-NOT_IMPLEMENTED_YET: set[str] = {
-    "listUsers",
-    "assignUserRoles",
-    "deactivateUser",
-    "activateUser",
-}
+NOT_IMPLEMENTED_YET: set[str] = set()
+A_USER_ID = "6f1c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01"
 
 
 def operations() -> list[tuple[str, str, str]]:
@@ -35,7 +31,7 @@ def a_case(path: str, method: str, operation_id: str):
 @pytest.mark.parametrize(("path", "method", "operation_id"), [a_case(*op) for op in operations()])
 def test_every_contract_operation_has_its_route(path, method, operation_id):
     try:
-        match = resolve(path)
+        match = resolve(path.replace("{userId}", A_USER_ID))
     except Resolver404:
         pytest.fail(f"{operation_id}: {method.upper()} {path} no existe en el servicio")
 

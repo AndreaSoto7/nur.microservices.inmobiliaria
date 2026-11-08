@@ -7,16 +7,23 @@ from functools import cache
 from django.conf import settings
 from django.db import Error as DatabaseError
 
+from identity.application.commands.administer_users import (
+    ActivateUserHandler,
+    AssignUserRolesHandler,
+    DeactivateUserHandler,
+)
 from identity.application.commands.authenticate_user import AuthenticateUserHandler
 from identity.application.commands.logout import LogoutHandler
 from identity.application.commands.refresh_tokens import RefreshTokensHandler
 from identity.application.commands.register_user import RegisterUserHandler
 from identity.application.queries.get_current_user import GetCurrentUserHandler
+from identity.application.queries.list_users import ListUsersHandler
 from identity.infrastructure.clock import SystemClock
 from identity.infrastructure.messaging.kafka_producer import KafkaEventProducer
 from identity.infrastructure.persistence.health import check_database
 from identity.infrastructure.persistence.repositories import (
     DjangoRefreshTokenLedger,
+    DjangoUserDirectory,
     DjangoUserRepository,
 )
 from identity.infrastructure.security.keys import (
@@ -75,6 +82,22 @@ def event_producer() -> KafkaEventProducer:
 
 def get_current_user_handler() -> GetCurrentUserHandler:
     return GetCurrentUserHandler(users=DjangoUserRepository())
+
+
+def list_users_handler() -> ListUsersHandler:
+    return ListUsersHandler(users=DjangoUserRepository(), directory=DjangoUserDirectory())
+
+
+def assign_user_roles_handler() -> AssignUserRolesHandler:
+    return AssignUserRolesHandler(users=DjangoUserRepository())
+
+
+def deactivate_user_handler() -> DeactivateUserHandler:
+    return DeactivateUserHandler(users=DjangoUserRepository())
+
+
+def activate_user_handler() -> ActivateUserHandler:
+    return ActivateUserHandler(users=DjangoUserRepository())
 
 
 def access_token_verifier() -> PyJwtAccessTokenVerifier:

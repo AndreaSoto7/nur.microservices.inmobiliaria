@@ -1,4 +1,5 @@
 from typing import ClassVar
+from uuid import UUID
 
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
@@ -8,15 +9,25 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from identity import container
+from identity.application.commands.administer_users import (
+    ActivateUserCommand,
+    AssignUserRolesCommand,
+    DeactivateUserCommand,
+)
 from identity.application.commands.authenticate_user import AuthenticateUserCommand
 from identity.application.commands.logout import LogoutCommand
 from identity.application.commands.refresh_tokens import RefreshTokensCommand
 from identity.application.commands.register_user import RegisterUserCommand
 from identity.application.queries.get_current_user import GetCurrentUserQuery
+from identity.application.queries.list_users import ListUsersQuery
+from identity.domain.role import Role
 from identity.presentation.authentication import BearerAuthentication
 from identity.presentation.serializers import (
+    AdminUserPageSerializer,
+    AssignUserRolesRequestSerializer,
     CurrentUserSerializer,
     JwksSerializer,
+    ListUsersParamsSerializer,
     LoginRequestSerializer,
     ProblemSerializer,
     RefreshTokensRequestSerializer,
@@ -191,6 +202,130 @@ class CurrentUserView(APIView):
             GetCurrentUserQuery(user_id=request.user.id)
         )
         return Response(CurrentUserSerializer(profile).data)
+
+
+class _AdminView(APIView):
+    """Exige un access token válido. El rol ADMIN lo comprueba cada caso de uso, en la base."""
+
+    authentication_classes: ClassVar[list] = [BearerAuthentication]
+    permission_classes: ClassVar[list] = [IsAuthenticated]
+
+
+_ADMIN_ERRORS = {
+    (401, _PROBLEM): OpenApiResponse(ProblemSerializer, description="AUTH_INVALID_TOKEN"),
+    (403, _PROBLEM): OpenApiResponse(ProblemSerializer, description="USER_ADMIN_REQUIRED"),
+}
+_USER_CHANGE_ERRORS = {
+    **_ADMIN_ERRORS,
+    (404, _PROBLEM): OpenApiResponse(ProblemSerializer, description="USER_NOT_FOUND"),
+    (409, _PROBLEM): OpenApiResponse(ProblemSerializer, description="USER_OWN_ACCOUNT_PROTECTED"),
+}
+
+
+class UsersView(_AdminView):
+    """GET /api/v1/users. Solo ADMIN."""
+
+    @extend_schema(
+        operation_id="listUsers",
+        tags=["users"],
+        summary="Listar los usuarios",
+        parameters=[ListUsersParamsSerializer],
+        responses={
+            200: AdminUserPageSerializer,
+            (400, _PROBLEM): OpenApiResponse(ProblemSerializer, description="VALIDATION_ERROR"),
+            **_ADMIN_ERRORS,
+        },
+    )
+    def get(self, request: Request) -> Response:
+        params = ListUsersParamsSerializer(data=request.query_params)
+        params.is_valid(raise_exception=True)
+        role = params.validated_data.get("role")
+        result = container.list_users_handler().handle(
+            ListUsersQuery(
+                actor_id=request.user.id,
+                page=params.validated_data["page"],
+                size=params.validated_data["size"],
+                role=Role(role) if role else None,
+            )
+        )
+        return Response(
+            AdminUserPageSerializer(
+                {
+                    "data": result.data,
+                    "page": {
+                        "number": result.number,
+                        "size": result.size,
+                        "total_elements": result.total_elements,
+                        "total_pages": result.total_pages,
+                    },
+                }
+            ).data
+        )
+
+
+class UserRolesView(_AdminView):
+    """PUT /api/v1/users/{userId}/roles. Solo ADMIN."""
+
+    @extend_schema(
+        operation_id="assignUserRoles",
+        tags=["users"],
+        summary="Reemplazar los roles de un usuario",
+        request=AssignUserRolesRequestSerializer,
+        responses={
+            204: None,
+            (400, _PROBLEM): OpenApiResponse(ProblemSerializer, description="VALIDATION_ERROR"),
+            **_USER_CHANGE_ERRORS,
+        },
+    )
+    def put(self, request: Request, user_id: UUID) -> Response:
+        serializer = AssignUserRolesRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        container.assign_user_roles_handler().handle(
+            AssignUserRolesCommand(
+                actor_id=request.user.id,
+                user_id=user_id,
+                roles=tuple(serializer.validated_data["roles"]),
+            )
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DeactivateUserView(_AdminView):
+    """POST /api/v1/users/{userId}/deactivate. Solo ADMIN."""
+
+    @extend_schema(
+        operation_id="deactivateUser",
+        tags=["users"],
+        summary="Desactivar una cuenta",
+        request=None,
+        responses={204: None, **_USER_CHANGE_ERRORS},
+    )
+    def post(self, request: Request, user_id: UUID) -> Response:
+        container.deactivate_user_handler().handle(
+            DeactivateUserCommand(actor_id=request.user.id, user_id=user_id)
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ActivateUserView(_AdminView):
+    """POST /api/v1/users/{userId}/activate. Solo ADMIN."""
+
+    @extend_schema(
+        operation_id="activateUser",
+        tags=["users"],
+        summary="Volver a activar una cuenta",
+        request=None,
+        responses={
+            204: None,
+            **_ADMIN_ERRORS,
+            (404, _PROBLEM): OpenApiResponse(ProblemSerializer, description="USER_NOT_FOUND"),
+        },
+    )
+    def post(self, request: Request, user_id: UUID) -> Response:
+        container.activate_user_handler().handle(
+            ActivateUserCommand(actor_id=request.user.id, user_id=user_id)
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class JwksView(APIView):
