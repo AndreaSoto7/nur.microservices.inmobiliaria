@@ -6,13 +6,14 @@ import pytest
 from identity.domain.email import Email
 from identity.domain.errors import (
     InvalidCredentials,
-    InvalidFullName,
+    InvalidFirstName,
+    InvalidLastName,
     RoleNotAllowed,
     WeakPassword,
 )
 from identity.domain.events import UserRegistered
-from identity.domain.full_name import FullName
 from identity.domain.password import RawPassword
+from identity.domain.person_name import PersonName
 from identity.domain.role import DEFAULT_SELF_REGISTRATION_ROLE, Role, self_registration_role
 from identity.domain.user import User
 
@@ -22,7 +23,7 @@ NOW = datetime(2026, 11, 3, 14, 30, tzinfo=UTC)
 def register(role: Role = Role.CLIENT) -> User:
     return User.register(
         email=Email("ana@example.com"),
-        full_name=FullName("Ana Pérez"),
+        name=PersonName("Ana", "Pérez"),
         password_hash="hash-de-prueba",
         role=role,
         now=NOW,
@@ -33,7 +34,8 @@ def test_registers_an_active_user_with_its_role():
     user = register(role=Role.AGENT)
 
     assert user.email == Email("ana@example.com")
-    assert user.full_name == FullName("Ana Pérez")
+    assert user.name == PersonName("Ana", "Pérez")
+    assert user.name.full == "Ana Pérez"
     assert user.password_hash == "hash-de-prueba"
     assert user.roles == frozenset({Role.AGENT})
     assert user.is_active is True
@@ -53,6 +55,8 @@ def test_register_emits_user_registered():
         UserRegistered(
             user_id=user.id,
             email="ana@example.com",
+            first_name="Ana",
+            last_name="Pérez",
             full_name="Ana Pérez",
             roles=("CLIENT",),
             occurred_at=NOW,
@@ -87,7 +91,7 @@ def test_user_always_has_at_least_one_role():
         User(
             id=register().id,
             email=Email("ana@example.com"),
-            full_name=FullName("Ana Pérez"),
+            name=PersonName("Ana", "Pérez"),
             password_hash="x",
             roles=frozenset(),
             is_active=True,
@@ -105,7 +109,7 @@ def test_two_users_are_equal_when_they_have_the_same_id():
     assert user == User(
         id=user.id,
         email=Email("otro@example.com"),
-        full_name=FullName("Otro"),
+        name=PersonName("Otro", "Usuario"),
         password_hash="x",
         roles=frozenset({Role.CLIENT}),
         is_active=True,
@@ -128,16 +132,33 @@ def test_role_parse_rejects_unknown_roles_with_the_contract_text():
     assert error.value.message == "Solo se puede registrar con rol CLIENT o AGENT."
 
 
-def test_full_name_trims_spaces():
-    assert FullName("  Ana Pérez  ").value == "Ana Pérez"
+def test_person_name_trims_and_collapses_spaces():
+    name = PersonName("  María   José ", " Pérez  Rojas ")
+
+    assert (name.first_name, name.last_name) == ("María José", "Pérez Rojas")
+    assert name.full == "María José Pérez Rojas"
 
 
-@pytest.mark.parametrize("raw", ["", "   ", "x" * 151])
-def test_full_name_rejects_empty_or_too_long_names(raw):
-    with pytest.raises(InvalidFullName) as error:
-        FullName(raw)
+@pytest.mark.parametrize("raw", ["", "   ", "x" * 76])
+def test_person_name_rejects_an_empty_or_too_long_first_name(raw):
+    with pytest.raises(InvalidFirstName) as error:
+        PersonName(raw, "Pérez")
 
-    assert error.value.code == "USER_INVALID_FULL_NAME"
+    assert error.value.code == "USER_INVALID_FIRST_NAME"
+
+
+@pytest.mark.parametrize("raw", ["", "   ", "x" * 76])
+def test_person_name_rejects_an_empty_or_too_long_last_name(raw):
+    with pytest.raises(InvalidLastName) as error:
+        PersonName("Ana", raw)
+
+    assert error.value.code == "USER_INVALID_LAST_NAME"
+
+
+def test_a_stored_account_from_before_the_split_may_have_no_last_name():
+    name = PersonName.restore("Ana", "")
+
+    assert (name.first_name, name.last_name, name.full) == ("Ana", "", "Ana")
 
 
 @pytest.mark.parametrize("raw", ["corta", "x" * 129, "x" * 5000])

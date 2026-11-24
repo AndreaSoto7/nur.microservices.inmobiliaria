@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Nombre y apellido por separado (`firstName`, `lastName`; `fullName` queda en las respuestas y se acepta, obsoleto, en el registro). Migración `0004` que separa los nombres existentes. Contrato 1.5.0, `UserRegistered` con los campos nuevos y el claim `name` en el access token (lo usa visit para el contacto). Probado por el gateway | _(pendiente)_ |
 | fix | Los errores de dominio de un campo (contraseña débil, email inválido o ya registrado, nombre, rol) traen `errors[{field, message}]`, así el formulario los muestra junto al campo | _(pendiente)_ |
 | feat | Administración de usuarios, parte 2: API para listar, cambiar roles, desactivar y activar. Probada contra el stack real y PostgreSQL | #116 |
 | feat | Administración de usuarios, parte 1: reglas del dominio, casos de uso y persistencia. El rol se comprueba en la base, y nadie se quita su propio `ADMIN` ni se desactiva | #115 |

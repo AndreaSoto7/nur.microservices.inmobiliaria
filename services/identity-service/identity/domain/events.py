@@ -9,6 +9,8 @@ from uuid import UUID
 class UserRegistered:
     user_id: UUID
     email: str
+    first_name: str
+    last_name: str
     full_name: str
     roles: tuple[str, ...]
     occurred_at: datetime

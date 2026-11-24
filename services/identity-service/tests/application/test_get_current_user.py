@@ -11,7 +11,7 @@ from identity.application.queries.get_current_user import (
 )
 from identity.domain.email import Email
 from identity.domain.errors import InvalidAccessToken
-from identity.domain.full_name import FullName
+from identity.domain.person_name import PersonName
 from identity.domain.role import Role
 from identity.domain.user import User
 from tests.application.fakes import InMemoryUserRepository
@@ -28,7 +28,7 @@ def users() -> InMemoryUserRepository:
 def user(users) -> User:
     user = User.register(
         email=Email("ana@example.com"),
-        full_name=FullName("Ana Pérez"),
+        name=PersonName("Ana", "Pérez"),
         password_hash="secreto",
         role=Role.AGENT,
         now=NOW,
@@ -43,6 +43,8 @@ def test_returns_the_profile_without_sensitive_data(users, user):
     assert profile == UserProfile(
         id=user.id,
         email="ana@example.com",
+        first_name="Ana",
+        last_name="Pérez",
         full_name="Ana Pérez",
         roles=["AGENT"],
         registered_at=NOW,

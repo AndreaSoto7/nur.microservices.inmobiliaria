@@ -128,7 +128,12 @@ def test_unexpected_error_responds_500_problem_json_without_details(monkeypatch)
 
     response = Client(raise_request_exception=False).post(
         "/api/v1/auth/register",
-        {"email": "ana@example.com", "password": "S3gura-2026", "fullName": "Ana"},
+        {
+            "email": "ana@example.com",
+            "password": "S3gura-2026",
+            "firstName": "Ana",
+            "lastName": "Pérez",
+        },
         content_type="application/json",
     )
 

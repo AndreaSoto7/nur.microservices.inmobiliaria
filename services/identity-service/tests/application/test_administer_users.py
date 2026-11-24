@@ -21,7 +21,7 @@ from identity.domain.errors import (
     RoleNotAllowed,
     UserNotFound,
 )
-from identity.domain.full_name import FullName
+from identity.domain.person_name import PersonName
 from identity.domain.role import Role
 from identity.domain.user import User
 from tests.application.fakes import InMemoryUserRepository
@@ -33,7 +33,7 @@ def add_user(users, email: str, *roles: Role, is_active: bool = True) -> User:
     user = User(
         id=uuid4(),
         email=Email(email),
-        full_name=FullName("Nombre Apellido"),
+        name=PersonName("Nombre", "Apellido"),
         password_hash="hash-de-prueba",
         roles=frozenset(roles),
         is_active=is_active,

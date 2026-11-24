@@ -13,8 +13,12 @@ class InvalidEmail(DomainError):
     code = "USER_INVALID_EMAIL"
 
 
-class InvalidFullName(DomainError):
-    code = "USER_INVALID_FULL_NAME"
+class InvalidFirstName(DomainError):
+    code = "USER_INVALID_FIRST_NAME"
+
+
+class InvalidLastName(DomainError):
+    code = "USER_INVALID_LAST_NAME"
 
 
 class WeakPassword(DomainError):

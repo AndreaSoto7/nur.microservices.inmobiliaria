@@ -14,7 +14,7 @@ PASSWORD = "S3gura-2026"
 def tokens(client) -> dict:
     client.post(
         "/api/v1/auth/register",
-        {"email": "ana@example.com", "password": PASSWORD, "fullName": "Ana"},
+        {"email": "ana@example.com", "password": PASSWORD, "firstName": "Ana", "lastName": "Pérez"},
         content_type="application/json",
     )
     response = client.post(

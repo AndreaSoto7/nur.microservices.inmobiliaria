@@ -19,7 +19,8 @@ def tokens(client) -> dict:
         {
             "email": "ana@example.com",
             "password": PASSWORD,
-            "fullName": "Ana Pérez",
+            "firstName": "Ana",
+            "lastName": "Pérez",
             "role": "AGENT",
         },
         content_type="application/json",
@@ -48,8 +49,17 @@ def test_returns_the_authenticated_user_data(client, tokens):
 
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == {"id", "email", "fullName", "roles", "registeredAt"}
+    assert set(body) == {
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "fullName",
+        "roles",
+        "registeredAt",
+    }
     assert body["email"] == "ana@example.com"
+    assert (body["firstName"], body["lastName"]) == ("Ana", "Pérez")
     assert body["fullName"] == "Ana Pérez"
     assert body["roles"] == ["AGENT"]
     assert body["registeredAt"].endswith("Z")

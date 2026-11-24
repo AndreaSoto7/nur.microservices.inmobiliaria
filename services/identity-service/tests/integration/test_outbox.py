@@ -14,7 +14,7 @@ from identity.application.correlation import correlation_id
 from identity.domain.email import Email
 from identity.domain.errors import EmailAlreadyRegistered
 from identity.domain.events import UserRegistered
-from identity.domain.full_name import FullName
+from identity.domain.person_name import PersonName
 from identity.domain.role import Role
 from identity.domain.user import User
 from identity.infrastructure.messaging.integration_events import USER_TOPIC, to_integration_event
@@ -32,7 +32,7 @@ NOW = datetime(2026, 11, 3, 14, 30, tzinfo=UTC)
 def a_user() -> User:
     return User.register(
         email=Email("ana@example.com"),
-        full_name=FullName("Ana Pérez"),
+        name=PersonName("Ana", "Pérez"),
         password_hash="hash-secreto",
         role=Role.AGENT,
         now=NOW,
@@ -43,6 +43,8 @@ def an_event() -> UserRegistered:
     return UserRegistered(
         user_id=uuid4(),
         email="ana@example.com",
+        first_name="Ana",
+        last_name="Pérez",
         full_name="Ana Pérez",
         roles=("AGENT",),
         occurred_at=NOW,
@@ -124,7 +126,7 @@ def test_when_the_outbox_fails_the_user_is_not_saved_either(monkeypatch):
 def test_when_the_user_fails_the_event_is_not_saved_either(monkeypatch):
     def broken(user):
         model = to_model(user)
-        model.full_name = None  # NOT NULL
+        model.first_name = None  # NOT NULL
         return model
 
     monkeypatch.setattr(repositories, "to_model", broken)
@@ -177,7 +179,12 @@ def test_what_kafka_does_not_ack_stays_pending_for_retry():
 def test_register_endpoint_leaves_the_event_in_the_outbox(client):
     response = client.post(
         "/api/v1/auth/register",
-        {"email": "ana@example.com", "password": "S3gura-2026", "fullName": "Ana"},
+        {
+            "email": "ana@example.com",
+            "password": "S3gura-2026",
+            "firstName": "Ana",
+            "lastName": "Pérez",
+        },
         content_type="application/json",
         headers={"X-Correlation-Id": "corr-registro"},
     )

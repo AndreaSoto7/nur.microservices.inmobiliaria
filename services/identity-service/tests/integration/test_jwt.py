@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 from identity.domain.email import Email
 from identity.domain.errors import InvalidRefreshToken
-from identity.domain.full_name import FullName
+from identity.domain.person_name import PersonName
 from identity.domain.refresh_token import RefreshToken
 from identity.domain.role import Role
 from identity.domain.user import User
@@ -59,7 +59,7 @@ def issuer(signing_key) -> PyJwtTokenIssuer:
 def user() -> User:
     return User.register(
         email=Email("ana@example.com"),
-        full_name=FullName("Ana Pérez"),
+        name=PersonName("Ana", "Pérez"),
         password_hash="x",
         role=Role.AGENT,
         now=NOW,
@@ -84,6 +84,7 @@ def test_access_token_carries_the_contract_claims(issuer, signing_key, user):
     claims = decode(tokens.access_token, signing_key)
     assert claims["sub"] == str(user.id)
     assert claims["email"] == "ana@example.com"
+    assert claims["name"] == "Ana Pérez"
     assert claims["roles"] == ["AGENT"]
     assert claims["iss"] == "identity-service"
     assert claims["aud"] == "inmobiliaria"

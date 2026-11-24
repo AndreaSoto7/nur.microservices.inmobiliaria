@@ -8,7 +8,7 @@ from django.db import models
 from django.utils import timezone
 
 from identity.domain.email import Email
-from identity.domain.full_name import FullName
+from identity.domain.person_name import PersonName
 
 
 class UserModelManager(BaseUserManager["UserModel"]):
@@ -17,7 +17,8 @@ class UserModelManager(BaseUserManager["UserModel"]):
     def create_user(self, email: str, password: str | None = None, **extra) -> "UserModel":
         # Mismas reglas que el dominio: una fila sin roles o con otro email no se podría cargar.
         extra.setdefault("roles", ["CLIENT"])
-        extra["full_name"] = FullName(extra.get("full_name", "")).value
+        name = PersonName(extra.get("first_name", ""), extra.get("last_name", ""))
+        extra["first_name"], extra["last_name"] = name.first_name, name.last_name
         user = self.model(email=Email(email).value, **extra)
         user.set_password(password)
         user.save(using=self._db)
@@ -74,7 +75,9 @@ class RevokedRefreshFamily(models.Model):
 class UserModel(AbstractBaseUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(max_length=254, unique=True)
-    full_name = models.CharField(max_length=150)
+    first_name = models.CharField(max_length=75)
+    # Vacío solo en cuentas creadas antes de separar nombre y apellido (migración 0004).
+    last_name = models.CharField(max_length=75, blank=True)
     # Lista de roles en UPPER_SNAKE_CASE (CLIENT, AGENT, ADMIN).
     roles = models.JSONField(default=list)
     is_active = models.BooleanField(default=True)
@@ -84,7 +87,7 @@ class UserModel(AbstractBaseUser):
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"
-    REQUIRED_FIELDS: ClassVar[list[str]] = ["full_name"]
+    REQUIRED_FIELDS: ClassVar[list[str]] = ["first_name", "last_name"]
 
     class Meta:
         db_table = "users"

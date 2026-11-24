@@ -80,7 +80,8 @@ class RegisterUserView(APIView):
             RegisterUserCommand(
                 email=data["email"],
                 password=data["password"],
-                full_name=data["full_name"],
+                first_name=data["first_name"],
+                last_name=data["last_name"],
                 role=data.get("role"),
             )
         )

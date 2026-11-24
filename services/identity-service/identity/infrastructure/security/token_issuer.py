@@ -56,6 +56,9 @@ class PyJwtTokenIssuer:
             | {
                 "aud": self._audience,
                 "email": user.email.value,
+                # Nombre y apellido (claim estándar de OIDC): visit lo guarda para que el agente
+                # sepa a quién contactar cuando un cliente pide una visita.
+                "name": user.name.full,
                 "roles": sorted(role.value for role in user.roles),
                 "tokenType": "access",
                 "jti": str(uuid4()),

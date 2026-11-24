@@ -10,10 +10,15 @@ class UserDirectoryEntry:
 
     id: UUID
     email: str
-    full_name: str
+    first_name: str
+    last_name: str
     roles: list[str]
     active: bool
     registered_at: datetime
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}".strip()
 
 
 @dataclass(frozen=True, slots=True)

@@ -45,7 +45,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 
 - **El rol se comprueba en la base** en cada caso de uso (`application/authorization.py`), no en el claim del token: a un administrador destituido no le sirve un token anterior.
 - **Un administrador no se quita su propio `ADMIN` ni se desactiva:** así el sistema no se queda sin administradores por accidente. Si dos administradores se destituyen entre sí a la vez sí podría pasar: se recupera con `createsuperuser`.
-- **El primer administrador** no se puede obtener por registro público. Se crea con `DJANGO_SUPERUSER_PASSWORD=… python manage.py createsuperuser --noinput --email … --full_name …`. En Docker: `python infra/scripts/demo.py admin`.
+- **El primer administrador** no se puede obtener por registro público. Se crea con `DJANGO_SUPERUSER_PASSWORD=… python manage.py createsuperuser --noinput --email … --first_name … --last_name …`. En Docker: `python infra/scripts/demo.py admin`.
 - **Los cambios tardan hasta 15 minutos en llegar a los demás servicios:** es lo que dura el access token, que ellos validan sin consultar a identity. Identity ya no renueva la sesión de una cuenta desactivada.
 - Cada cambio deja un log con los IDs del administrador y del usuario, sin email ni nombre.
 
@@ -80,7 +80,7 @@ El **modelo de Django es persistencia** (`infrastructure/persistence/models.py`)
 - **JWT con PyJWT** detrás del puerto `TokenIssuer`. No se usa `djangorestframework-simplejwt`: no pone `kid` en el header.
   - Clave privada desde `JWT_PRIVATE_KEY_PATH` (o `JWT_PRIVATE_KEY`). `kid` = huella RFC 7638.
   - JWKS: `GET /api/v1/auth/.well-known/jwks.json`.
-  - Access token: `sub`, `email`, `roles`, `iss`, `aud=inmobiliaria`, `iat`, `exp`, `jti`; header `typ=at+jwt`.
+  - Access token: `sub`, `email`, `name` (nombre y apellido; lo usa visit para el contacto), `roles`, `iss`, `aud=inmobiliaria`, `iat`, `exp`, `jti`; header `typ=at+jwt`.
   - Refresh token: `aud=identity-service` y `typ=rt+jwt`, para que ningún otro servicio lo acepte.
 - **camelCase:** `djangorestframework-camel-case` (parser y renderer).
 - **Errores:** `EXCEPTION_HANDLER` propio → `application/problem+json`.

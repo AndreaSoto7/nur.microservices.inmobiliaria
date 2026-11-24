@@ -86,13 +86,16 @@ class DjangoUserDirectory:
             users = users.filter(_has_role(role))
         offset = (page - 1) * size
         # Con .values() la contraseña ni siquiera sale de la base.
-        rows = users.values("id", "email", "full_name", "roles", "is_active", "date_joined")
+        rows = users.values(
+            "id", "email", "first_name", "last_name", "roles", "is_active", "date_joined"
+        )
         return UserDirectoryPage(
             data=[
                 UserDirectoryEntry(
                     id=row["id"],
                     email=row["email"],
-                    full_name=row["full_name"],
+                    first_name=row["first_name"],
+                    last_name=row["last_name"],
                     roles=sorted(row["roles"]),
                     active=row["is_active"],
                     registered_at=row["date_joined"],

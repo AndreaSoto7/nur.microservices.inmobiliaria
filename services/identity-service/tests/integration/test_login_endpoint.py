@@ -14,7 +14,7 @@ PASSWORD = "S3gura-2026"
 def registered(client):
     response = client.post(
         "/api/v1/auth/register",
-        {"email": "ana@example.com", "password": PASSWORD, "fullName": "Ana Pérez"},
+        {"email": "ana@example.com", "password": PASSWORD, "firstName": "Ana", "lastName": "Pérez"},
         content_type="application/json",
     )
     return response.json()["id"]
@@ -157,7 +157,7 @@ def test_user_with_corrupt_data_responds_500_and_reveals_nothing(registered):
 def test_corrupt_name_responds_500_and_does_not_reveal_the_account_exists(registered, password):
     from django.test import Client
 
-    UserModel.objects.filter(email="ana@example.com").update(full_name="")
+    UserModel.objects.filter(email="ana@example.com").update(first_name="")
 
     response = Client(raise_request_exception=False).post(
         LOGIN,

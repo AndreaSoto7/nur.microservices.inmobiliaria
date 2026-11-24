@@ -5,7 +5,7 @@ import pytest
 
 from identity.domain.email import Email
 from identity.domain.errors import AdminRequired, OwnAccountProtected, RoleNotAllowed
-from identity.domain.full_name import FullName
+from identity.domain.person_name import PersonName
 from identity.domain.role import Role
 from identity.domain.user import User
 
@@ -16,7 +16,7 @@ def a_user(*roles: Role, is_active: bool = True) -> User:
     return User(
         id=uuid4(),
         email=Email("ana@example.com"),
-        full_name=FullName("Ana Pérez"),
+        name=PersonName("Ana", "Pérez"),
         password_hash="hash-de-prueba",
         roles=frozenset(roles or {Role.CLIENT}),
         is_active=is_active,
