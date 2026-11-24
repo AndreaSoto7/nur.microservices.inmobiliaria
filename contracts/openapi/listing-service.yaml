@@ -601,8 +601,11 @@ components:
     Conflict:
       description: |
         Regla de negocio: `PROPERTY_INVALID_TRANSITION`, `PROPERTY_WITHOUT_IMAGES`, `PROPERTY_INCOMPLETE`,
-        `PROPERTY_OPERATION_MISMATCH`, `PROPERTY_IMAGE_LIMIT` o `PROPERTY_CONCURRENT_UPDATE`.
+        `PROPERTY_OPERATION_MISMATCH`, `PROPERTY_IMAGE_LIMIT`, `PROPERTY_LAST_IMAGE`,
+        `PROPERTY_HAS_SCHEDULED_VISITS` o `PROPERTY_CONCURRENT_UPDATE`.
         Editar una propiedad vendida o alquilada también es `PROPERTY_INVALID_TRANSITION`.
+        Pausar una propiedad con una visita programada a futuro es `PROPERTY_HAS_SCHEDULED_VISITS` (ADR 0008).
+        Quitar la única foto de una propiedad visible es `PROPERTY_LAST_IMAGE`.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: notification-service
-  version: 1.0.2
+  version: 1.1.0
   description: |
     Avisos dentro de la app para agentes y clientes (ADR 0007). Se crean a partir de eventos de Kafka: la API solo los lee y los marca como leídos.
     Cada usuario ve solo los suyos: el destinatario es el `sub` del access token.
@@ -209,7 +209,7 @@ components:
     NotificationType:
       type: string
       description: Puede crecer con nuevos avisos; el cliente debe tolerar valores desconocidos.
-      enum: [WELCOME, VISIT_REQUESTED, PROPERTY_RESERVED, INQUIRY_RECEIVED, VISIT_SCHEDULED, VISIT_REJECTED, VISIT_CANCELLED, VISIT_CANCELLED_BY_CLIENT, VISIT_COMPLETED]
+      enum: [WELCOME, VISIT_REQUESTED, PROPERTY_RESERVED, INQUIRY_RECEIVED, INQUIRY_REPLIED, VISIT_SCHEDULED, VISIT_TIME_PROPOSED, VISIT_TIME_PROPOSED_BY_CLIENT, VISIT_PROPOSAL_ACCEPTED, VISIT_REJECTED, VISIT_CANCELLED, VISIT_CANCELLED_BY_CLIENT, VISIT_COMPLETED]
 
     Notification:
       type: object
