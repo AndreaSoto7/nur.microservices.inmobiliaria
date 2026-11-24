@@ -39,6 +39,7 @@ listing ──listing.property.events──► visit   copia local de propiedade
                                              PropertyReserved → rechaza solicitudes pendientes
                                              PropertySold/Rented → rechaza y cancela visitas
 visit   ──visit.lead.events──────────► listing   LeadClosed (WON) → reserva la propiedad
+visit   ──visit.visit.events─────────► listing   visitas confirmadas: no deja pausar (ADR 0008)
 identity, listing, visit ──eventos────► notification   crea los avisos de cada usuario
 todos   ──todos los topics───────────► audit     (opcional)
 ```
