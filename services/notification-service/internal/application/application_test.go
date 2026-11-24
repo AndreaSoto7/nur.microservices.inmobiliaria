@@ -48,6 +48,16 @@ func (s *inMemoryStore) SaveForEvent(_ context.Context, eventID string, notifica
 	return nil
 }
 
+func (s *inMemoryStore) Delete(_ context.Context, id, recipientID string) error {
+	if s.failWith != nil {
+		return s.failWith
+	}
+	if item, ok := s.items[id]; ok && item.RecipientID() == recipientID {
+		delete(s.items, id)
+	}
+	return nil
+}
+
 func (s *inMemoryStore) FindByID(_ context.Context, id string) (*domain.Notification, error) {
 	notification, ok := s.items[id]
 	if !ok {
@@ -354,6 +364,35 @@ func TestMarkReadOfAnotherUserLooksLikeNotFound(t *testing.T) {
 	}
 	if store.items[id].ReadAt() != nil {
 		t.Error("otro usuario marcó el aviso")
+	}
+}
+
+func TestDeleteByTheRecipient(t *testing.T) {
+	store := newStore()
+	id := seeded(t, store, userA)
+
+	err := NewDeleteNotification(store).Handle(context.Background(), DeleteNotificationCommand{NotificationID: id, UserID: userA})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, ok := store.items[id]; ok {
+		t.Error("el aviso sigue guardado")
+	}
+}
+
+// Igual que al marcarlo: otro usuario recibe 404 y el aviso queda intacto.
+func TestDeleteOfAnotherUserLooksLikeNotFound(t *testing.T) {
+	store := newStore()
+	id := seeded(t, store, userA)
+
+	err := NewDeleteNotification(store).Handle(context.Background(), DeleteNotificationCommand{NotificationID: id, UserID: userB})
+
+	if !errors.Is(err, domain.ErrNotificationNotFound) {
+		t.Errorf("error = %v", err)
+	}
+	if _, ok := store.items[id]; !ok {
+		t.Error("otro usuario borró el aviso")
 	}
 }
 

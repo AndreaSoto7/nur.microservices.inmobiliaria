@@ -84,6 +84,7 @@ func run(logger *slog.Logger) error {
 		Validator: jwks.NewValidator(keys, cfg.JWTIssuer, cfg.JWTAudience, time.Now),
 		List:      application.NewListNotifications(repository),
 		MarkRead:  application.NewMarkNotificationRead(repository, time.Now),
+		Delete:    application.NewDeleteNotification(repository),
 	})
 
 	stopConsumer := startConsumer(ctx, cfg, repository, logger)

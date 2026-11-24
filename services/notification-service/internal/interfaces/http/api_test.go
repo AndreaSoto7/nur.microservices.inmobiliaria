@@ -50,20 +50,34 @@ func (f *fakeMarkRead) Handle(_ context.Context, command application.MarkNotific
 	return f.err
 }
 
+type fakeDelete struct {
+	err      error
+	received application.DeleteNotificationCommand
+	calls    int
+}
+
+func (f *fakeDelete) Handle(_ context.Context, command application.DeleteNotificationCommand) error {
+	f.received = command
+	f.calls++
+	return f.err
+}
+
 type api struct {
 	handler  http.Handler
 	list     *fakeList
 	markRead *fakeMarkRead
+	remove   *fakeDelete
 }
 
 func newAPI(validator TokenValidator) *api {
-	list, markRead := &fakeList{}, &fakeMarkRead{}
+	list, markRead, remove := &fakeList{}, &fakeMarkRead{}, &fakeDelete{}
 	return &api{
 		list:     list,
 		markRead: markRead,
+		remove:   remove,
 		handler: NewRouter(Dependencies{
 			Logger: slog.New(slog.DiscardHandler), Ready: alwaysReady,
-			Validator: validator, List: list, MarkRead: markRead,
+			Validator: validator, List: list, MarkRead: markRead, Delete: remove,
 		}),
 	}
 }
@@ -282,6 +296,36 @@ func TestMarkRead(t *testing.T) {
 	want := application.MarkNotificationReadCommand{NotificationID: notificationID, UserID: userID}
 	if a.markRead.received != want {
 		t.Errorf("comando = %+v", a.markRead.received)
+	}
+}
+
+func TestDelete(t *testing.T) {
+	a := newAPI(fakeValidator{})
+
+	rec := a.do(http.MethodDelete, listPath+"/"+notificationID, "", nil)
+
+	if rec.Code != http.StatusNoContent || rec.Body.Len() != 0 {
+		t.Errorf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	want := application.DeleteNotificationCommand{NotificationID: notificationID, UserID: userID}
+	if a.remove.received != want {
+		t.Errorf("comando = %+v", a.remove.received)
+	}
+}
+
+func TestDeleteOfAnotherUserIsNotFound(t *testing.T) {
+	a := newAPI(fakeValidator{})
+	a.remove.err = domain.ErrNotificationNotFound
+
+	assertProblem(t, a.do(http.MethodDelete, listPath+"/"+notificationID, "", nil), http.StatusNotFound, "NOTIFICATION_NOT_FOUND")
+}
+
+func TestDeleteRejectsAnIDThatIsNotAUUID(t *testing.T) {
+	a := newAPI(fakeValidator{})
+
+	assertProblem(t, a.do(http.MethodDelete, listPath+"/abc", "", nil), http.StatusBadRequest, "VALIDATION_ERROR")
+	if a.remove.calls != 0 {
+		t.Error("llegó al caso de uso")
 	}
 }
 

@@ -32,6 +32,11 @@ type MarkReadUseCase interface {
 	Handle(ctx context.Context, command application.MarkNotificationReadCommand) error
 }
 
+// DeleteUseCase borra un aviso.
+type DeleteUseCase interface {
+	Handle(ctx context.Context, command application.DeleteNotificationCommand) error
+}
+
 type notificationResponse struct {
 	ID         string  `json:"id"`
 	Type       string  `json:"type"`
@@ -158,6 +163,29 @@ func markNotificationRead(deps Dependencies) http.HandlerFunc {
 		}
 
 		err := deps.MarkRead.Handle(r.Context(), application.MarkNotificationReadCommand{
+			NotificationID: id,
+			UserID:         userFrom(r.Context()),
+		})
+		switch {
+		case err == nil:
+			w.WriteHeader(http.StatusNoContent)
+		case errors.Is(err, domain.ErrNotificationNotFound):
+			writeProblem(w, r, problemNotificationNotFound)
+		default:
+			writeInternal(deps, w, r, err)
+		}
+	}
+}
+
+func deleteNotification(deps Dependencies) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, valid := canonicalUUID(r.PathValue("notificationId"))
+		if !valid {
+			writeProblem(w, r, problemValidation, fieldError{Field: "notificationId", Message: "Debe ser un UUID."})
+			return
+		}
+
+		err := deps.Delete.Handle(r.Context(), application.DeleteNotificationCommand{
 			NotificationID: id,
 			UserID:         userFrom(r.Context()),
 		})
