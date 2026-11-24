@@ -18,6 +18,8 @@ import tools.jackson.databind.json.JsonMapper;
 import com.inmobiliaria.listing.application.command.RebuildCatalogHandler;
 import com.inmobiliaria.listing.application.policy.LeadClosed;
 import com.inmobiliaria.listing.application.policy.ReserveOnLeadWonPolicy;
+import com.inmobiliaria.listing.application.policy.TrackScheduledVisitsPolicy;
+import com.inmobiliaria.listing.application.policy.VisitScheduleChange;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -85,6 +87,9 @@ class ListingApiIntegrationTest {
 
     @Autowired
     ReserveOnLeadWonPolicy policy;
+
+    @Autowired
+    TrackScheduledVisitsPolicy trackVisits;
 
     private static final byte[] JPEG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 16, 'J', 'F', 'I', 'F'};
 
@@ -270,6 +275,104 @@ class ListingApiIntegrationTest {
                 .andExpect(status().isNoContent());
         mvc.perform(delete("/api/v1/favorites/{id}", id).with(user(client, "CLIENT")))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void catalog_finds_part_of_the_zone_without_accents_and_returns_coordinates() throws Exception {
+        UUID agent = UUID.randomUUID();
+        UUID id = createPublishedProperty(agent, "Barrio Ñuflo Chávez", "510000", List.of());
+        mvc.perform(put("/api/v1/properties/{id}", id).with(user(agent, "AGENT"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("title", "Casa en Ñuflo", "description", "Linda",
+                                "price", Map.of("amount", "510000", "currency", "BOB"),
+                                "location", Map.of("zone", "Barrio Ñuflo Chávez", "latitude", -17.7712,
+                                        "longitude", -63.1801)))))
+                .andExpect(status().isNoContent());
+
+        for (String typed : List.of("nuflo", "ÑUFLO CHAVEZ", "zona barrio ñuflo")) {
+            mvc.perform(get("/api/v1/catalog/properties").param("zone", typed))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data", hasSize(1)))
+                    .andExpect(jsonPath("$.data[0].id").value(id.toString()))
+                    .andExpect(jsonPath("$.data[0].latitude").value(-17.7712))
+                    .andExpect(jsonPath("$.data[0].longitude").value(-63.1801));
+        }
+        // Un comodín que escribe la persona es texto: no trae todo el catálogo.
+        mvc.perform(get("/api/v1/catalog/properties").param("zone", "%"))
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
+    void only_the_owner_sees_the_photos_of_a_draft_and_can_remove_them() throws Exception {
+        UUID agent = UUID.randomUUID();
+        String created = mvc.perform(post("/api/v1/properties").with(user(agent, "AGENT"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("title", "Borrador con fotos", "description", "",
+                                "propertyType", "HOUSE", "operationType", "SALE",
+                                "price", Map.of("amount", "300000", "currency", "BOB"),
+                                "location", Map.of("zone", "Norte")))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        UUID id = UUID.fromString(json.readTree(created).get("id").asString());
+        String uploaded = mvc.perform(multipart("/api/v1/properties/{id}/images", id)
+                        .file(new MockMultipartFile("files", "a.jpg", "image/jpeg", JPEG))
+                        .file(new MockMultipartFile("files", "b.jpg", "image/jpeg", JPEG))
+                        .with(user(agent, "AGENT")))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        JsonNode ids = json.readTree(uploaded).get("imageIds");
+        String first = ids.get(0).asString();
+        String second = ids.get(1).asString();
+
+        mvc.perform(get("/api/v1/properties/{id}/images/{imageId}", id, first))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/properties/{id}/images/{imageId}", id, first)
+                        .with(user(UUID.randomUUID(), "AGENT")))
+                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/v1/properties/{id}/images/{imageId}", id, first).with(user(agent, "AGENT")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")));
+
+        mvc.perform(delete("/api/v1/properties/{id}/images/{imageId}", id, first).with(user(agent, "AGENT")))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/properties/{id}", id).with(user(agent, "AGENT")))
+                .andExpect(jsonPath("$.images", hasSize(1)))
+                .andExpect(jsonPath("$.images[0].id").value(second))
+                .andExpect(jsonPath("$.images[0].position").value(0));
+        mvc.perform(delete("/api/v1/properties/{id}/images/{imageId}", id, first).with(user(agent, "AGENT")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("PROPERTY_IMAGE_NOT_FOUND"));
+    }
+
+    @Test
+    void a_published_property_keeps_at_least_one_photo() throws Exception {
+        UUID agent = UUID.randomUUID();
+        UUID id = createPublishedProperty(agent, "Este", "250000", List.of());
+        String detail = mvc.perform(get("/api/v1/properties/{id}", id).with(user(agent, "AGENT")))
+                .andReturn().getResponse().getContentAsString();
+        String only = json.readTree(detail).get("images").get(0).get("id").asString();
+
+        mvc.perform(delete("/api/v1/properties/{id}/images/{imageId}", id, only).with(user(agent, "AGENT")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PROPERTY_LAST_IMAGE"));
+    }
+
+    @Test
+    void a_property_with_a_confirmed_visit_cannot_be_paused_until_the_visit_ends() throws Exception {
+        UUID agent = UUID.randomUUID();
+        UUID id = createPublishedProperty(agent, "Pausa", "330000", List.of());
+        UUID visit = UUID.randomUUID();
+        trackVisits.handle(new VisitScheduleChange(UUID.randomUUID(), VisitScheduleChange.Kind.SCHEDULED, visit,
+                id, java.time.Instant.now().plusSeconds(86_400), "corr-pausa"));
+
+        mvc.perform(post("/api/v1/properties/{id}/pause", id).with(user(agent, "AGENT")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PROPERTY_HAS_SCHEDULED_VISITS"));
+
+        trackVisits.handle(new VisitScheduleChange(UUID.randomUUID(), VisitScheduleChange.Kind.ENDED, visit, id,
+                null, "corr-pausa"));
+        mvc.perform(post("/api/v1/properties/{id}/pause", id).with(user(agent, "AGENT")))
+                .andExpect(status().isNoContent());
     }
 
     @Test

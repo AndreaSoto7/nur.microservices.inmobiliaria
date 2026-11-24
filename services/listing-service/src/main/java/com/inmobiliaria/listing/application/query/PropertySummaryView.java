@@ -15,6 +15,8 @@ public record PropertySummaryView(
         BigDecimal priceAmount,
         String priceCurrency,
         String zone,
+        BigDecimal latitude,
+        BigDecimal longitude,
         Integer bedrooms,
         Integer bathrooms,
         BigDecimal areaM2,

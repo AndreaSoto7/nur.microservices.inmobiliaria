@@ -1,11 +1,11 @@
 package com.inmobiliaria.listing.infrastructure.persistence;
 
+import com.inmobiliaria.listing.application.common.SearchText;
 import com.inmobiliaria.listing.application.port.CatalogProjection;
 import com.inmobiliaria.listing.domain.model.Amenity;
 import com.inmobiliaria.listing.domain.model.Area;
 import com.inmobiliaria.listing.domain.model.Property;
 import java.sql.Timestamp;
-import java.util.Locale;
 import java.util.Map;
 import java.util.HashMap;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -20,16 +20,17 @@ public class JdbcCatalogProjection implements CatalogProjection {
 
     private static final String UPSERT = """
             INSERT INTO property_catalog (property_id, agent_id, title, property_type, operation_type, status,
-                price_amount, zone, zone_normalized, bedrooms, bathrooms, area_m2, features, cover_image_id,
-                published_at, updated_at)
+                price_amount, zone, zone_normalized, latitude, longitude, bedrooms, bathrooms, area_m2, features,
+                cover_image_id, published_at, updated_at)
             VALUES (:id, :agentId, :title, :propertyType, :operationType, :status, :price, :zone, :zoneNormalized,
-                :bedrooms, :bathrooms, :area, CAST(:features AS varchar(30)[]), :coverImageId, :publishedAt,
-                :updatedAt)
+                :latitude, :longitude, :bedrooms, :bathrooms, :area, CAST(:features AS varchar(30)[]), :coverImageId,
+                :publishedAt, :updatedAt)
             ON CONFLICT (property_id) DO UPDATE SET
                 agent_id = EXCLUDED.agent_id, title = EXCLUDED.title, property_type = EXCLUDED.property_type,
                 operation_type = EXCLUDED.operation_type, status = EXCLUDED.status,
                 price_amount = EXCLUDED.price_amount, zone = EXCLUDED.zone,
-                zone_normalized = EXCLUDED.zone_normalized, bedrooms = EXCLUDED.bedrooms,
+                zone_normalized = EXCLUDED.zone_normalized, latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude, bedrooms = EXCLUDED.bedrooms,
                 bathrooms = EXCLUDED.bathrooms, area_m2 = EXCLUDED.area_m2, features = EXCLUDED.features,
                 cover_image_id = EXCLUDED.cover_image_id, published_at = EXCLUDED.published_at,
                 updated_at = EXCLUDED.updated_at
@@ -56,7 +57,9 @@ public class JdbcCatalogProjection implements CatalogProjection {
         params.put("status", p.status().name());
         params.put("price", p.price().amount());
         params.put("zone", p.location().zone());
-        params.put("zoneNormalized", p.location().zone().toLowerCase(Locale.ROOT));
+        params.put("zoneNormalized", SearchText.normalize(p.location().zone()));
+        params.put("latitude", p.location().latitude());
+        params.put("longitude", p.location().longitude());
         params.put("bedrooms", p.bedrooms().orElse(null));
         params.put("bathrooms", p.bathrooms().orElse(null));
         params.put("area", p.area().map(Area::squareMeters).orElse(null));

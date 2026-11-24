@@ -18,23 +18,29 @@ import com.inmobiliaria.listing.application.command.PausePropertyHandler;
 import com.inmobiliaria.listing.application.command.PropertyCommandSupport;
 import com.inmobiliaria.listing.application.command.PublishPropertyCommand;
 import com.inmobiliaria.listing.application.command.PublishPropertyHandler;
+import com.inmobiliaria.listing.application.command.RemovePropertyImageCommand;
+import com.inmobiliaria.listing.application.command.RemovePropertyImageHandler;
 import com.inmobiliaria.listing.application.common.CommandMetadata;
 import com.inmobiliaria.listing.application.port.ImageStorage;
 import com.inmobiliaria.listing.application.exception.NotPropertyOwnerException;
+import com.inmobiliaria.listing.application.exception.PropertyImageNotFoundException;
 import com.inmobiliaria.listing.application.exception.PropertyNotFoundException;
 import com.inmobiliaria.listing.domain.event.PropertyEvent;
+import com.inmobiliaria.listing.domain.exception.DomainException;
 import com.inmobiliaria.listing.domain.exception.InvalidValueException;
 import com.inmobiliaria.listing.domain.model.Location;
 import com.inmobiliaria.listing.domain.model.Money;
 import com.inmobiliaria.listing.domain.model.OperationType;
 import com.inmobiliaria.listing.domain.model.Property;
 import com.inmobiliaria.listing.domain.model.PropertyId;
+import com.inmobiliaria.listing.domain.model.PropertyImage;
 import com.inmobiliaria.listing.domain.model.PropertyStatus;
 import com.inmobiliaria.listing.domain.model.PropertyType;
 import com.inmobiliaria.listing.support.FakeCatalogProjection;
 import com.inmobiliaria.listing.support.FakeEventPublisher;
 import com.inmobiliaria.listing.support.FixedClock;
 import com.inmobiliaria.listing.support.InMemoryPropertyRepository;
+import com.inmobiliaria.listing.support.InMemoryScheduledVisits;
 import com.inmobiliaria.listing.support.PropertyMother;
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -50,6 +56,7 @@ class PropertyCommandHandlersTest {
     private InMemoryPropertyRepository repository;
     private FakeCatalogProjection catalog;
     private FakeEventPublisher events;
+    private final InMemoryScheduledVisits scheduledVisits = new InMemoryScheduledVisits();
     private PropertyCommandSupport support;
     private final CommandMetadata owner = CommandMetadata.agent(AGENT, "corr-1");
 
@@ -96,7 +103,7 @@ class PropertyCommandHandlersTest {
     void pause_should_remove_from_catalog() {
         Property property = stored(PropertyStatus.PUBLISHED);
 
-        new PausePropertyHandler(support).handle(new PausePropertyCommand(property.id(), owner));
+        new PausePropertyHandler(support, scheduledVisits).handle(new PausePropertyCommand(property.id(), owner));
 
         assertThat(catalog.rows).doesNotContainKey(property.id());
     }
@@ -128,7 +135,7 @@ class PropertyCommandHandlersTest {
         Property property = stored(PropertyStatus.PUBLISHED);
         CommandMetadata stranger = CommandMetadata.agent(UUID.randomUUID(), "corr-2");
 
-        assertThatThrownBy(() -> new PausePropertyHandler(support)
+        assertThatThrownBy(() -> new PausePropertyHandler(support, scheduledVisits)
                 .handle(new PausePropertyCommand(property.id(), stranger)))
                 .isInstanceOf(NotPropertyOwnerException.class);
         assertThat(repository.get(property.id()).status()).isEqualTo(PropertyStatus.PUBLISHED);
@@ -166,6 +173,66 @@ class PropertyCommandHandlersTest {
                 .handle(new AddPropertyImagesCommand(property.id(), List.of(notAnImage), owner)))
                 .isInstanceOf(InvalidValueException.class);
         assertThat(storage.files).isEmpty();
+    }
+
+    @Test
+    void pause_should_be_rejected_while_a_confirmed_visit_has_not_ended() {
+        Property property = stored(PropertyStatus.PUBLISHED);
+        scheduledVisits.track(UUID.randomUUID(), property.id().value(), T0.plusSeconds(3600));
+
+        assertThatThrownBy(() -> new PausePropertyHandler(support, scheduledVisits)
+                .handle(new PausePropertyCommand(property.id(), owner)))
+                .isInstanceOf(DomainException.class)
+                .hasFieldOrPropertyWithValue("code", "PROPERTY_HAS_SCHEDULED_VISITS");
+        assertThat(repository.get(property.id()).status()).isEqualTo(PropertyStatus.PUBLISHED);
+    }
+
+    @Test
+    void pause_should_ignore_a_confirmed_visit_that_already_ended() {
+        Property property = stored(PropertyStatus.PUBLISHED);
+        scheduledVisits.track(UUID.randomUUID(), property.id().value(), T0.minusSeconds(60));
+
+        new PausePropertyHandler(support, scheduledVisits).handle(new PausePropertyCommand(property.id(), owner));
+
+        assertThat(repository.get(property.id()).status()).isEqualTo(PropertyStatus.PAUSED);
+    }
+
+    @Test
+    void remove_image_should_delete_the_file_and_resync_the_catalog_cover() {
+        Property property = stored(PropertyStatus.PUBLISHED);
+        PropertyImage cover = property.images().getFirst();
+        PropertyImage second = PropertyMother.jpeg(property);
+        property.addImage(second, T0);
+        property.pullEvents();
+        repository.save(property);
+        MemoryStorage storage = new MemoryStorage();
+        storage.store(cover.storageKey(), new byte[] {1});
+
+        new RemovePropertyImageHandler(support, storage)
+                .handle(new RemovePropertyImageCommand(property.id(), cover.id(), owner));
+
+        assertThat(repository.get(property.id()).images()).containsExactly(second);
+        assertThat(storage.files).doesNotContainKey(cover.storageKey());
+        assertThat(events.events).singleElement().isInstanceOf(PropertyEvent.PropertyImageRemoved.class);
+    }
+
+    @Test
+    void remove_image_should_answer_not_found_for_an_unknown_image() {
+        Property property = stored(PropertyStatus.DRAFT);
+
+        assertThatThrownBy(() -> new RemovePropertyImageHandler(support, new MemoryStorage())
+                .handle(new RemovePropertyImageCommand(property.id(), UUID.randomUUID(), owner)))
+                .isInstanceOf(PropertyImageNotFoundException.class);
+    }
+
+    @Test
+    void remove_image_should_only_let_the_owner_do_it() {
+        Property property = stored(PropertyStatus.DRAFT);
+        CommandMetadata stranger = CommandMetadata.agent(UUID.randomUUID(), "corr-2");
+
+        assertThatThrownBy(() -> new RemovePropertyImageHandler(support, new MemoryStorage())
+                .handle(new RemovePropertyImageCommand(property.id(), property.images().getFirst().id(), stranger)))
+                .isInstanceOf(NotPropertyOwnerException.class);
     }
 
     static class MemoryStorage implements ImageStorage {

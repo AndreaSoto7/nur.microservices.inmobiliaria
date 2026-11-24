@@ -27,7 +27,7 @@ public class JdbcPropertyReadModel implements PropertyReadModel {
     /** Columnas de una fila resumida, con la portada (posición 0) y las características. */
     private static final String SUMMARY_COLUMNS = """
             p.id, p.title, p.property_type, p.operation_type, p.status, p.price_amount, p.price_currency, p.zone,
-            p.bedrooms, p.bathrooms, p.area_m2, p.published_at, p.updated_at,
+            p.latitude, p.longitude, p.bedrooms, p.bathrooms, p.area_m2, p.published_at, p.updated_at,
             (SELECT i.id FROM property_images i WHERE i.property_id = p.id ORDER BY i.position LIMIT 1) AS cover_id,
             ARRAY(SELECT f.feature FROM property_features f WHERE f.property_id = p.id ORDER BY f.feature)
                 AS features
@@ -76,11 +76,12 @@ public class JdbcPropertyReadModel implements PropertyReadModel {
     @Override
     public Optional<ImageLocation> findImage(UUID propertyId, UUID imageId) {
         return jdbc.query("""
-                SELECT p.status, i.content_type, i.storage_key
+                SELECT p.status, p.agent_id, i.content_type, i.storage_key
                 FROM property_images i JOIN properties p ON p.id = i.property_id
                 WHERE i.id = :imageId AND i.property_id = :propertyId
                 """, Map.of("imageId", imageId, "propertyId", propertyId),
-                (rs, n) -> new ImageLocation(rs.getString("status"), rs.getString("content_type"),
+                (rs, n) -> new ImageLocation(rs.getString("status"), rs.getObject("agent_id", UUID.class),
+                        rs.getString("content_type"),
                         rs.getString("storage_key"))).stream().findFirst();
     }
 
@@ -89,7 +90,8 @@ public class JdbcPropertyReadModel implements PropertyReadModel {
         UUID cover = rs.getObject("cover_id", UUID.class);
         return new PropertySummaryView(id, rs.getString("title"), rs.getString("property_type"),
                 rs.getString("operation_type"), rs.getString("status"), rs.getBigDecimal("price_amount"),
-                rs.getString("price_currency"), rs.getString("zone"), SqlSupport.integer(rs, "bedrooms"),
+                rs.getString("price_currency"), rs.getString("zone"), rs.getBigDecimal("latitude"),
+                rs.getBigDecimal("longitude"), SqlSupport.integer(rs, "bedrooms"),
                 SqlSupport.integer(rs, "bathrooms"), rs.getBigDecimal("area_m2"), SqlSupport.strings(rs, "features"),
                 cover == null ? null : ImageUrls.of(id, cover), SqlSupport.instant(rs, "published_at"),
                 SqlSupport.instant(rs, "updated_at"));

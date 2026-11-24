@@ -22,6 +22,12 @@ class CatalogCriteriaTest {
     }
 
     @Test
+    void should_search_part_of_the_zone_without_accents_nor_the_word_zona() {
+        assertThat(CatalogCriteria.builder().zone("Zona Urubó").build().zone()).contains("urubo");
+        assertThat(CatalogCriteria.builder().zone("zona").build().zone()).isEmpty();
+    }
+
+    @Test
     void should_reject_min_price_greater_than_max_price() {
         assertThatThrownBy(() -> CatalogCriteria.builder().priceBetween(BigDecimal.TEN, BigDecimal.ONE))
                 .isInstanceOf(IllegalArgumentException.class);

@@ -18,6 +18,6 @@ public interface PropertyReadModel {
 
     Optional<ImageLocation> findImage(UUID propertyId, UUID imageId);
 
-    record ImageLocation(String propertyStatus, String contentType, String storageKey) {
+    record ImageLocation(String propertyStatus, UUID agentId, String contentType, String storageKey) {
     }
 }

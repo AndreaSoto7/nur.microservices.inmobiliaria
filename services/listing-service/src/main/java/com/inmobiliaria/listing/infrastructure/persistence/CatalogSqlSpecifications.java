@@ -13,7 +13,8 @@ final class CatalogSqlSpecifications {
 
     static List<SqlFilter> from(CatalogCriteria criteria) {
         List<SqlFilter> filters = new ArrayList<>();
-        criteria.zone().ifPresent(zone -> filters.add(SqlFilter.of("zone_normalized = :zone", "zone", zone)));
+        criteria.zone().ifPresent(zone -> filters.add(
+                SqlFilter.of("zone_normalized LIKE :zone ESCAPE '\\'", "zone", "%" + escapeLike(zone) + "%")));
         criteria.propertyType().ifPresent(type ->
                 filters.add(SqlFilter.of("property_type = :propertyType", "propertyType", type.name())));
         criteria.operationType().ifPresent(operation ->
@@ -27,5 +28,10 @@ final class CatalogSqlSpecifications {
             filters.add(SqlFilter.of("features @> CAST(:features AS varchar(30)[])", "features", features));
         }
         return filters;
+    }
+
+    /** Un % o un _ que escribe quien busca es texto, no un comodín. */
+    static String escapeLike(String text) {
+        return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 }

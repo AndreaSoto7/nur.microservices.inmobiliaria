@@ -133,6 +133,25 @@ public class Property {
         pendingEvents.add(new PropertyEvent.PropertyImagesAdded(id, now));
     }
 
+    /**
+     * Quita una foto; las siguientes suben de posición (si era la portada, la próxima pasa a serlo). Una
+     * propiedad visible en el catálogo no puede quedarse sin fotos: publicar exige al menos una.
+     */
+    public PropertyImage removeImage(UUID imageId, Instant now) {
+        requireNotSoldOrRented("quitar imágenes de");
+        PropertyImage image = images.stream().filter(i -> i.id().equals(imageId)).findFirst()
+                .orElseThrow(() -> new DomainException("PROPERTY_IMAGE_NOT_FOUND",
+                        "La propiedad no tiene la imagen " + imageId));
+        if (images.size() == 1 && status.isVisibleInCatalog()) {
+            throw new DomainException("PROPERTY_LAST_IMAGE",
+                    "Una propiedad publicada necesita al menos una foto: agrega otra antes de quitar esta");
+        }
+        images.remove(image);
+        updatedAt = now;
+        pendingEvents.add(new PropertyEvent.PropertyImageRemoved(id, now));
+        return image;
+    }
+
     // ─── Máquina de estados ──────────────────────────────────────────────────
 
     /** DRAFT → PUBLISHED (nueva) o PAUSED → PUBLISHED (reanudada). Exige datos completos y 1 foto. */
