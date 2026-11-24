@@ -84,6 +84,9 @@ def test_out_of_range_password_always_responds_user_weak_password(client, passwo
 
     assert response.status_code == 400
     assert response.json()["code"] == "USER_WEAK_PASSWORD"
+    assert response.json()["errors"] == [
+        {"field": "password", "message": "La contraseña debe tener entre 8 y 128 caracteres."}
+    ]
 
 
 @pytest.mark.parametrize("role", ["ADMIN", "FOO"])
@@ -92,6 +95,7 @@ def test_disallowed_role_responds_400_user_role_not_allowed(client, role):
 
     assert response.status_code == 400
     assert response.json()["code"] == "USER_ROLE_NOT_ALLOWED"
+    assert response.json()["errors"][0]["field"] == "role"
     assert not UserModel.objects.exists()
 
 

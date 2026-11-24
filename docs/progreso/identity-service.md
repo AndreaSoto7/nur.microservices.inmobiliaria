@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| fix | Los errores de dominio de un campo (contraseña débil, email inválido o ya registrado, nombre, rol) traen `errors[{field, message}]`, así el formulario los muestra junto al campo | _(pendiente)_ |
 | feat | Administración de usuarios, parte 2: API para listar, cambiar roles, desactivar y activar. Probada contra el stack real y PostgreSQL | #116 |
 | feat | Administración de usuarios, parte 1: reglas del dominio, casos de uso y persistencia. El rol se comprueba en la base, y nadie se quita su propio `ADMIN` ni se desactiva | #115 |
 | docs | Contrato de la administración de usuarios: listar, cambiar roles, desactivar y activar, solo `ADMIN` | #113 |
