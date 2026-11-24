@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: identity-service
-  version: 1.3.0
+  version: 1.4.0
   description: |
     Registro, autenticación y emisión de JWT RS256 de la Plataforma Inmobiliaria.
 
@@ -661,6 +661,9 @@ components:
                 instance: /api/v1/auth/register
                 code: USER_WEAK_PASSWORD
                 correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+                errors:
+                  - field: password
+                    message: La contraseña debe tener entre 8 y 128 caracteres.
             roleNotAllowed:
               value:
                 type: https://inmobiliaria.local/problems/user-role-not-allowed
@@ -670,6 +673,9 @@ components:
                 instance: /api/v1/auth/register
                 code: USER_ROLE_NOT_ALLOWED
                 correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+                errors:
+                  - field: role
+                    message: Solo se puede registrar con rol CLIENT o AGENT.
 
   schemas:
     RegisterUserRequest:
@@ -873,7 +879,9 @@ components:
         correlationId: { type: string, pattern: '^[A-Za-z0-9._-]{1,128}$' }
         errors:
           type: array
-          description: Solo en errores de validación.
+          description: |
+            En los errores de validación y en los errores de dominio de un solo campo (email inválido o ya
+            registrado, nombre inválido, contraseña débil, rol no permitido), para mostrarlos junto al campo.
           items:
             type: object
             required: [field, message]

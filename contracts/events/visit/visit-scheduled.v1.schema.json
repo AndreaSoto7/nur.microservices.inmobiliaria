@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://inmobiliaria.local/contracts/events/visit/visit-scheduled.v1.schema.json",
   "title": "VisitScheduled v1 (payload)",
-  "description": "El agente asignado confirma la fecha y el horario de una solicitud de visita.",
+  "description": "La visita quedó programada: la programó el agente asignado o el cliente aceptó el horario que le propuso el agente.",
   "type": "object",
   "required": ["visitId", "propertyId", "clientId", "agentId", "scheduledStart", "scheduledEnd"],
   "properties": {
@@ -11,7 +11,12 @@
     "clientId": { "$ref": "#/$defs/uuid" },
     "agentId": { "$ref": "#/$defs/uuid" },
     "scheduledStart": { "$ref": "#/$defs/utcDateTime" },
-    "scheduledEnd": { "$ref": "#/$defs/utcDateTime" }
+    "scheduledEnd": { "$ref": "#/$defs/utcDateTime" },
+    "actor": {
+      "type": "string",
+      "enum": ["AGENT", "CLIENT"],
+      "description": "Quién la dejó programada. Opcional: sin el campo, la programó el agente (los eventos anteriores no lo traen)."
+    }
   },
   "additionalProperties": true,
   "$defs": {

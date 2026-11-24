@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: visit-service
-  version: 0.1.0
+  version: 0.3.0
   description: |
     API de consultas, solicitudes y gestión de visitas.
     La relación con Listing se verifica en la copia local alimentada por listing.property.events.
@@ -106,6 +106,45 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/leads/{leadId}/follow-ups:
+    get:
+      tags: [leads]
+      operationId: listLeadFollowUps
+      summary: Listar las notas de seguimiento de una oportunidad
+      description: Solo el agente asignado. Por defecto, de la más antigua a la más nueva.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/LeadId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: sort
+          in: query
+          schema: {type: string, enum: ['createdAt,asc', 'createdAt,desc'], default: 'createdAt,asc'}
+      responses:
+        '200':
+          description: Notas de la oportunidad.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, page]
+                properties:
+                  data: {type: array, items: {$ref: '#/components/schemas/LeadFollowUp'}}
+                  page: {$ref: '#/components/schemas/PageMetadata'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: LEAD_NOT_FOUND si la oportunidad no existe o pertenece a otro agente.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [leads]
       operationId: registerLeadFollowUp
@@ -195,8 +234,10 @@ paths:
     get:
       tags: [inquiries]
       operationId: listAgentInquiries
-      summary: Listar consultas asignadas al agente
-      description: Requiere AGENT. El agente se toma del JWT. El mensaje completo, el correo y el teléfono se consultan por ID.
+      summary: Listar las consultas de quien llama
+      description: |
+        Requiere AGENT o CLIENT. Un AGENT ve las consultas que tiene asignadas; un CLIENT, las que envió.
+        El mensaje completo, el correo, el teléfono y la respuesta se consultan por ID.
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/Page'
@@ -268,6 +309,57 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '409':
           description: PROPERTY_UNAVAILABLE si la propiedad no está publicada.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/inquiries/{inquiryId}/reply:
+    post:
+      tags: [inquiries]
+      operationId: replyInquiry
+      summary: Responder una consulta
+      description: |
+        Solo el AGENT asignado, una vez por consulta. Publica InquiryReplied, y notification le avisa al cliente.
+        Repetir la misma clave con los mismos datos devuelve el resultado original durante 24 horas.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: inquiryId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReplyInquiry'}
+      responses:
+        '200':
+          description: Consulta respondida. Devuelve el id de la consulta.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CreatedVisit'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: INQUIRY_NOT_FOUND si la consulta no existe o está asignada a otro agente.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: INQUIRY_ALREADY_REPLIED si la consulta ya tiene respuesta.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -564,6 +656,113 @@ paths:
           description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
           headers:
             X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/visits/{visitId}/propose-time:
+    post:
+      tags: [visits]
+      operationId: proposeVisitTime
+      summary: Proponer otro horario para una solicitud pendiente
+      description: |
+        El AGENT asignado o el CLIENT que la pidió proponen otro horario para una visita REQUESTED: por ejemplo,
+        porque el que pidió el cliente choca con otra visita del agente. La visita sigue REQUESTED con el horario
+        nuevo y proposedBy de quien lo propuso. Publica VisitTimeProposed, y notification avisa a la otra parte.
+        Si lo propone el agente, el horario no puede chocar con sus visitas programadas.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: visitId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProposeVisitTime'}
+      responses:
+        '200':
+          description: Horario propuesto.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ProposedVisit'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: La visita no existe o quien llama no participa en ella.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: |
+            VISIT_NOT_REQUESTED si la visita ya no está pendiente.
+            VISIT_INVALID_PROPOSED_DATE si el horario no es futuro.
+            VISIT_SCHEDULE_CONFLICT si el agente propone un horario en el que ya tiene otra visita.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/visits/{visitId}/accept-proposal:
+    post:
+      tags: [visits]
+      operationId: acceptVisitProposal
+      summary: Aceptar el horario que propuso el agente
+      description: |
+        Solo el CLIENT que pidió la visita, cuando el último horario lo propuso el agente (proposedBy AGENT).
+        La visita queda SCHEDULED en ese horario, por 60 minutos. Publica VisitScheduled con actor CLIENT, y
+        notification le avisa al agente.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: visitId
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/Uuid'}
+      responses:
+        '200':
+          description: Visita programada.
+          headers:
+            X-Correlation-Id: {$ref: '#/components/headers/CorrelationId'}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ScheduledVisit'}
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: La visita no existe o quien llama no participa en ella.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '409':
+          description: |
+            VISIT_NOT_REQUESTED si la visita ya no está pendiente.
+            VISIT_NO_AGENT_PROPOSAL si el último horario no lo propuso el agente.
+            VISIT_INVALID_SCHEDULE si el horario propuesto ya pasó.
+            VISIT_SCHEDULE_CONFLICT si el agente ya ocupó ese horario con otra visita.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+        '422':
+          description: IDEMPOTENCY_KEY_REUSED si la clave corresponde a otros datos.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -908,7 +1107,12 @@ components:
         propertyId: {$ref: '#/components/schemas/Uuid'}
         contactName: {type: string, minLength: 1, maxLength: 150, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
         contactEmail: {type: string, format: email, maxLength: 254, pattern: '^[^\s\u0000]+$'}
-        contactPhone: {type: string, minLength: 1, maxLength: 30, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+        contactPhone:
+          type: string
+          maxLength: 20
+          pattern: '^\+?[0-9(][0-9 ()-]*[0-9]$'
+          description: 'Solo dígitos, con un + inicial opcional y espacios, guiones o paréntesis. De 7 a 15 dígitos.'
+          example: '+591 71234567'
         message: {type: string, minLength: 1, maxLength: 2000, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
     SendInquiry:
       allOf:
@@ -934,7 +1138,16 @@ components:
           properties:
             id: {$ref: '#/components/schemas/Uuid'}
             createdAt: {$ref: '#/components/schemas/UtcDateTime'}
+            reply: {type: string, description: La respuesta del agente; solo si ya respondió.}
+            repliedAt: {$ref: '#/components/schemas/UtcDateTime'}
       unevaluatedProperties: false
+    ReplyInquiry:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message: {type: string, minLength: 1, maxLength: 2000, pattern: '^(?![\s\S]*\u0000)[\s\S]*\S'}
+      example: {message: Sí, se aceptan mascotas pequeñas. La garantía es de un mes.}
     CreatedVisit:
       type: object
       required: [id]
@@ -1035,6 +1248,7 @@ components:
         propertyId: {$ref: '#/components/schemas/Uuid'}
         contactName: {type: string}
         createdAt: {$ref: '#/components/schemas/UtcDateTime'}
+        repliedAt: {$ref: '#/components/schemas/UtcDateTime', description: Solo si el agente ya respondió.}
     VisitPage:
       type: object
       additionalProperties: false
@@ -1053,6 +1267,11 @@ components:
       properties:
         id: {$ref: '#/components/schemas/Uuid'}
         propertyId: {$ref: '#/components/schemas/Uuid'}
+        clientId: {$ref: '#/components/schemas/Uuid', description: El interesado (sub del JWT); el agente lo usa para encontrar su oportunidad.}
+        proposedBy:
+          type: string
+          enum: [CLIENT, AGENT]
+          description: Quién propuso el horario en proposedAt. AGENT si el agente sugirió otro y espera la respuesta del cliente.
         propertyTitle:
           type: string
           maxLength: 150
@@ -1117,6 +1336,22 @@ components:
       properties:
         scheduledStart: {$ref: '#/components/schemas/UtcDateTime'}
       example: {scheduledStart: '2026-11-12T19:00:00Z'}
+    ProposeVisitTime:
+      type: object
+      additionalProperties: false
+      required: [proposedAt]
+      properties:
+        proposedAt: {$ref: '#/components/schemas/UtcDateTime'}
+      example: {proposedAt: '2026-11-12T21:00:00Z'}
+    ProposedVisit:
+      type: object
+      additionalProperties: false
+      required: [id, status, proposedAt, proposedBy]
+      properties:
+        id: {$ref: '#/components/schemas/Uuid'}
+        status: {type: string, enum: [REQUESTED]}
+        proposedAt: {$ref: '#/components/schemas/UtcDateTime'}
+        proposedBy: {type: string, enum: [CLIENT, AGENT]}
     ScheduledVisit:
       type: object
       required: [id, status, scheduledStart, scheduledEnd]
