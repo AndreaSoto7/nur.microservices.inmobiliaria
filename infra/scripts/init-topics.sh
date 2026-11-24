@@ -20,6 +20,7 @@ create listing.property.events --config retention.ms=-1
 # Retención por defecto: lleva datos personales, que no se guardan para siempre.
 create identity.user.events
 create visit.inquiry.events
+# listing lo consume: lleva las visitas programadas para no pausar con una confirmada (ADR 0008).
 create visit.visit.events
 # listing lo consume: una oportunidad ganada reserva la propiedad (ADR 0005).
 create visit.lead.events
