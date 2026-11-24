@@ -10,6 +10,7 @@ import com.inmobiliaria.listing.application.command.PausePropertyHandler;
 import com.inmobiliaria.listing.application.command.PropertyCommandSupport;
 import com.inmobiliaria.listing.application.command.PublishPropertyHandler;
 import com.inmobiliaria.listing.application.command.RebuildCatalogHandler;
+import com.inmobiliaria.listing.application.command.MovePropertyImageHandler;
 import com.inmobiliaria.listing.application.command.RemovePropertyImageHandler;
 import com.inmobiliaria.listing.application.command.ReleaseReservationHandler;
 import com.inmobiliaria.listing.application.command.RemoveFavoriteHandler;
@@ -102,6 +103,11 @@ public class ApplicationConfig {
     @Bean
     RemovePropertyImageHandler removePropertyImageHandler(PropertyCommandSupport support, ImageStorage storage) {
         return new RemovePropertyImageHandler(support, storage);
+    }
+
+    @Bean
+    MovePropertyImageHandler movePropertyImageHandler(PropertyCommandSupport support) {
+        return new MovePropertyImageHandler(support);
     }
 
     @Bean

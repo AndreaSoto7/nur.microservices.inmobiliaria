@@ -9,8 +9,8 @@ import static com.inmobiliaria.listing.domain.model.PropertyStatus.SOLD;
 
 import com.inmobiliaria.listing.domain.event.PropertyEvent;
 import com.inmobiliaria.listing.domain.exception.DomainException;
-import com.inmobiliaria.listing.domain.exception.InvalidValueException;
 import com.inmobiliaria.listing.domain.exception.InvalidStateTransitionException;
+import com.inmobiliaria.listing.domain.exception.InvalidValueException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -150,6 +150,28 @@ public class Property {
         updatedAt = now;
         pendingEvents.add(new PropertyEvent.PropertyImageRemoved(id, now));
         return image;
+    }
+
+    /**
+     * Mueve una foto a otra posición de la galería (0 es la portada); las demás se corren. Moverla a donde
+     * ya está no cambia nada.
+     */
+    public void moveImage(UUID imageId, int position, Instant now) {
+        requireNotSoldOrRented("ordenar las imágenes de");
+        PropertyImage image = images.stream().filter(i -> i.id().equals(imageId)).findFirst()
+                .orElseThrow(() -> new DomainException("PROPERTY_IMAGE_NOT_FOUND",
+                        "La propiedad no tiene la imagen " + imageId));
+        if (position < 0 || position >= images.size()) {
+            throw new InvalidValueException("PROPERTY_IMAGE_INVALID_POSITION",
+                    "La posición va de 0 a " + (images.size() - 1));
+        }
+        if (images.indexOf(image) == position) {
+            return;
+        }
+        images.remove(image);
+        images.add(position, image);
+        updatedAt = now;
+        pendingEvents.add(new PropertyEvent.PropertyImagesReordered(id, now));
     }
 
     // ─── Máquina de estados ──────────────────────────────────────────────────

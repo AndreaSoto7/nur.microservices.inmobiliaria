@@ -23,6 +23,9 @@ public sealed interface PropertyEvent {
 
     record PropertyImageRemoved(PropertyId propertyId, Instant occurredAt) implements PropertyEvent {}
 
+    /** Cambió el orden de la galería, y con él puede cambiar la portada del catálogo. */
+    record PropertyImagesReordered(PropertyId propertyId, Instant occurredAt) implements PropertyEvent {}
+
     /** previousStatus distingue una propiedad nueva (DRAFT) de una reanudada o liberada. */
     record PropertyPublished(PropertyId propertyId, PropertyStatus previousStatus, Instant occurredAt)
             implements PropertyEvent {}

@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | Ordenar la galería y elegir la portada: `PATCH /properties/{id}/images/{imageId}` con `{position}`. Contrato 0.4.0. Probado por el gateway: la portada del catálogo cambia | _(pendiente)_ |
 | feat | No se pausa una propiedad con visitas confirmadas: listing consume `visit.visit.events` y lleva `scheduled_visits` (ADR 0008). Migración `V20261124_1200` | _(pendiente)_ |
 | feat | Mapa del catálogo y búsqueda: `zone` busca parte del nombre sin mayúsculas ni tildes (`uru` → Urubó), el resumen trae `latitude`/`longitude`, el dueño ve las fotos de un borrador con su token y puede quitar una foto (`DELETE …/images/{imageId}`). Migración `V20261123_1200` | _(pendiente)_ |
 | refactor | Nombres alineados con el lenguaje ubicuo: `isSoldOrRented()` (antes `isClosed`, término de `Lead`), `isVisibleInCatalog()`, `Amenity` para los extras y `updateCharacteristics(...)` / `UpdatePropertyCharacteristicsCommand`, `Favorite.add(...)`, `LeadClosed` (antes `LeadClosedNotification`) y `reconstitute` en los dos aggregates. Sin cambios de contrato ni de base | #90 |

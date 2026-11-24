@@ -18,6 +18,8 @@ import com.inmobiliaria.listing.application.command.PausePropertyHandler;
 import com.inmobiliaria.listing.application.command.PropertyCommandSupport;
 import com.inmobiliaria.listing.application.command.PublishPropertyCommand;
 import com.inmobiliaria.listing.application.command.PublishPropertyHandler;
+import com.inmobiliaria.listing.application.command.MovePropertyImageCommand;
+import com.inmobiliaria.listing.application.command.MovePropertyImageHandler;
 import com.inmobiliaria.listing.application.command.RemovePropertyImageCommand;
 import com.inmobiliaria.listing.application.command.RemovePropertyImageHandler;
 import com.inmobiliaria.listing.application.common.CommandMetadata;
@@ -214,6 +216,31 @@ class PropertyCommandHandlersTest {
         assertThat(repository.get(property.id()).images()).containsExactly(second);
         assertThat(storage.files).doesNotContainKey(cover.storageKey());
         assertThat(events.events).singleElement().isInstanceOf(PropertyEvent.PropertyImageRemoved.class);
+    }
+
+    @Test
+    void move_image_should_change_the_cover_and_resync_the_catalog() {
+        Property property = stored(PropertyStatus.PUBLISHED);
+        PropertyImage cover = property.images().getFirst();
+        PropertyImage second = PropertyMother.jpeg(property);
+        property.addImage(second, T0);
+        property.pullEvents();
+        repository.save(property);
+
+        new MovePropertyImageHandler(support)
+                .handle(new MovePropertyImageCommand(property.id(), second.id(), 0, owner));
+
+        assertThat(repository.get(property.id()).images()).containsExactly(second, cover);
+        assertThat(events.events).singleElement().isInstanceOf(PropertyEvent.PropertyImagesReordered.class);
+    }
+
+    @Test
+    void move_image_should_answer_not_found_for_an_unknown_image() {
+        Property property = stored(PropertyStatus.DRAFT);
+
+        assertThatThrownBy(() -> new MovePropertyImageHandler(support)
+                .handle(new MovePropertyImageCommand(property.id(), UUID.randomUUID(), 0, owner)))
+                .isInstanceOf(PropertyImageNotFoundException.class);
     }
 
     @Test

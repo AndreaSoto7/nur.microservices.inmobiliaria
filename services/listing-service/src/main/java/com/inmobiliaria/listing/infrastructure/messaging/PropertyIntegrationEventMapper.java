@@ -5,6 +5,7 @@ import com.inmobiliaria.listing.application.common.ImageUrls;
 import com.inmobiliaria.listing.domain.event.PropertyEvent;
 import com.inmobiliaria.listing.domain.event.PropertyEvent.PropertyCreated;
 import com.inmobiliaria.listing.domain.event.PropertyEvent.PropertyImageRemoved;
+import com.inmobiliaria.listing.domain.event.PropertyEvent.PropertyImagesReordered;
 import com.inmobiliaria.listing.domain.event.PropertyEvent.PropertyImagesAdded;
 import com.inmobiliaria.listing.domain.event.PropertyEvent.PropertyPaused;
 import com.inmobiliaria.listing.domain.event.PropertyEvent.PropertyPublished;
@@ -56,7 +57,7 @@ public class PropertyIntegrationEventMapper {
         boolean updatedSent = false;
         for (PropertyEvent event : events) {
             boolean isUpdate = event instanceof PropertyUpdated || event instanceof PropertyImagesAdded
-                    || event instanceof PropertyImageRemoved;
+                    || event instanceof PropertyImageRemoved || event instanceof PropertyImagesReordered;
             if (isUpdate && updatedSent) {
                 continue;
             }
@@ -72,6 +73,7 @@ public class PropertyIntegrationEventMapper {
             case PropertyCreated ignored -> Optional.empty();
             case PropertyImagesAdded added -> updated(property, added, metadata);
             case PropertyImageRemoved removed -> updated(property, removed, metadata);
+            case PropertyImagesReordered reordered -> updated(property, reordered, metadata);
             case PropertyUpdated updated -> updated(property, updated, metadata);
             case PropertyPublished published -> {
                 Map<String, Object> payload = fullPayload(property);

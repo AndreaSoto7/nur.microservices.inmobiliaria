@@ -1,5 +1,7 @@
 package com.inmobiliaria.listing.presentation.rest;
 
+import com.inmobiliaria.listing.application.command.MovePropertyImageCommand;
+import com.inmobiliaria.listing.application.command.MovePropertyImageHandler;
 import com.inmobiliaria.listing.application.command.RemovePropertyImageCommand;
 import com.inmobiliaria.listing.application.command.RemovePropertyImageHandler;
 import com.inmobiliaria.listing.application.common.CommandMetadata;
@@ -8,6 +10,8 @@ import com.inmobiliaria.listing.application.query.GetPropertyImageQuery;
 import com.inmobiliaria.listing.application.query.ImageContent;
 import com.inmobiliaria.listing.domain.model.PropertyId;
 import com.inmobiliaria.listing.infrastructure.web.CorrelationIdFilter;
+import com.inmobiliaria.listing.presentation.rest.dto.MoveImageRequest;
+import jakarta.validation.Valid;
 import java.time.Duration;
 import java.util.UUID;
 import org.springframework.http.CacheControl;
@@ -17,12 +21,14 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Imagen de la galería. El GET es público mientras la propiedad es visible; el agente dueño, con su token,
- * también ve las de un borrador o una propiedad pausada. El DELETE es solo del dueño.
+ * también ve las de un borrador o una propiedad pausada. Moverla (PATCH) y quitarla (DELETE) es solo del dueño.
  */
 @RestController
 public class PropertyImageController {
@@ -31,10 +37,21 @@ public class PropertyImageController {
 
     private final GetPropertyImageHandler getImage;
     private final RemovePropertyImageHandler removeImage;
+    private final MovePropertyImageHandler moveImage;
 
-    public PropertyImageController(GetPropertyImageHandler getImage, RemovePropertyImageHandler removeImage) {
+    public PropertyImageController(GetPropertyImageHandler getImage, RemovePropertyImageHandler removeImage,
+            MovePropertyImageHandler moveImage) {
         this.getImage = getImage;
         this.removeImage = removeImage;
+        this.moveImage = moveImage;
+    }
+
+    @PatchMapping(PATH)
+    public ResponseEntity<Void> move(@PathVariable UUID propertyId, @PathVariable UUID imageId,
+            @Valid @RequestBody MoveImageRequest request, @AuthenticationPrincipal Jwt jwt) {
+        moveImage.handle(new MovePropertyImageCommand(new PropertyId(propertyId), imageId, request.position(),
+                CommandMetadata.agent(CurrentUser.id(jwt), CorrelationIdFilter.current())));
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping(PATH)
