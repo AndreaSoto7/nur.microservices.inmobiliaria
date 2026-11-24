@@ -59,6 +59,8 @@ export class IdentityGuard implements CanActivate {
       request.principal = {
         id: payload.sub.toLowerCase(),
         roles: payload.roles,
+        ...optionalClaim('name', payload.name, 150),
+        ...optionalClaim('email', payload.email, 254),
       };
     } catch {
       throw new VisitProblem('AUTH_INVALID_TOKEN');
@@ -69,4 +71,15 @@ export class IdentityGuard implements CanActivate {
     }
     return true;
   }
+}
+
+/** name y email son opcionales en el token: solo se usan para que el agente sepa a quién contactar. */
+function optionalClaim(
+  key: 'name' | 'email',
+  value: unknown,
+  max: number,
+): { name?: string } | { email?: string } {
+  if (typeof value !== 'string') return {};
+  const trimmed = value.trim();
+  return trimmed && [...trimmed].length <= max ? { [key]: trimmed } : {};
 }

@@ -32,6 +32,8 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 
 Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es entidad hija de `Lead`.
 
+**Contacto del interesado (`client_contacts`):** lo último que un interesado le dio a cada agente, por (`clientId`, `agentId`): al consultar, nombre, email y teléfono del formulario; al pedir una visita, `name` y `email` del token y el `contactPhone` opcional. Un dato que no llega no borra el anterior. Las visitas y las oportunidades lo devuelven en `client`, así el agente sabe a quién llamar; un agente nunca ve lo que el interesado le dio a otro.
+
 **Modelo de lectura `PropertySnapshot`:** copia local de cada propiedad (`propertyId`, `agentId`, `status`, `operationType`, `title`, `zone`). Solo la escribe el consumidor de `listing.property.events`; ningún comando la modifica. Las consultas de visitas leen de aquí `propertyTitle`: así el título sigue disponible aunque la propiedad ya no esté publicada.
 
 ## Casos de uso (event storming → código)

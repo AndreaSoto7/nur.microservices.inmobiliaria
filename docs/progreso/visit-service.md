@@ -9,6 +9,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | A quién contactar: `client_contacts` por cliente y agente, con lo último que dio al consultar o pedir una visita (`contactPhone` opcional y `name`/`email` del token). Visitas y oportunidades lo devuelven en `client`. Contrato 0.4.0, migración `1795700000000`. Probado por el gateway | _(pendiente)_ |
 | feat | Contrapropuesta de horario: el agente o el cliente proponen otro (`POST /visits/{id}/propose-time`, `VisitTimeProposed`) y el cliente acepta la del agente (`POST /visits/{id}/accept-proposal`, `VisitScheduled` con `actor: CLIENT`). No se propone un horario que choque con la agenda del agente. La visita trae `clientId` y `proposedBy`. Migración `1795620000000`. Probado de punta a punta por el gateway | _(pendiente)_ |
 | feat | Responder consultas (`POST /inquiries/{id}/reply`, una vez, publica `InquiryReplied`), el cliente lista sus consultas en `GET /inquiries`, listar las notas de una oportunidad (`GET /leads/{id}/follow-ups`) y validar el teléfono de una consulta (7 a 15 dígitos). Migración `1795540000000` | _(pendiente)_ |
 | feat | Contrato inicial para solicitar y consultar visitas y esquemas de VisitRequested y LeadOpened | #39 |

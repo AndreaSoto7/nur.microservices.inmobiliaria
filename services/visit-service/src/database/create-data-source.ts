@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { CreateVisitSchema1793898000000 } from './migrations/1793898000000-create-visit-schema.js';
 import { AddInquiryReply1795540000000 } from './migrations/1795540000000-add-inquiry-reply.js';
 import { AddVisitProposedBy1795620000000 } from './migrations/1795620000000-add-visit-proposed-by.js';
+import { CreateClientContacts1795700000000 } from './migrations/1795700000000-create-client-contacts.js';
 
 export function createDataSource(url: string): DataSource {
   return new DataSource({
@@ -15,6 +16,7 @@ export function createDataSource(url: string): DataSource {
       CreateVisitSchema1793898000000,
       AddInquiryReply1795540000000,
       AddVisitProposedBy1795620000000,
+      CreateClientContacts1795700000000,
     ],
   });
 }

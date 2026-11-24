@@ -1,3 +1,4 @@
+import type { ClientContact } from './client-contact.js';
 export type LeadStatus = 'OPEN' | 'CLOSED';
 export const leadOutcomes = ['WON', 'LOST'] as const;
 export type LeadOutcome = (typeof leadOutcomes)[number];
@@ -11,6 +12,8 @@ export type LeadSummary = {
   id: string;
   propertyId: string;
   clientId: string;
+  /** Cómo contactar al interesado, si alguna vez dejó sus datos. */
+  client?: ClientContact;
   status: LeadStatus;
   openedAt: Date;
   closedAt?: Date;

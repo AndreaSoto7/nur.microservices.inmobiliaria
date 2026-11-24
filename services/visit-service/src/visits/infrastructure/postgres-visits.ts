@@ -1,3 +1,7 @@
+import {
+  compactContact,
+  type ClientContact,
+} from '../../leads/domain/client-contact.js';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { QueryFailedError, type EntityManager } from 'typeorm';
@@ -41,14 +45,22 @@ import {
   type VisitState,
 } from '../domain/visit.js';
 
+type ContactRow = {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+};
+
 type VisitRow = Omit<
   VisitDetails,
+  | 'client'
   | 'propertyTitle'
   | 'scheduledStart'
   | 'scheduledEnd'
   | 'resolutionReason'
   | 'completedAt'
 > & {
+  client: ContactRow | null;
   propertyTitle: string | null;
   scheduledStart: Date | null;
   scheduledEnd: Date | null;
@@ -56,7 +68,14 @@ type VisitRow = Omit<
   completedAt: Date | null;
 };
 
+/** Los datos de contacto del interesado, como JSON (o null si nunca los dejó). */
+const clientContact = (table: 'visits' | 'leads') =>
+  `(SELECT json_build_object('name', c.name, 'email', c.email, 'phone', c.phone)
+      FROM client_contacts c
+     WHERE c.client_id = ${table}.client_id AND c.agent_id = ${table}.agent_id) AS "client"`;
+
 const visitColumns = `id, property_id AS "propertyId", client_id AS "clientId", status,
+  ${clientContact('visits')},
   proposed_by AS "proposedBy",
   (SELECT p.title FROM property_snapshots p WHERE p.property_id = visits.property_id) AS "propertyTitle",
   proposed_at AS "proposedAt", requested_at AS "requestedAt",
@@ -66,6 +85,7 @@ const visitColumns = `id, property_id AS "propertyId", client_id AS "clientId", 
 
 function visitDetails(row: VisitRow): VisitDetails {
   const {
+    client,
     propertyTitle,
     scheduledStart,
     scheduledEnd,
@@ -73,8 +93,10 @@ function visitDetails(row: VisitRow): VisitDetails {
     completedAt,
     ...details
   } = row;
+  const contact = client ? compactContact(client) : undefined;
   return {
     ...details,
+    ...(contact ? { client: contact } : {}),
     ...(propertyTitle !== null ? { propertyTitle } : {}),
     ...(scheduledStart && scheduledEnd ? { scheduledStart, scheduledEnd } : {}),
     ...(resolutionReason !== null ? { resolutionReason } : {}),
@@ -145,12 +167,14 @@ export class PostgresVisits implements VisitRepository {
     agentId: string,
     filter: LeadListFilter,
   ): Promise<Page<LeadSummary>> {
-    type LeadRow = Omit<LeadSummary, 'closedAt' | 'outcome'> & {
+    type LeadRow = Omit<LeadSummary, 'closedAt' | 'outcome' | 'client'> & {
       closedAt: Date | null;
       outcome: 'WON' | 'LOST' | null;
+      client: ContactRow | null;
     };
     const { data, page } = await this.readPage<LeadRow>(
-      'id, property_id AS "propertyId", client_id AS "clientId", status, opened_at AS "openedAt", closed_at AS "closedAt", outcome',
+      `id, property_id AS "propertyId", client_id AS "clientId", ${clientContact('leads')},
+        status, opened_at AS "openedAt", closed_at AS "closedAt", outcome`,
       `FROM leads WHERE agent_id = $1 AND ($2::uuid IS NULL OR property_id = $2)
         AND ($3::varchar IS NULL OR status = $3)`,
       'opened_at',
@@ -158,10 +182,14 @@ export class PostgresVisits implements VisitRepository {
       filter,
     );
     return {
-      data: data.map(({ closedAt, outcome, ...lead }) => ({
-        ...lead,
-        ...(closedAt && outcome ? { closedAt, outcome } : {}),
-      })),
+      data: data.map(({ closedAt, outcome, client, ...lead }) => {
+        const contact = client ? compactContact(client) : undefined;
+        return {
+          ...lead,
+          ...(contact ? { client: contact } : {}),
+          ...(closedAt && outcome ? { closedAt, outcome } : {}),
+        };
+      }),
       page,
     };
   }
@@ -578,6 +606,31 @@ class PostgresVisitTransaction implements VisitTransaction {
       [id, source.propertyId],
     );
     return row ? Visit.restore(row) : undefined;
+  }
+
+  async rememberClientContact(
+    clientId: string,
+    agentId: string,
+    contact: ClientContact,
+    at: Date,
+  ): Promise<void> {
+    await this.manager.query(
+      `INSERT INTO client_contacts (client_id, agent_id, name, email, phone, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (client_id, agent_id) DO UPDATE SET
+         name = COALESCE(EXCLUDED.name, client_contacts.name),
+         email = COALESCE(EXCLUDED.email, client_contacts.email),
+         phone = COALESCE(EXCLUDED.phone, client_contacts.phone),
+         updated_at = GREATEST(EXCLUDED.updated_at, client_contacts.updated_at)`,
+      [
+        clientId,
+        agentId,
+        contact.name ?? null,
+        contact.email ?? null,
+        contact.phone ?? null,
+        at,
+      ],
+    );
   }
 
   async saveProposal(

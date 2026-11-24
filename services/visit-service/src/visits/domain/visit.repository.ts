@@ -13,17 +13,26 @@ import type {
   LeadStatus,
   LeadSummary,
 } from '../../leads/domain/lead.js';
+import type { ClientContact } from '../../leads/domain/client-contact.js';
 import type { Page, PageFilter } from '../../shared/page.js';
 import type { Visit, VisitProposer, VisitSlot, VisitStatus } from './visit.js';
 
 export const VISIT_REPOSITORY = Symbol('VISIT_REPOSITORY');
 
-export type VisitPrincipal = { id: string; roles: readonly string[] };
+/** Quien hace la request. name y email salen del token, si identity los incluye. */
+export type VisitPrincipal = {
+  id: string;
+  roles: readonly string[];
+  name?: string;
+  email?: string;
+};
 
 export type VisitDetails = {
   id: string;
   propertyId: string;
   clientId: string;
+  /** Cómo contactar al interesado, si alguna vez dejó sus datos. */
+  client?: ClientContact;
   proposedBy: VisitProposer;
   propertyTitle?: string;
   status: VisitStatus;
@@ -110,6 +119,13 @@ export interface VisitTransaction {
     id: string,
   ): Promise<{ id: string; agentId: string; status: string } | undefined>;
   saveVisit(visit: Visit, note: string | undefined): Promise<void>;
+  /** Guarda lo último que el interesado le dio a ese agente; lo que no trae, se conserva. */
+  rememberClientContact(
+    clientId: string,
+    agentId: string,
+    contact: ClientContact,
+    at: Date,
+  ): Promise<void>;
   saveInquiry(inquiry: Inquiry): Promise<void>;
   /** Bloquea la fila: dos respuestas a la vez no pueden pasar las dos. */
   findAssignedInquiry(
