@@ -33,7 +33,9 @@ def hasher() -> FakePasswordHasher:
 def user_id(users, hasher):
     register = RegisterUserHandler(users=users, password_hasher=hasher, clock=FixedClock())
     return register.handle(
-        RegisterUserCommand(email="ana@example.com", password=PASSWORD, full_name="Ana Pérez")
+        RegisterUserCommand(
+            email="ana@example.com", password=PASSWORD, first_name="Ana", last_name="Pérez"
+        )
     )
 
 

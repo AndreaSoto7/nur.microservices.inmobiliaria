@@ -3,11 +3,11 @@ import pytest
 from identity.application.commands.register_user import RegisterUserCommand, RegisterUserHandler
 from identity.domain.errors import (
     EmailAlreadyRegistered,
-    InvalidFullName,
+    InvalidFirstName,
     RoleNotAllowed,
     WeakPassword,
 )
-from identity.domain.full_name import FullName
+from identity.domain.person_name import PersonName
 from identity.domain.role import Role
 from tests.application.fakes import FakePasswordHasher, FixedClock, InMemoryUserRepository
 
@@ -31,7 +31,8 @@ def a_command(**overrides) -> RegisterUserCommand:
     data = {
         "email": "Ana.Perez@Example.com",
         "password": "S3gura-2026",
-        "full_name": "Ana Pérez",
+        "first_name": "Ana",
+        "last_name": "Pérez",
     }
     return RegisterUserCommand(**(data | overrides))
 
@@ -42,7 +43,7 @@ def test_saves_the_user_with_hashed_password_and_returns_its_id(handler, users):
     saved = users.users["ana.perez@example.com"]
     assert saved.id == user_id
     assert saved.password_hash == "hashed::S3gura-2026"
-    assert saved.full_name == FullName("Ana Pérez")
+    assert saved.name == PersonName("Ana", "Pérez")
 
 
 def test_without_role_uses_default_role_client(handler, users):
@@ -92,11 +93,11 @@ def test_does_not_allow_self_assigning_admin(handler, users):
 
 @pytest.mark.parametrize(
     "overrides",
-    [{"full_name": "   "}, {"role": "ADMIN"}, {"role": "FOO"}, {"password": "corta"}],
+    [{"first_name": "   "}, {"role": "ADMIN"}, {"role": "FOO"}, {"password": "corta"}],
 )
 def test_does_not_hash_when_data_is_invalid(handler, hasher, overrides):
     # Hashear con PBKDF2 es caro: los datos inválidos no deben gastar CPU.
-    with pytest.raises((InvalidFullName, RoleNotAllowed, WeakPassword)):
+    with pytest.raises((InvalidFirstName, RoleNotAllowed, WeakPassword)):
         handler.handle(a_command(**overrides))
 
     assert hasher.calls == 0

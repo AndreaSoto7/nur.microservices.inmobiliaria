@@ -4,8 +4,8 @@ from uuid import UUID
 from identity.application.ports import Clock, PasswordHasher
 from identity.domain.email import Email
 from identity.domain.errors import EmailAlreadyRegistered
-from identity.domain.full_name import FullName
 from identity.domain.password import RawPassword
+from identity.domain.person_name import PersonName
 from identity.domain.repository import UserRepository
 from identity.domain.role import self_registration_role
 from identity.domain.user import User
@@ -17,7 +17,8 @@ EMAIL_ALREADY_REGISTERED_MESSAGE = "Ya existe un usuario con ese email."
 class RegisterUserCommand:
     email: str
     password: str = field(repr=False)
-    full_name: str
+    first_name: str
+    last_name: str
     role: str | None = None
 
 
@@ -32,7 +33,7 @@ class RegisterUserHandler:
     def handle(self, command: RegisterUserCommand) -> UUID:
         # Todo se valida antes de hashear: PBKDF2 es caro y no debe gastarse en datos inválidos.
         email = Email(command.email)
-        full_name = FullName(command.full_name)
+        name = PersonName(command.first_name, command.last_name)
         password = RawPassword(command.password)
         role = self_registration_role(command.role)
 
@@ -43,7 +44,7 @@ class RegisterUserHandler:
 
         user = User.register(
             email=email,
-            full_name=full_name,
+            name=name,
             password_hash=self._password_hasher.hash(password),
             role=role,
             now=self._clock.now(),

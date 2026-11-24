@@ -9,7 +9,8 @@ from identity.presentation.problem import PROBLEM_CONTENT_TYPE, problem
 # Error de dominio → (status HTTP, título). Un test exige que cada DomainError esté aquí.
 DOMAIN_ERRORS: dict[type[errors.DomainError], tuple[int, str]] = {
     errors.InvalidEmail: (400, "Email inválido"),
-    errors.InvalidFullName: (400, "Nombre inválido"),
+    errors.InvalidFirstName: (400, "Nombre inválido"),
+    errors.InvalidLastName: (400, "Apellido inválido"),
     errors.WeakPassword: (400, "Contraseña débil"),
     errors.RoleNotAllowed: (400, "Rol no permitido"),
     errors.EmailAlreadyRegistered: (409, "Email ya registrado"),
@@ -26,7 +27,8 @@ DEFAULT_DOMAIN_ERROR = (409, "Regla de negocio no cumplida")
 # el mensaje junto a ese campo y no como un error general.
 DOMAIN_ERROR_FIELDS: dict[type[errors.DomainError], str] = {
     errors.InvalidEmail: "email",
-    errors.InvalidFullName: "fullName",
+    errors.InvalidFirstName: "firstName",
+    errors.InvalidLastName: "lastName",
     errors.WeakPassword: "password",
     errors.RoleNotAllowed: "role",
     errors.EmailAlreadyRegistered: "email",

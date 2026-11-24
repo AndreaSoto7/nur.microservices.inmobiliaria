@@ -9,7 +9,7 @@ from identity.application.commands.refresh_tokens import (
 )
 from identity.domain.email import Email
 from identity.domain.errors import InvalidRefreshToken
-from identity.domain.full_name import FullName
+from identity.domain.person_name import PersonName
 from identity.domain.role import Role
 from identity.domain.user import User
 from tests.application.fakes import (
@@ -33,7 +33,7 @@ def users() -> InMemoryUserRepository:
 def user(users) -> User:
     user = User.register(
         email=Email("ana@example.com"),
-        full_name=FullName("Ana"),
+        name=PersonName("Ana", "Pérez"),
         password_hash="x",
         role=Role.CLIENT,
         now=NOW,

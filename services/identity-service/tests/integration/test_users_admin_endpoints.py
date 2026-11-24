@@ -27,12 +27,16 @@ def bearer(token: str) -> dict:
 
 @pytest.fixture
 def admin(db) -> UserModel:
-    return UserModel.objects.create_superuser("admin@example.com", PASSWORD, full_name="Admin")
+    return UserModel.objects.create_superuser(
+        "admin@example.com", PASSWORD, first_name="Admin", last_name="Demo"
+    )
 
 
 @pytest.fixture
 def ana(db) -> UserModel:
-    return UserModel.objects.create_user("ana@example.com", PASSWORD, full_name="Ana Pérez")
+    return UserModel.objects.create_user(
+        "ana@example.com", PASSWORD, first_name="Ana", last_name="Pérez"
+    )
 
 
 @pytest.fixture
@@ -62,7 +66,16 @@ def test_an_admin_lists_users_in_the_contract_format(client, admin_token, ana):
     body = response.json()
     assert body["page"] == {"number": 1, "size": 20, "totalElements": 2, "totalPages": 1}
     item = next(user for user in body["data"] if user["email"] == "ana@example.com")
-    assert set(item) == {"id", "email", "fullName", "roles", "active", "registeredAt"}
+    assert set(item) == {
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "fullName",
+        "roles",
+        "active",
+        "registeredAt",
+    }
     assert item["id"] == str(ana.id)
     assert item["fullName"] == "Ana Pérez"
     assert item["roles"] == ["CLIENT"]
@@ -255,7 +268,13 @@ def test_a_deactivated_admin_loses_access_with_the_token_they_still_hold(
 def test_public_registration_still_cannot_create_an_admin(client):
     response = client.post(
         "/api/v1/auth/register",
-        {"email": "x@example.com", "password": PASSWORD, "fullName": "X", "role": "ADMIN"},
+        {
+            "email": "x@example.com",
+            "password": PASSWORD,
+            "firstName": "X",
+            "lastName": "Y",
+            "role": "ADMIN",
+        },
         content_type="application/json",
     )
 
@@ -266,7 +285,11 @@ def test_the_first_admin_is_created_with_the_django_command(client, monkeypatch)
     monkeypatch.setenv("DJANGO_SUPERUSER_PASSWORD", PASSWORD)
 
     call_command(
-        "createsuperuser", interactive=False, email="root@example.com", full_name="Root Admin"
+        "createsuperuser",
+        interactive=False,
+        email="root@example.com",
+        first_name="Root",
+        last_name="Admin",
     )
 
     token = login(client, "root@example.com")

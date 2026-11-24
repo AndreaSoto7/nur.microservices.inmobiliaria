@@ -12,7 +12,8 @@ erDiagram
         uuid id PK
         varchar email UK "254"
         varchar password "hash de Django, 128"
-        varchar full_name "150"
+        varchar first_name "75"
+        varchar last_name "75, vacío solo en cuentas anteriores a 0004"
         jsonb roles "CLIENT, AGENT, ADMIN"
         boolean is_active
         timestamptz date_joined
@@ -49,7 +50,8 @@ CREATE TABLE users (
     id           uuid         PRIMARY KEY,
     email        varchar(254) NOT NULL UNIQUE,   -- validado por el value object Email del dominio
     password     varchar(128) NOT NULL,          -- hash PBKDF2 de Django, nunca texto plano
-    full_name    varchar(150) NOT NULL,
+    first_name   varchar(75)  NOT NULL,          -- PersonName; la migración 0004 separó full_name
+    last_name    varchar(75)  NOT NULL,          -- '' solo en cuentas con nombre de una palabra
     roles        jsonb        NOT NULL,          -- lista: ["CLIENT"], ["AGENT"], ["ADMIN"], ...
     is_active    boolean      NOT NULL,
     date_joined  timestamptz  NOT NULL,

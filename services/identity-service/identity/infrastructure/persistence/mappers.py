@@ -2,7 +2,7 @@
 
 from identity.domain.email import Email
 from identity.domain.errors import DomainError
-from identity.domain.full_name import FullName
+from identity.domain.person_name import PersonName
 from identity.domain.role import Role
 from identity.domain.user import User
 from identity.infrastructure.persistence.models import UserModel
@@ -12,7 +12,8 @@ def to_model(user: User) -> UserModel:
     return UserModel(
         id=user.id,
         email=user.email.value,
-        full_name=user.full_name.value,
+        first_name=user.name.first_name,
+        last_name=user.name.last_name,
         password=user.password_hash,
         roles=sorted(role.value for role in user.roles),
         is_active=user.is_active,
@@ -25,7 +26,7 @@ def to_domain(model: UserModel) -> User:
         return User(
             id=model.id,
             email=Email(model.email),
-            full_name=FullName(model.full_name),
+            name=PersonName.restore(model.first_name, model.last_name),
             password_hash=model.password,
             roles=frozenset(Role(role) for role in model.roles),
             is_active=model.is_active,

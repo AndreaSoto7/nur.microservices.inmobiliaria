@@ -11,7 +11,7 @@ from identity.domain.errors import (
     RoleNotAllowed,
 )
 from identity.domain.events import UserRegistered
-from identity.domain.full_name import FullName
+from identity.domain.person_name import PersonName
 from identity.domain.role import ROLE_NOT_ALLOWED_MESSAGE, SELF_REGISTRABLE_ROLES, Role
 
 
@@ -26,7 +26,7 @@ class User:
 
     id: UUID
     email: Email
-    full_name: FullName
+    name: PersonName
     password_hash: str = field(repr=False)
     roles: frozenset[Role]
     is_active: bool
@@ -44,7 +44,7 @@ class User:
         cls,
         *,
         email: Email,
-        full_name: FullName,
+        name: PersonName,
         password_hash: str,
         role: Role,
         now: datetime,
@@ -55,7 +55,7 @@ class User:
         user = cls(
             id=uuid4(),
             email=email,
-            full_name=full_name,
+            name=name,
             password_hash=password_hash,
             roles=frozenset({role}),
             is_active=True,
@@ -65,7 +65,9 @@ class User:
             UserRegistered(
                 user_id=user.id,
                 email=email.value,
-                full_name=full_name.value,
+                first_name=name.first_name,
+                last_name=name.last_name,
+                full_name=name.full,
                 roles=tuple(sorted(user.roles)),
                 occurred_at=now,
             )

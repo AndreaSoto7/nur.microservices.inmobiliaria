@@ -55,7 +55,8 @@ class InMemoryUserRepository(UserRepository):
                 UserDirectoryEntry(
                     id=user.id,
                     email=user.email.value,
-                    full_name=user.full_name.value,
+                    first_name=user.name.first_name,
+                    last_name=user.name.last_name,
                     roles=sorted(item.value for item in user.roles),
                     active=user.is_active,
                     registered_at=user.registered_at,

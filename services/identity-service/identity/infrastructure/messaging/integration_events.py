@@ -44,6 +44,8 @@ def to_integration_event(event: UserRegistered) -> IntegrationEvent:
                 "userId": aggregate_id,
                 "email": event.email,
                 "fullName": event.full_name,
+                "firstName": event.first_name,
+                "lastName": event.last_name,
                 "roles": list(event.roles),
                 "registeredAt": _utc_iso(event.occurred_at),
             },

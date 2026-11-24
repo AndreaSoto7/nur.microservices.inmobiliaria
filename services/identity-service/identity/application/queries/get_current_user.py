@@ -17,6 +17,8 @@ class UserProfile:
 
     id: UUID
     email: str
+    first_name: str
+    last_name: str
     full_name: str
     roles: list[str]
     registered_at: datetime
@@ -34,7 +36,9 @@ class GetCurrentUserHandler:
         return UserProfile(
             id=user.id,
             email=user.email.value,
-            full_name=user.full_name.value,
+            first_name=user.name.first_name,
+            last_name=user.name.last_name,
+            full_name=user.name.full,
             roles=sorted(role.value for role in user.roles),
             registered_at=user.registered_at,
         )

@@ -30,8 +30,23 @@ class RegisterUserRequestSerializer(serializers.Serializer):
     # Sin límites de largo: la política de 8 a 128 es del dominio y se valida antes de hashear.
     # El tamaño total del body ya lo acota Django (DATA_UPLOAD_MAX_MEMORY_SIZE).
     password = StrictCharField(write_only=True, trim_whitespace=False)
-    full_name = StrictCharField(max_length=150)
+    first_name = StrictCharField(max_length=75)
+    last_name = StrictCharField(max_length=75)
     role = SelfRegistrationRoleField(required=False, max_length=20)
+
+    def to_internal_value(self, data):
+        # fullName es obsoleto desde 1.5.0 (lo manda el frontend anterior): la primera palabra es
+        # el nombre y el resto, el apellido. Con una sola palabra, lastName queda en blanco y se
+        # rechaza.
+        if (
+            isinstance(data, dict)
+            and isinstance(data.get("full_name"), str)
+            and "first_name" not in data
+            and "last_name" not in data
+        ):
+            first, _, last = " ".join(data["full_name"].split()).partition(" ")
+            data = {**data, "first_name": first, "last_name": last}
+        return super().to_internal_value(data)
 
 
 class RegisterUserResponseSerializer(serializers.Serializer):
@@ -64,6 +79,8 @@ class TokenPairSerializer(serializers.Serializer):
 class CurrentUserSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     email = serializers.EmailField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField(allow_blank=True)
     full_name = serializers.CharField()
     roles = serializers.ListField(child=serializers.CharField())
     registered_at = serializers.DateTimeField()
@@ -81,6 +98,8 @@ class ListUsersParamsSerializer(serializers.Serializer):
 class AdminUserSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     email = serializers.EmailField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField(allow_blank=True)
     full_name = serializers.CharField()
     roles = serializers.ListField(child=serializers.CharField())
     active = serializers.BooleanField()

@@ -6,7 +6,7 @@ from django.db import DatabaseError, IntegrityError
 
 from identity.domain.email import Email
 from identity.domain.errors import EmailAlreadyRegistered
-from identity.domain.full_name import FullName
+from identity.domain.person_name import PersonName
 from identity.domain.role import Role
 from identity.domain.user import User
 from identity.infrastructure.persistence import repositories
@@ -25,7 +25,7 @@ NOW = datetime(2026, 11, 3, 14, 30, tzinfo=UTC)
 def a_user(email: str = "ana@example.com") -> User:
     return User.register(
         email=Email(email),
-        full_name=FullName("Ana Pérez"),
+        name=PersonName("Ana", "Pérez"),
         password_hash="pbkdf2_sha256$hash",
         role=Role.AGENT,
         now=NOW,
@@ -52,7 +52,7 @@ def test_duplicate_email_raises_domain_error():
 def test_other_integrity_violation_is_not_disguised_as_duplicate_email(monkeypatch):
     def broken_to_model(user):
         model = to_model(user)
-        model.full_name = None  # NOT NULL
+        model.first_name = None  # NOT NULL
         return model
 
     monkeypatch.setattr(repositories, "to_model", broken_to_model)
@@ -68,7 +68,7 @@ def test_mapper_round_trip_keeps_all_fields():
 
     assert restored == user
     assert restored.email == user.email
-    assert restored.full_name == user.full_name
+    assert restored.name == user.name
     assert restored.password_hash == user.password_hash
     assert restored.roles == user.roles
     assert restored.is_active == user.is_active
@@ -130,7 +130,7 @@ def test_updates_only_the_password_hash():
 
     stored = repository.get_by_id(user.id)
     assert stored.password_hash == "nuevo-hash"
-    assert stored.full_name == user.full_name
+    assert stored.name == user.name
 
 
 def test_rehash_does_not_overwrite_a_password_changed_meanwhile():

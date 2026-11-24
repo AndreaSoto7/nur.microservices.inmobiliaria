@@ -15,7 +15,8 @@ def a_body(**overrides) -> dict:
     return {
         "email": "ana@example.com",
         "password": "S3gura-2026",
-        "fullName": "Ana Pérez",
+        "firstName": "Ana",
+        "lastName": "Pérez",
     } | overrides
 
 
@@ -29,7 +30,7 @@ def test_registers_and_responds_201_with_the_id(client):
     assert response.status_code == 201
     saved = UserModel.objects.get(id=uuid.UUID(response.json()["id"]))
     assert saved.email == "ana@example.com"
-    assert saved.full_name == "Ana Pérez"
+    assert (saved.first_name, saved.last_name) == ("Ana", "Pérez")
     assert saved.roles == ["CLIENT"]
 
 
@@ -64,6 +65,26 @@ def test_duplicate_email_responds_409_without_revealing_the_email(client):
     assert body["detail"] == "Ya existe un usuario con ese email."
 
 
+def test_the_obsolete_full_name_is_split_into_first_and_last_name(client):
+    response = post(
+        client,
+        {"email": "ana@example.com", "password": "S3gura-2026", "fullName": " Ana  María Pérez "},
+    )
+
+    assert response.status_code == 201
+    saved = UserModel.objects.get(email="ana@example.com")
+    assert (saved.first_name, saved.last_name) == ("Ana", "María Pérez")
+
+
+def test_an_obsolete_full_name_of_one_word_asks_for_the_last_name(client):
+    response = post(
+        client, {"email": "ana@example.com", "password": "S3gura-2026", "fullName": "Ana"}
+    )
+
+    assert response.status_code == 400
+    assert {error["field"] for error in response.json()["errors"]} == {"lastName"}
+
+
 def test_missing_fields_respond_400_problem_json_with_camel_case_names(client):
     response = post(client, {"email": "ana@example.com"}, **{"X-Correlation-Id": "corr-1"})
 
@@ -75,7 +96,7 @@ def test_missing_fields_respond_400_problem_json_with_camel_case_names(client):
     assert body["type"] == "https://inmobiliaria.local/problems/validation-error"
     assert body["instance"] == URL
     assert body["correlationId"] == "corr-1"
-    assert {error["field"] for error in body["errors"]} == {"password", "fullName"}
+    assert {error["field"] for error in body["errors"]} == {"password", "firstName", "lastName"}
 
 
 @pytest.mark.parametrize("password", ["corta", "x" * 200, "x" * 2000])
@@ -137,7 +158,7 @@ def test_django_request_log_carries_the_correlation_id(client):
     assert [record.correlation_id for record in capture.records] == ["corr-log"]
 
 
-@pytest.mark.parametrize("override", [{"password": 12345678}, {"fullName": 123}, {"role": 1}])
+@pytest.mark.parametrize("override", [{"password": 12345678}, {"firstName": 123}, {"role": 1}])
 def test_non_string_values_respond_400(client, override):
     response = post(client, a_body(**override))
 
