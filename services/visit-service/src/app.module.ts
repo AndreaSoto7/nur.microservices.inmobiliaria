@@ -3,12 +3,17 @@ import { APP_FILTER } from '@nestjs/core';
 import { CqrsModule } from '@nestjs/cqrs';
 import { VisitDatabase } from './database/visit-database.js';
 import { GetInquiryByIdHandler } from './inquiries/application/get-inquiry-by-id.js';
-import { ListAgentInquiriesHandler } from './inquiries/application/list-agent-inquiries.js';
+import {
+  ListAgentInquiriesHandler,
+  ListClientInquiriesHandler,
+} from './inquiries/application/list-agent-inquiries.js';
+import { ReplyInquiryHandler } from './inquiries/application/reply-inquiry.js';
 import { SendInquiryHandler } from './inquiries/application/send-inquiry.js';
 import { InquiriesController } from './inquiries/presentation/inquiries.controller.js';
 import { CloseLeadHandler } from './leads/application/close-lead.js';
 import {
   GetLeadFollowUpHandler,
+  ListLeadFollowUpsHandler,
   ListAgentLeadsHandler,
 } from './leads/application/lead-queries.js';
 import { RegisterLeadFollowUpHandler } from './leads/application/register-lead-follow-up.js';
@@ -28,6 +33,8 @@ import { ListVisitsHandler } from './visits/application/list-visits.js';
 import { RejectVisitHandler } from './visits/application/reject-visit.js';
 import { RequestVisitHandler } from './visits/application/request-visit.js';
 import { ScheduleVisitHandler } from './visits/application/schedule-visit.js';
+import { ProposeVisitTimeHandler } from './visits/application/propose-visit-time.js';
+import { AcceptVisitProposalHandler } from './visits/application/accept-visit-proposal.js';
 import { VISIT_REPOSITORY } from './visits/domain/visit.repository.js';
 import { PostgresVisits } from './visits/infrastructure/postgres-visits.js';
 import { VisitsController } from './visits/presentation/visits.controller.js';
@@ -50,6 +57,8 @@ import { VisitsController } from './visits/presentation/visits.controller.js';
     PropertyVisitPolicy,
     RequestVisitHandler,
     ScheduleVisitHandler,
+    ProposeVisitTimeHandler,
+    AcceptVisitProposalHandler,
     RejectVisitHandler,
     CancelVisitHandler,
     CompleteVisitHandler,
@@ -57,10 +66,13 @@ import { VisitsController } from './visits/presentation/visits.controller.js';
     GetInquiryByIdHandler,
     SendInquiryHandler,
     ListAgentInquiriesHandler,
+    ListClientInquiriesHandler,
+    ReplyInquiryHandler,
     ListAgentLeadsHandler,
     RegisterLeadFollowUpHandler,
     CloseLeadHandler,
     GetLeadFollowUpHandler,
+    ListLeadFollowUpsHandler,
     ListVisitsHandler,
     { provide: VISIT_REPOSITORY, useClass: PostgresVisits },
     { provide: APP_FILTER, useClass: ProblemFilter },

@@ -1,7 +1,9 @@
 import type {
   AgentInquirySummary,
+  AssignedInquiry,
   Inquiry,
   InquiryDetails,
+  InquiryReply,
 } from '../../inquiries/domain/inquiry.js';
 import type {
   Lead,
@@ -12,7 +14,7 @@ import type {
   LeadSummary,
 } from '../../leads/domain/lead.js';
 import type { Page, PageFilter } from '../../shared/page.js';
-import type { Visit, VisitSlot, VisitStatus } from './visit.js';
+import type { Visit, VisitProposer, VisitSlot, VisitStatus } from './visit.js';
 
 export const VISIT_REPOSITORY = Symbol('VISIT_REPOSITORY');
 
@@ -21,6 +23,8 @@ export type VisitPrincipal = { id: string; roles: readonly string[] };
 export type VisitDetails = {
   id: string;
   propertyId: string;
+  clientId: string;
+  proposedBy: VisitProposer;
   propertyTitle?: string;
   status: VisitStatus;
   proposedAt: Date;
@@ -63,15 +67,20 @@ export type RequestKey = {
     | 'cancel-visit'
     | 'complete-visit'
     | 'send-inquiry'
+    | 'reply-inquiry'
     | 'register-lead-follow-up'
+    | 'propose-visit-time'
+    | 'accept-visit-proposal'
     | 'close-lead';
 };
 
 export type VisitEvent = {
   type:
     | 'InquiryReceived'
+    | 'InquiryReplied'
     | 'VisitRequested'
     | 'VisitScheduled'
+    | 'VisitTimeProposed'
     | 'VisitRejected'
     | 'VisitCancelled'
     | 'VisitCompleted'
@@ -102,6 +111,12 @@ export interface VisitTransaction {
   ): Promise<{ id: string; agentId: string; status: string } | undefined>;
   saveVisit(visit: Visit, note: string | undefined): Promise<void>;
   saveInquiry(inquiry: Inquiry): Promise<void>;
+  /** Bloquea la fila: dos respuestas a la vez no pueden pasar las dos. */
+  findAssignedInquiry(
+    id: string,
+    agentId: string,
+  ): Promise<AssignedInquiry | undefined>;
+  saveInquiryReply(reply: InquiryReply): Promise<void>;
   findAssignedLead(id: string, agentId: string): Promise<Lead | undefined>;
   saveLeadClosure(id: string, closure: LeadClosure): Promise<void>;
   saveLeadFollowUp(followUp: LeadFollowUp): Promise<void>;
@@ -124,6 +139,16 @@ export interface VisitTransaction {
     now: Date,
   ): Promise<void>;
   saveSchedule(id: string, slot: VisitSlot, now: Date): Promise<void>;
+  saveProposal(
+    id: string,
+    proposedAt: Date,
+    proposedBy: VisitProposer,
+    now: Date,
+  ): Promise<void>;
+  /** El agente de una visita, sin bloquearla: para tomar el lock de su agenda antes que el de la fila. */
+  findVisitAgentId(id: string): Promise<string | undefined>;
+  /** Si el agente ya tiene una visita programada que se cruza con ese horario. */
+  agentIsBusy(agentId: string, slot: VisitSlot): Promise<boolean>;
   saveRejection(
     id: string,
     actor: VisitRejectionActor,
@@ -158,8 +183,18 @@ export interface VisitRepository {
     followUpId: string,
     agentId: string,
   ): Promise<LeadFollowUpDetails | undefined>;
+  /** undefined si la oportunidad no existe o es de otro agente. */
+  listLeadFollowUps(
+    leadId: string,
+    agentId: string,
+    filter: PageFilter,
+  ): Promise<Page<LeadFollowUpDetails> | undefined>;
   listAgentInquiries(
     agentId: string,
+    filter: PageFilter,
+  ): Promise<Page<AgentInquirySummary>>;
+  listClientInquiries(
+    clientId: string,
     filter: PageFilter,
   ): Promise<Page<AgentInquirySummary>>;
   listVisits(

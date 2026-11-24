@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
   Param,
   Post,
   Query,
@@ -33,8 +34,20 @@ import {
 import { parsePageQuery } from '../../shared/page-query.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import { GetInquiryByIdQuery } from '../application/get-inquiry-by-id.js';
-import { ListAgentInquiriesQuery } from '../application/list-agent-inquiries.js';
+import {
+  ListAgentInquiriesQuery,
+  ListClientInquiriesQuery,
+} from '../application/list-agent-inquiries.js';
+import { ReplyInquiryCommand } from '../application/reply-inquiry.js';
 import { SendInquiryCommand } from '../application/send-inquiry.js';
+import { PHONE_PATTERN } from '../domain/inquiry.js';
+
+class ReplyInquiryDto {
+  @IsString()
+  @Matches(/\S/u)
+  @MaxLength(2000)
+  message!: string;
+}
 
 class SendInquiryDto {
   @Matches(uuidPattern)
@@ -52,8 +65,8 @@ class SendInquiryDto {
 
   @ValidateIf((_, value: unknown) => value !== undefined)
   @IsString()
-  @Matches(/\S/u)
-  @MaxLength(30)
+  @Matches(PHONE_PATTERN)
+  @MaxLength(20)
   contactPhone?: string;
 
   @IsString()
@@ -78,7 +91,7 @@ export class InquiriesController {
   ) {}
 
   @Get()
-  @VisitRoles(['AGENT'])
+  @VisitRoles(['AGENT', 'CLIENT'])
   async listInquiries(
     @Req() request: AuthenticatedRequest,
     @Res({ passthrough: true }) response: Response,
@@ -86,8 +99,41 @@ export class InquiriesController {
   ) {
     const filter = parsePageQuery(query, 'createdAt');
     ensureCorrelationId(request, response);
+    // La colección depende de quién llama (rule api-rest): el agente ve su bandeja; el cliente, lo que envió.
+    const { id, roles } = request.principal;
     return this.queries.execute(
-      new ListAgentInquiriesQuery(request.principal.id, filter),
+      roles.includes('AGENT')
+        ? new ListAgentInquiriesQuery(id, filter)
+        : new ListClientInquiriesQuery(id, filter),
+    );
+  }
+
+  @Post(':inquiryId/reply')
+  @HttpCode(200)
+  @VisitRoles(['AGENT'])
+  async replyInquiry(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+    @Param('inquiryId') inquiryId: string,
+    @Headers('idempotency-key') key: string | undefined,
+    @Body() body: ReplyInquiryDto,
+  ) {
+    if (
+      !uuidPattern.test(inquiryId) ||
+      !key ||
+      !uuidPattern.test(key) ||
+      typeof body?.message !== 'string'
+    ) {
+      throw new VisitProblem('VALIDATION_ERROR');
+    }
+    return this.commands.execute(
+      new ReplyInquiryCommand(
+        inquiryId.toLowerCase(),
+        request.principal.id,
+        key.toLowerCase(),
+        body.message,
+        ensureCorrelationId(request, response),
+      ),
     );
   }
 

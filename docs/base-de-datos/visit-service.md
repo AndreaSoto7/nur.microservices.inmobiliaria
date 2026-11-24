@@ -45,6 +45,7 @@ erDiagram
         uuid agent_id
         varchar status "REQUESTED ... REJECTED"
         timestamptz proposed_at "fecha propuesta"
+        varchar proposed_by "CLIENT, AGENT"
         varchar client_note "nullable"
         timestamptz scheduled_start "nullable"
         timestamptz scheduled_end "nullable"
@@ -124,7 +125,9 @@ CREATE TABLE visits (
     agent_id           uuid         NOT NULL,           -- copiado de la snapshot al solicitar
     status             varchar(20)  NOT NULL
                        CHECK (status IN ('REQUESTED', 'SCHEDULED', 'COMPLETED', 'CANCELLED', 'REJECTED')),
-    proposed_at        timestamptz  NOT NULL,           -- fecha que propone el cliente (futura al solicitar)
+    proposed_at        timestamptz  NOT NULL,           -- horario pendiente (futuro al solicitar o proponer)
+    proposed_by        varchar(10)  NOT NULL DEFAULT 'CLIENT'
+                       CHECK (proposed_by IN ('CLIENT', 'AGENT')), -- quién propuso el horario pendiente
     client_note        varchar(500),
     scheduled_start    timestamptz,                     -- fecha y hora que fija el agente
     scheduled_end      timestamptz,                     -- start + duración fija del dominio de 1 h

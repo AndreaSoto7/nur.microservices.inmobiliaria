@@ -24,8 +24,13 @@ const problems: Record<VisitProblemCode, [number, string]> = {
   LEAD_NOT_OPEN: [409, 'La oportunidad debe estar abierta'],
   LEAD_FOLLOW_UP_NOT_FOUND: [404, 'Nota de seguimiento no encontrada'],
   INQUIRY_NOT_FOUND: [404, 'Consulta no encontrada'],
+  INQUIRY_ALREADY_REPLIED: [409, 'La consulta ya tiene respuesta'],
   VISIT_NOT_FOUND: [404, 'Visita no encontrada'],
   VISIT_NOT_REQUESTED: [409, 'La visita debe estar pendiente'],
+  VISIT_NO_AGENT_PROPOSAL: [
+    409,
+    'El agente no propuso otro horario para esta visita',
+  ],
   VISIT_NOT_SCHEDULED: [409, 'La visita debe estar programada'],
   VISIT_COMPLETION_TOO_EARLY: [
     409,

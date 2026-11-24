@@ -1,6 +1,6 @@
 import { Inject } from '@nestjs/common';
 import { Query, QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
-import type { Page } from '../../shared/page.js';
+import type { Page, PageFilter } from '../../shared/page.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import {
   VISIT_REPOSITORY,
@@ -26,6 +26,36 @@ export class ListAgentLeadsHandler implements IQueryHandler<ListAgentLeadsQuery>
 
   execute(query: ListAgentLeadsQuery): Promise<Page<LeadSummary>> {
     return this.visits.listAgentLeads(query.agentId, query.filter);
+  }
+}
+
+export class ListLeadFollowUpsQuery extends Query<Page<LeadFollowUpDetails>> {
+  constructor(
+    readonly leadId: string,
+    readonly agentId: string,
+    readonly filter: PageFilter,
+  ) {
+    super();
+  }
+}
+
+/** Las notas que el agente fue dejando en su oportunidad (antes solo se podía leer una por id). */
+@QueryHandler(ListLeadFollowUpsQuery)
+export class ListLeadFollowUpsHandler implements IQueryHandler<ListLeadFollowUpsQuery> {
+  constructor(
+    @Inject(VISIT_REPOSITORY) private readonly visits: VisitRepository,
+  ) {}
+
+  async execute(
+    query: ListLeadFollowUpsQuery,
+  ): Promise<Page<LeadFollowUpDetails>> {
+    const notes = await this.visits.listLeadFollowUps(
+      query.leadId,
+      query.agentId,
+      query.filter,
+    );
+    if (!notes) throw new VisitProblem('LEAD_NOT_FOUND');
+    return notes;
   }
 }
 

@@ -37,6 +37,7 @@ import { VisitProblem } from '../../shared/visit-problem.js';
 import {
   GetLeadFollowUpQuery,
   ListAgentLeadsQuery,
+  ListLeadFollowUpsQuery,
 } from '../application/lead-queries.js';
 import { CloseLeadCommand } from '../application/close-lead.js';
 import { leadOutcomes, type LeadOutcome } from '../domain/lead.js';
@@ -152,6 +153,28 @@ export class LeadsController {
     );
     response.setHeader('Location', leadFollowUpLocation(id, created.id));
     return created;
+  }
+
+  @Get(':leadId/follow-ups')
+  @VisitRoles(['AGENT'])
+  listFollowUps(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+    @Param('leadId') leadId: string,
+    @Query() query: Record<string, unknown>,
+  ) {
+    if (!uuidPattern.test(leadId) || query.propertyId !== undefined)
+      throw new VisitProblem('VALIDATION_ERROR');
+    const filter = parsePageQuery(query, 'createdAt');
+    // Una conversación se lee de la nota más antigua a la más nueva.
+    const sort = query.sort === undefined ? 'asc' : filter.sort;
+    ensureCorrelationId(request, response);
+    return this.queries.execute(
+      new ListLeadFollowUpsQuery(leadId.toLowerCase(), request.principal.id, {
+        ...filter,
+        sort,
+      }),
+    );
   }
 
   @Get(':leadId/follow-ups/:followUpId')

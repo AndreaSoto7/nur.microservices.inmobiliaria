@@ -4,8 +4,10 @@ import { QueryFailedError, type EntityManager } from 'typeorm';
 import { VisitDatabase } from '../../database/visit-database.js';
 import type {
   AgentInquirySummary,
+  AssignedInquiry,
   Inquiry,
   InquiryDetails,
+  InquiryReply,
 } from '../../inquiries/domain/inquiry.js';
 import {
   Lead,
@@ -32,7 +34,12 @@ import type {
   VisitRepository,
   VisitTransaction,
 } from '../domain/visit.repository.js';
-import { Visit, type VisitSlot, type VisitState } from '../domain/visit.js';
+import {
+  Visit,
+  type VisitProposer,
+  type VisitSlot,
+  type VisitState,
+} from '../domain/visit.js';
 
 type VisitRow = Omit<
   VisitDetails,
@@ -49,7 +56,8 @@ type VisitRow = Omit<
   completedAt: Date | null;
 };
 
-const visitColumns = `id, property_id AS "propertyId", status,
+const visitColumns = `id, property_id AS "propertyId", client_id AS "clientId", status,
+  proposed_by AS "proposedBy",
   (SELECT p.title FROM property_snapshots p WHERE p.property_id = visits.property_id) AS "propertyTitle",
   proposed_at AS "proposedAt", requested_at AS "requestedAt",
   scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd",
@@ -173,17 +181,61 @@ export class PostgresVisits implements VisitRepository {
     return followUp;
   }
 
+  async listLeadFollowUps(
+    leadId: string,
+    agentId: string,
+    filter: PageFilter,
+  ): Promise<Page<LeadFollowUpDetails> | undefined> {
+    const database = await this.database.connect();
+    const [lead] = await database.query<{ id: string }[]>(
+      'SELECT id FROM leads WHERE id = $1 AND agent_id = $2',
+      [leadId, agentId],
+    );
+    if (!lead) return undefined;
+    return this.readPage<LeadFollowUpDetails>(
+      'id, lead_id AS "leadId", note, created_at AS "createdAt"',
+      'FROM lead_follow_ups WHERE lead_id = $1',
+      'created_at',
+      [leadId],
+      filter,
+    );
+  }
+
   listAgentInquiries(
     agentId: string,
     filter: PageFilter,
   ): Promise<Page<AgentInquirySummary>> {
-    return this.readPage<AgentInquirySummary>(
-      'id, property_id AS "propertyId", contact_name AS "contactName", created_at AS "createdAt"',
-      'FROM inquiries WHERE agent_id = $1 AND ($2::uuid IS NULL OR property_id = $2)',
+    return this.readInquiryPage('agent_id', agentId, filter);
+  }
+
+  listClientInquiries(
+    clientId: string,
+    filter: PageFilter,
+  ): Promise<Page<AgentInquirySummary>> {
+    return this.readInquiryPage('client_id', clientId, filter);
+  }
+
+  private async readInquiryPage(
+    owner: 'agent_id' | 'client_id',
+    ownerId: string,
+    filter: PageFilter,
+  ): Promise<Page<AgentInquirySummary>> {
+    type Row = Omit<AgentInquirySummary, 'repliedAt'> & {
+      repliedAt: Date | null;
+    };
+    const { data, page } = await this.readPage<Row>(
+      'id, property_id AS "propertyId", contact_name AS "contactName", created_at AS "createdAt", replied_at AS "repliedAt"',
+      `FROM inquiries WHERE ${owner} = $1 AND ($2::uuid IS NULL OR property_id = $2)`,
       'created_at',
-      [agentId, filter.propertyId ?? null],
+      [ownerId, filter.propertyId ?? null],
       filter,
     );
+    return {
+      data: data.map(({ repliedAt, ...inquiry }) =>
+        repliedAt ? { ...inquiry, repliedAt } : inquiry,
+      ),
+      page,
+    };
   }
 
   async listVisits(
@@ -246,12 +298,18 @@ export class PostgresVisits implements VisitRepository {
     principal: VisitPrincipal,
   ): Promise<InquiryDetails | undefined> {
     const database = await this.database.connect();
-    const [inquiry] = await database.query<
-      (Omit<InquiryDetails, 'contactPhone'> & { contactPhone: string | null })[]
-    >(
+    type InquiryRow = Omit<
+      InquiryDetails,
+      'contactPhone' | 'reply' | 'repliedAt'
+    > & {
+      contactPhone: string | null;
+      reply: string | null;
+      repliedAt: Date | null;
+    };
+    const [inquiry] = await database.query<InquiryRow[]>(
       `SELECT id, property_id AS "propertyId", contact_name AS "contactName",
               contact_email AS "contactEmail", contact_phone AS "contactPhone", message,
-              created_at AS "createdAt"
+              created_at AS "createdAt", reply, replied_at AS "repliedAt"
          FROM inquiries WHERE id = $1
            AND (($3 AND client_id = $2) OR ($4 AND agent_id = $2))`,
       [
@@ -262,8 +320,12 @@ export class PostgresVisits implements VisitRepository {
       ],
     );
     if (!inquiry) return;
-    const { contactPhone, ...details } = inquiry;
-    return contactPhone === null ? details : { ...details, contactPhone };
+    const { contactPhone, reply, repliedAt, ...details } = inquiry;
+    return {
+      ...details,
+      ...(contactPhone === null ? {} : { contactPhone }),
+      ...(reply === null || repliedAt === null ? {} : { reply, repliedAt }),
+    };
   }
 
   async findVisible(
@@ -332,6 +394,29 @@ class PostgresVisitTransaction implements VisitTransaction {
         note ?? null,
         visit.requestedAt,
       ],
+    );
+  }
+
+  async findAssignedInquiry(
+    id: string,
+    agentId: string,
+  ): Promise<AssignedInquiry | undefined> {
+    const [inquiry] = await this.manager.query<
+      (Omit<AssignedInquiry, 'repliedAt'> & { repliedAt: Date | null })[]
+    >(
+      `SELECT id, property_id AS "propertyId", client_id AS "clientId", agent_id AS "agentId",
+              replied_at AS "repliedAt"
+         FROM inquiries WHERE id = $1 AND agent_id = $2 FOR UPDATE`,
+      [id, agentId],
+    );
+    if (!inquiry) return;
+    return { ...inquiry, repliedAt: inquiry.repliedAt ?? undefined };
+  }
+
+  async saveInquiryReply(reply: InquiryReply): Promise<void> {
+    await this.manager.query(
+      'UPDATE inquiries SET reply = $2, replied_at = $3 WHERE id = $1',
+      [reply.inquiryId, reply.message, reply.repliedAt],
     );
   }
 
@@ -419,7 +504,7 @@ class PostgresVisitTransaction implements VisitTransaction {
       event.type === 'LeadFollowUpRegistered' ||
       event.type === 'LeadClosed'
         ? 'Lead'
-        : event.type === 'InquiryReceived'
+        : event.type === 'InquiryReceived' || event.type === 'InquiryReplied'
           ? 'Inquiry'
           : 'Visit';
     const topic = 'visit.' + aggregateType.toLowerCase() + '.events';
@@ -460,6 +545,7 @@ class PostgresVisitTransaction implements VisitTransaction {
     const [row] = await this.manager.query<VisitState[]>(
       `SELECT id, property_id AS "propertyId", client_id AS "clientId", agent_id AS "agentId",
               status, proposed_at AS "proposedAt", requested_at AS "requestedAt",
+              proposed_by AS "proposedBy",
               scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd"
          FROM visits WHERE id = $1
            AND (($3 AND client_id = $2) OR ($4 AND agent_id = $2)) FOR UPDATE`,
@@ -486,11 +572,44 @@ class PostgresVisitTransaction implements VisitTransaction {
     const [row] = await this.manager.query<VisitState[]>(
       `SELECT id, property_id AS "propertyId", client_id AS "clientId", agent_id AS "agentId",
               status, proposed_at AS "proposedAt", requested_at AS "requestedAt",
+              proposed_by AS "proposedBy",
               scheduled_start AS "scheduledStart", scheduled_end AS "scheduledEnd"
         FROM visits WHERE id = $1 AND property_id = $2 FOR UPDATE`,
       [id, source.propertyId],
     );
     return row ? Visit.restore(row) : undefined;
+  }
+
+  async saveProposal(
+    id: string,
+    proposedAt: Date,
+    proposedBy: VisitProposer,
+    now: Date,
+  ): Promise<void> {
+    await this.manager.query(
+      `UPDATE visits SET proposed_at = $2, proposed_by = $3, updated_at = $4, version = version + 1
+        WHERE id = $1`,
+      [id, proposedAt, proposedBy, now],
+    );
+  }
+
+  async findVisitAgentId(id: string): Promise<string | undefined> {
+    const [row] = await this.manager.query<{ agentId: string }[]>(
+      'SELECT agent_id AS "agentId" FROM visits WHERE id = $1',
+      [id],
+    );
+    return row?.agentId;
+  }
+
+  async agentIsBusy(agentId: string, slot: VisitSlot): Promise<boolean> {
+    const [row] = await this.manager.query<{ busy: boolean }[]>(
+      `SELECT EXISTS (
+         SELECT 1 FROM visits WHERE agent_id = $1 AND status = 'SCHEDULED'
+           AND tstzrange(scheduled_start, scheduled_end) && tstzrange($2, $3)
+       ) AS busy`,
+      [agentId, slot.start, slot.end],
+    );
+    return row.busy;
   }
 
   async saveSchedule(id: string, slot: VisitSlot, now: Date): Promise<void> {

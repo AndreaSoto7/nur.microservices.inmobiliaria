@@ -2,6 +2,7 @@ import {
   InvalidProposedVisitDateError,
   InvalidVisitResolutionReasonError,
   Visit,
+  VisitNoAgentProposalError,
   VisitNotRequestedError,
   VisitCancellationTooLateError,
   VisitCompletionTooEarlyError,
@@ -150,5 +151,51 @@ describe('Visit', () => {
     visit.proposedAt.setTime(0);
 
     expect(visit.proposedAt.toISOString()).toBe(originalDate);
+  });
+
+  describe('proposals', () => {
+    const now = new Date('2026-11-24T12:00:00Z');
+    const pending = () =>
+      Visit.request({
+        id: 'visit',
+        propertyId: 'property',
+        clientId: 'client',
+        agentId: 'agent',
+        proposedAt: new Date('2026-11-25T15:00:00Z'),
+        requestedAt: now,
+      });
+
+    it('lets the agent propose another time and the client accept it', () => {
+      const visit = pending();
+      const later = new Date('2026-11-25T17:00:00Z');
+
+      visit.proposeTime('AGENT', later, now);
+      expect(visit.proposedBy).toBe('AGENT');
+      expect(visit.proposedAt).toEqual(later);
+
+      expect(visit.acceptProposal(now)).toEqual({
+        start: later,
+        end: new Date('2026-11-25T18:00:00Z'),
+      });
+      expect(visit.status).toBe('SCHEDULED');
+    });
+
+    it('does not accept a time that the client proposed', () => {
+      const visit = pending();
+      expect(() => visit.acceptProposal(now)).toThrow(
+        VisitNoAgentProposalError,
+      );
+    });
+
+    it('rejects a past time and a visit that is no longer pending', () => {
+      const visit = pending();
+      expect(() =>
+        visit.proposeTime('AGENT', new Date('2026-11-24T11:00:00Z'), now),
+      ).toThrow(InvalidProposedVisitDateError);
+      visit.schedule(new Date('2026-11-25T15:00:00Z'), now);
+      expect(() =>
+        visit.proposeTime('CLIENT', new Date('2026-11-26T15:00:00Z'), now),
+      ).toThrow(VisitNotRequestedError);
+    });
   });
 });
