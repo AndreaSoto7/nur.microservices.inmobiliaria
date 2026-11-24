@@ -41,6 +41,8 @@ import { visitStatuses } from '../domain/visit.js';
 import { RejectVisitCommand } from '../application/reject-visit.js';
 import { RequestVisitCommand } from '../application/request-visit.js';
 import { ScheduleVisitCommand } from '../application/schedule-visit.js';
+import { ProposeVisitTimeCommand } from '../application/propose-visit-time.js';
+import { AcceptVisitProposalCommand } from '../application/accept-visit-proposal.js';
 
 class RequestVisitDto {
   @Matches(uuidPattern)
@@ -60,6 +62,12 @@ class ScheduleVisitDto {
   @Matches(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/)
   @IsISO8601({ strict: true, strictSeparator: true })
   scheduledStart!: string;
+}
+
+class ProposeVisitTimeDto {
+  @Matches(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/)
+  @IsISO8601({ strict: true, strictSeparator: true })
+  proposedAt!: string;
 }
 
 class RejectVisitDto {
@@ -193,6 +201,67 @@ export class VisitsController {
           idempotencyKey: key.toLowerCase(),
         },
         body.reason,
+        ensureCorrelationId(request, response),
+      ),
+    );
+  }
+
+  @Post(':visitId/propose-time')
+  @HttpCode(200)
+  @VisitRoles(['CLIENT', 'AGENT'])
+  async proposeTime(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+    @Param('visitId') visitId: string,
+    @Headers('idempotency-key') key: string | undefined,
+    @Body() body: ProposeVisitTimeDto,
+  ) {
+    if (
+      !uuidPattern.test(visitId) ||
+      !key ||
+      !uuidPattern.test(key) ||
+      typeof body?.proposedAt !== 'string'
+    ) {
+      throw new VisitProblem('VALIDATION_ERROR');
+    }
+    return this.commands.execute(
+      new ProposeVisitTimeCommand(
+        visitId.toLowerCase(),
+        request.principal,
+        key.toLowerCase(),
+        body.proposedAt,
+        ensureCorrelationId(request, response),
+      ),
+    );
+  }
+
+  @Post(':visitId/accept-proposal')
+  @HttpCode(200)
+  @VisitRoles(['CLIENT'])
+  async acceptProposal(
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) response: Response,
+    @Param('visitId') visitId: string,
+    @Headers('idempotency-key') key: string | undefined,
+    @Body() body: unknown,
+  ) {
+    if (
+      !uuidPattern.test(visitId) ||
+      !key ||
+      !uuidPattern.test(key) ||
+      (body !== undefined &&
+        (body === null ||
+          typeof body !== 'object' ||
+          Array.isArray(body) ||
+          Object.keys(body).length !== 0))
+    ) {
+      throw new VisitProblem('VALIDATION_ERROR');
+    }
+    return this.commands.execute(
+      new AcceptVisitProposalCommand(
+        visitId.toLowerCase(),
+        request.principal.id,
+        key.toLowerCase(),
         ensureCorrelationId(request, response),
       ),
     );

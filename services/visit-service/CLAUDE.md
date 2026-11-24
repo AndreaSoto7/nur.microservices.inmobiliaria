@@ -26,8 +26,8 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 
 | Aggregate | Estados | Invariantes del event storming |
 |---|---|---|
-| `Inquiry` | — | Propiedad `PUBLISHED`; mensaje, nombre y correo obligatorios; teléfono opcional |
-| `Visit` | `REQUESTED → SCHEDULED → COMPLETED`; `REQUESTED → REJECTED`; `SCHEDULED → CANCELLED` | Propiedad `PUBLISHED`; fecha propuesta futura; **máx. 1 solicitud pendiente por cliente y propiedad**; **el agente no tiene dos visitas que se crucen**; rechazo con motivo obligatorio; el cliente o agente asignado cancela solo antes de la hora de inicio; el agente asignado completa al llegar o pasar la hora de fin |
+| `Inquiry` | sin respuesta → respondida | Propiedad `PUBLISHED`; mensaje, nombre y correo obligatorios; teléfono opcional (dígitos con `+`, espacios, guiones o paréntesis; 7 a 15 dígitos); **una sola respuesta, del agente asignado** |
+| `Visit` | `REQUESTED → SCHEDULED → COMPLETED`; `REQUESTED → REJECTED`; `SCHEDULED → CANCELLED`. Mientras está `REQUESTED`, el horario puede ir y venir (`proposedBy` `CLIENT` o `AGENT`) | Propiedad `PUBLISHED`; fecha propuesta futura; **máx. 1 solicitud pendiente por cliente y propiedad**; **el agente no tiene dos visitas que se crucen** (tampoco al proponer un horario); el cliente solo acepta una propuesta del agente; rechazo con motivo obligatorio; el cliente o agente asignado cancela solo antes de la hora de inicio; el agente asignado completa al llegar o pasar la hora de fin |
 | `Lead` (oportunidad) | `OPEN → CLOSED` (`WON` o `LOST`) | Una sola abierta por cliente y propiedad; seguimiento solo del agente asignado, con nota, y si está abierta; resultado obligatorio al cerrar |
 
 Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es entidad hija de `Lead`.
@@ -39,8 +39,11 @@ Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es 
 | Diagrama | Comando o consulta | Evento |
 |---|---|---|
 | `sendConsultationCommand` | `SendInquiryCommand` | `InquiryReceived` |
+| — | `ReplyInquiryCommand` (agente asignado, una vez) | `InquiryReplied` (lo consume notification) |
 | `requestVisitCommand` | `RequestVisitCommand` | `VisitRequested` |
-| `programVisitCommand` | `ScheduleVisitCommand` | `VisitScheduled` |
+| `programVisitCommand` | `ScheduleVisitCommand` | `VisitScheduled` (`actor: AGENT`) |
+| — | `ProposeVisitTimeCommand` (agente asignado o cliente dueño, con la visita `REQUESTED`) | `VisitTimeProposed` |
+| — | `AcceptVisitProposalCommand` (cliente dueño, si el último horario lo propuso el agente) | `VisitScheduled` (`actor: CLIENT`) |
 | `declineVisitCommand` | `RejectVisitCommand` | `VisitRejected` |
 | `cancelVisitCommand` | `CancelVisitCommand` | `VisitCancelled` |
 | `registerVisitConcludedCommand` | `CompleteVisitCommand` | `VisitCompleted` |
@@ -49,14 +52,14 @@ Toda transición inválida lanza un error de dominio → 409. `LeadFollowUp` es 
 | `closeOportunityCommand` | `CloseLeadCommand` | `LeadClosed` (lo consume listing) |
 | — | `GetInquiryByIdQuery` (cliente dueño o agente asignado) | — |
 | — | `GetVisitByIdQuery` (cliente dueño o agente asignado) | — |
-| — | `GetLeadFollowUpQuery` (agente asignado) | — |
-| — | `ListVisitsQuery` (por rol), `ListAgentInquiriesQuery`, `ListAgentLeadsQuery` | — |
+| — | `GetLeadFollowUpQuery`, `ListLeadFollowUpsQuery` (agente asignado) | — |
+| — | `ListVisitsQuery` (por rol), `ListAgentInquiriesQuery` / `ListClientInquiriesQuery` (`GET /inquiries` según el rol), `ListAgentLeadsQuery` | — |
 
 `VisitRejected` lleva `reason` obligatorio y `actor` (`AGENT` o `SYSTEM`). `VisitCancelled` lleva `reason` (puede ser `null`) y `actor` (`CLIENT`, `AGENT` o `SYSTEM`). `LeadClosed` lleva `propertyId`, `agentId`, `clientId` y `outcome`.
 
 ## Eventos y políticas
 
-- **Publica** con outbox, clave = id del aggregate. Catálogo en `contracts/events/README.md`. Visit ya genera `InquiryReceived`, `VisitRequested`, `LeadOpened`, `VisitScheduled`, `VisitRejected`, `VisitCancelled`, `VisitCompleted`, `LeadFollowUpRegistered` y `LeadClosed`.
+- **Publica** con outbox, clave = id del aggregate. Catálogo en `contracts/events/README.md`. Visit ya genera `InquiryReceived`, `InquiryReplied`, `VisitRequested`, `LeadOpened`, `VisitTimeProposed`, `VisitScheduled`, `VisitRejected`, `VisitCancelled`, `VisitCompleted`, `LeadFollowUpRegistered` y `LeadClosed`.
 - **Consume** `listing.property.events` (consumer group `visit-service`, desde el principio, idempotente con `processed_events`):
   1. **Copia local:** upsert de `PropertySnapshot` solo si `occurredAt` es más nuevo que el último aplicado.
   2. **Política 3.2 — `PropertyReserved`:** `RejectVisitCommand` por cada visita `REQUESTED` de la propiedad, con `reason: PROPERTY_RESERVED` y `actor: SYSTEM`. Las `SCHEDULED` se mantienen.

@@ -89,6 +89,7 @@ export class ScheduleVisitHandler implements ICommandHandler<ScheduleVisitComman
           agentId,
           scheduledStart,
           scheduledEnd,
+          actor: 'AGENT',
         },
       });
       const result: ScheduledVisit = {

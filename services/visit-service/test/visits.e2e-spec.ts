@@ -137,6 +137,147 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     else process.env.JWT_JWKS_URL = previousJwksUrl;
   });
 
+  it('the agent proposes another time when the request clashes, and the client accepts it', async () => {
+    const http = request(app.getHttpServer());
+    const proposalPropertyId = randomUUID();
+    await database.query(
+      `INSERT INTO property_snapshots
+        (property_id, agent_id, title, zone, operation_type, status, last_event_at, updated_at)
+       VALUES ($1,$2,'Casa con patio','Norte','SALE','PUBLISHED',now(),now())`,
+      [proposalPropertyId, agentId],
+    );
+    const busyStart = new Date(Date.now() + 120 * 3600_000);
+    busyStart.setUTCMinutes(0, 0, 0);
+    const busyEnd = new Date(busyStart.getTime() + 3600_000);
+    const pendingId = randomUUID();
+    await database.query(
+      `INSERT INTO visits
+         (id, property_id, client_id, agent_id, status, proposed_at, requested_at, scheduled_start, scheduled_end, updated_at)
+       VALUES ($1,$2,$3,$4,'SCHEDULED',$5,now(),$5,$6,now()),
+              ($7,$2,$8,$4,'REQUESTED',$5,now(),NULL,NULL,now())`,
+      [
+        randomUUID(),
+        proposalPropertyId,
+        randomUUID(),
+        agentId,
+        busyStart,
+        busyEnd,
+        pendingId,
+        clientId,
+      ],
+    );
+    const propose = (token: string, at: string, key = randomUUID()) =>
+      http
+        .post(path + '/' + pendingId + '/propose-time')
+        .auth(token, { type: 'bearer' })
+        .set('Idempotency-Key', key)
+        .send({ proposedAt: at });
+    const accept = (token: string, key = randomUUID()) =>
+      http
+        .post(path + '/' + pendingId + '/accept-proposal')
+        .auth(token, { type: 'bearer' })
+        .set('Idempotency-Key', key)
+        .send();
+
+    const later = busyEnd.toISOString();
+    await propose(otherAgentToken, later).expect(404);
+    await propose(agentToken, '2020-01-01T00:00:00Z')
+      .expect(409)
+      .expect(/VISIT_INVALID_PROPOSED_DATE/);
+    await propose(agentToken, busyStart.toISOString())
+      .expect(409)
+      .expect(/VISIT_SCHEDULE_CONFLICT/);
+    const proposed = await propose(agentToken, later).expect(200);
+    expect(proposed.body).toEqual({
+      id: pendingId,
+      status: 'REQUESTED',
+      proposedAt: later,
+      proposedBy: 'AGENT',
+    });
+    const detail = await http
+      .get(path + '/' + pendingId)
+      .auth(clientToken, { type: 'bearer' })
+      .expect(200);
+    expect(detail.body).toMatchObject({
+      clientId,
+      proposedAt: later,
+      proposedBy: 'AGENT',
+      status: 'REQUESTED',
+    });
+
+    await accept(agentToken).expect(403);
+    const accepted = await accept(clientToken).expect(200);
+    expect(accepted.body).toEqual({
+      id: pendingId,
+      status: 'SCHEDULED',
+      scheduledStart: later,
+      scheduledEnd: new Date(busyEnd.getTime() + 3600_000).toISOString(),
+    });
+    await accept(clientToken)
+      .expect(409)
+      .expect(/VISIT_NOT_REQUESTED/);
+
+    const events = await database.query<
+      { envelope: { eventType: string; payload: Record<string, unknown> } }[]
+    >(
+      "SELECT envelope FROM outbox WHERE aggregate_id = $1 AND envelope->>'eventType' IN ('VisitTimeProposed', 'VisitScheduled') ORDER BY created_at",
+      [pendingId],
+    );
+    expect(events.map(({ envelope }) => envelope.eventType)).toEqual([
+      'VisitTimeProposed',
+      'VisitScheduled',
+    ]);
+    const schemaPath = new URL(
+      '../../../contracts/events/visit/visit-time-proposed.v1.schema.json',
+      import.meta.url,
+    );
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as object;
+    const validate = addFormats.default(new Ajv2020()).compile(schema);
+    expect(validate(events[0].envelope.payload)).toBe(true);
+    expect(events[0].envelope.payload).toMatchObject({
+      proposedAt: later,
+      proposedBy: 'AGENT',
+      clientId,
+      agentId,
+    });
+    expect(events[1].envelope.payload).toMatchObject({ actor: 'CLIENT' });
+  });
+
+  it('the client can counter-propose, but cannot accept their own proposal', async () => {
+    const http = request(app.getHttpServer());
+    const counterPropertyId = randomUUID();
+    await database.query(
+      `INSERT INTO property_snapshots
+        (property_id, agent_id, title, zone, operation_type, status, last_event_at, updated_at)
+       VALUES ($1,$2,'Depto','Centro','RENT','PUBLISHED',now(),now())`,
+      [counterPropertyId, agentId],
+    );
+    const id = randomUUID();
+    await database.query(
+      `INSERT INTO visits (id, property_id, client_id, agent_id, status, proposed_at, requested_at, updated_at)
+        VALUES ($1,$2,$3,$4,'REQUESTED',$5,now(),now())`,
+      [id, counterPropertyId, clientId, agentId, body.proposedAt],
+    );
+    const at = new Date(Date.now() + 200 * 3600_000).toISOString();
+    const proposed = await http
+      .post(path + '/' + id + '/propose-time')
+      .auth(clientToken, { type: 'bearer' })
+      .set('Idempotency-Key', randomUUID())
+      .send({ proposedAt: at })
+      .expect(200);
+    expect(proposed.body).toMatchObject({
+      proposedBy: 'CLIENT',
+      proposedAt: at,
+    });
+    await http
+      .post(path + '/' + id + '/accept-proposal')
+      .auth(clientToken, { type: 'bearer' })
+      .set('Idempotency-Key', randomUUID())
+      .send()
+      .expect(409)
+      .expect(/VISIT_NO_AGENT_PROPOSAL/);
+  });
+
   it('returns the property title from the local copy, even if it is no longer published', async () => {
     const id = randomUUID();
     const now = new Date();
@@ -687,6 +828,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     await send({ ...payload, contactName: '  ' }).expect(400);
     await send({ ...payload, contactEmail: 'no-es-correo' }).expect(400);
     await send({ ...payload, contactPhone: null }).expect(400);
+    await send({ ...payload, contactPhone: 'sin teléfono' }).expect(400);
     await send({ ...payload, message: 'Consulta\0' }).expect(400);
     await send({ ...payload, propertyId: pausedPropertyId })
       .expect(409)
@@ -798,6 +940,98 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     });
   });
 
+  it('the assigned agent replies once and the client sees the reply in their inquiries', async () => {
+    const http = request(app.getHttpServer());
+    const inquiryPath = '/api/v1/inquiries';
+    const sent = await http
+      .post(inquiryPath)
+      .auth(clientToken, { type: 'bearer' })
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        propertyId: inquiryPropertyId,
+        contactName: 'María Pérez',
+        contactEmail: 'maria@example.com',
+        message: '¿Cuánto es la garantía?',
+      })
+      .expect(201);
+    const { id } = sent.body as { id: string };
+    const replyPath = inquiryPath + '/' + id + '/reply';
+    const reply = (
+      message: string,
+      token: string = agentToken,
+      key: string = randomUUID(),
+    ) =>
+      http
+        .post(replyPath)
+        .auth(token, { type: 'bearer' })
+        .set('Idempotency-Key', key)
+        .send({ message });
+
+    await reply('Un mes.', clientToken).expect(403);
+    await reply('Un mes.', otherAgentToken)
+      .expect(404)
+      .expect(/INQUIRY_NOT_FOUND/);
+    await reply('   ').expect(400);
+    const key = randomUUID();
+    const [first, replay] = await Promise.all([
+      reply('La garantía es de un mes.', agentToken, key).expect(200),
+      reply('La garantía es de un mes.', agentToken, key).expect(200),
+    ]);
+    expect(first.body).toEqual({ id });
+    expect(replay.body).toEqual({ id });
+    await reply('Otra respuesta.')
+      .expect(409)
+      .expect(/INQUIRY_ALREADY_REPLIED/);
+
+    const detail = await http
+      .get(inquiryPath + '/' + id)
+      .auth(clientToken, { type: 'bearer' })
+      .expect(200);
+    expect(detail.body).toMatchObject({
+      reply: 'La garantía es de un mes.',
+      repliedAt: expect.any(String),
+    });
+    const mine = await http
+      .get(inquiryPath)
+      .auth(clientToken, { type: 'bearer' })
+      .expect(200);
+    const row = (
+      mine.body as { data: { id: string; repliedAt?: string }[] }
+    ).data.find((inquiry) => inquiry.id === id);
+    expect(row?.repliedAt).toEqual(expect.any(String));
+    const otherClients = await http
+      .get(inquiryPath)
+      .auth(otherToken, { type: 'bearer' })
+      .expect(200);
+    expect(
+      (otherClients.body as { data: { id: string }[] }).data.map(
+        (inquiry) => inquiry.id,
+      ),
+    ).not.toContain(id);
+
+    const events = await database.query<
+      { topic: string; envelope: { payload: unknown } }[]
+    >(
+      "SELECT topic, envelope FROM outbox WHERE aggregate_id = $1 AND envelope->>'eventType' = 'InquiryReplied'",
+      [id],
+    );
+    expect(events).toHaveLength(1);
+    const schemaPath = new URL(
+      '../../../contracts/events/visit/inquiry-replied.v1.schema.json',
+      import.meta.url,
+    );
+    const schema = JSON.parse(readFileSync(schemaPath, 'utf8')) as object;
+    const validate = addFormats.default(new Ajv2020()).compile(schema);
+    expect(events[0].topic).toBe('visit.inquiry.events');
+    expect(validate(events[0].envelope.payload)).toBe(true);
+    expect(events[0].envelope.payload).toEqual({
+      inquiryId: id,
+      propertyId: inquiryPropertyId,
+      clientId,
+      agentId,
+    });
+  });
+
   it("paginates and sorts the inquiry inbox without exposing another agent's inquiries", async () => {
     const ids = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
     const tied = ids.slice(0, 2).sort();
@@ -818,7 +1052,11 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     const list = (token: string, query: object) =>
       http.get(endpoint).auth(token, { type: 'bearer' }).query(query);
     await http.get(endpoint).expect(401);
-    await list(clientToken, { propertyId: inboxPropertyId }).expect(403);
+    // Un cliente lista lo que él envió: nunca la bandeja de un agente.
+    const asOtherClient = await list(otherToken, {
+      propertyId: inboxPropertyId,
+    }).expect(200);
+    expect((asOtherClient.body as { data: unknown[] }).data).toEqual([]);
     const first = await list(agentToken, {
       propertyId: inboxPropertyId,
       size: 1,
@@ -1059,6 +1297,23 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
       .auth(otherAgentToken, { type: 'bearer' })
       .expect(404);
     await http.get(location).auth(clientToken, { type: 'bearer' }).expect(403);
+    const notes = await http
+      .get(endpoint + '/' + open + '/follow-ups')
+      .auth(agentToken, { type: 'bearer' })
+      .expect(200);
+    expect(notes.body).toEqual({
+      data: [{ id, leadId: open, note, createdAt: expect.any(String) }],
+      page: { number: 1, size: 20, totalElements: 1, totalPages: 1 },
+    });
+    await http
+      .get(endpoint + '/' + open + '/follow-ups')
+      .auth(otherAgentToken, { type: 'bearer' })
+      .expect(404)
+      .expect(/LEAD_NOT_FOUND/);
+    await http
+      .get(endpoint + '/' + open + '/follow-ups?sort=openedAt,asc')
+      .auth(agentToken, { type: 'bearer' })
+      .expect(400);
     await http
       .get(endpoint + '/' + closed + '/follow-ups/' + id)
       .auth(agentToken, { type: 'bearer' })
