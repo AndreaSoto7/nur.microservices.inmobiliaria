@@ -10,16 +10,19 @@ import com.inmobiliaria.listing.application.command.PausePropertyHandler;
 import com.inmobiliaria.listing.application.command.PropertyCommandSupport;
 import com.inmobiliaria.listing.application.command.PublishPropertyHandler;
 import com.inmobiliaria.listing.application.command.RebuildCatalogHandler;
+import com.inmobiliaria.listing.application.command.RemovePropertyImageHandler;
 import com.inmobiliaria.listing.application.command.ReleaseReservationHandler;
 import com.inmobiliaria.listing.application.command.RemoveFavoriteHandler;
 import com.inmobiliaria.listing.application.command.ReservePropertyHandler;
 import com.inmobiliaria.listing.application.command.UpdatePropertyCharacteristicsHandler;
 import com.inmobiliaria.listing.application.policy.ReserveOnLeadWonPolicy;
+import com.inmobiliaria.listing.application.policy.TrackScheduledVisitsPolicy;
 import com.inmobiliaria.listing.application.port.CatalogProjection;
 import com.inmobiliaria.listing.application.port.Clock;
 import com.inmobiliaria.listing.application.port.EventPublisher;
 import com.inmobiliaria.listing.application.port.ImageStorage;
 import com.inmobiliaria.listing.application.port.ProcessedEventStore;
+import com.inmobiliaria.listing.application.port.ScheduledVisits;
 import com.inmobiliaria.listing.application.query.CatalogReadModel;
 import com.inmobiliaria.listing.application.query.GetCatalogPropertyHandler;
 import com.inmobiliaria.listing.application.query.GetPropertyByIdHandler;
@@ -67,8 +70,8 @@ public class ApplicationConfig {
     }
 
     @Bean
-    PausePropertyHandler pausePropertyHandler(PropertyCommandSupport support) {
-        return new PausePropertyHandler(support);
+    PausePropertyHandler pausePropertyHandler(PropertyCommandSupport support, ScheduledVisits scheduledVisits) {
+        return new PausePropertyHandler(support, scheduledVisits);
     }
 
     @Bean
@@ -94,6 +97,11 @@ public class ApplicationConfig {
     @Bean
     AddPropertyImagesHandler addPropertyImagesHandler(PropertyCommandSupport support, ImageStorage storage) {
         return new AddPropertyImagesHandler(support, storage);
+    }
+
+    @Bean
+    RemovePropertyImageHandler removePropertyImageHandler(PropertyCommandSupport support, ImageStorage storage) {
+        return new RemovePropertyImageHandler(support, storage);
     }
 
     @Bean
@@ -145,5 +153,11 @@ public class ApplicationConfig {
     @Bean
     GetPropertyImageHandler getPropertyImageHandler(PropertyReadModel readModel, ImageStorage storage) {
         return new GetPropertyImageHandler(readModel, storage);
+    }
+
+    @Bean
+    TrackScheduledVisitsPolicy trackScheduledVisitsPolicy(ProcessedEventStore processedEvents,
+            ScheduledVisits scheduledVisits) {
+        return new TrackScheduledVisitsPolicy(processedEvents, scheduledVisits);
     }
 }

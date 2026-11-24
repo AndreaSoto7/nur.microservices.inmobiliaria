@@ -8,6 +8,8 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | No se pausa una propiedad con visitas confirmadas: listing consume `visit.visit.events` y lleva `scheduled_visits` (ADR 0008). Migración `V20261124_1200` | _(pendiente)_ |
+| feat | Mapa del catálogo y búsqueda: `zone` busca parte del nombre sin mayúsculas ni tildes (`uru` → Urubó), el resumen trae `latitude`/`longitude`, el dueño ve las fotos de un borrador con su token y puede quitar una foto (`DELETE …/images/{imageId}`). Migración `V20261123_1200` | _(pendiente)_ |
 | refactor | Nombres alineados con el lenguaje ubicuo: `isSoldOrRented()` (antes `isClosed`, término de `Lead`), `isVisibleInCatalog()`, `Amenity` para los extras y `updateCharacteristics(...)` / `UpdatePropertyCharacteristicsCommand`, `Favorite.add(...)`, `LeadClosed` (antes `LeadClosedNotification`) y `reconstitute` en los dos aggregates. Sin cambios de contrato ni de base | #90 |
 | feat | Comando de mantenimiento para reconstruir `property_catalog` desde `properties` (`CATALOG_REBUILD_ON_STARTUP=true`) | #70 |
 | feat | Agregar fotos a una propiedad publicada o reservada publica `PropertyUpdated` (un solo evento por comando), así visit tiene la galería al día | #67 |

@@ -13,7 +13,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 | API | `contracts/openapi/listing-service.yaml` · Swagger UI en `/docs` |
 | Rutas del gateway | `/api/v1/properties/**`, `/api/v1/favorites/**`, `/api/v1/catalog/**` (público) |
 | Publica | `listing.property.events` |
-| Consume | `visit.lead.events` (`LeadClosed`) |
+| Consume | `visit.lead.events` (`LeadClosed`) y `visit.visit.events` (visitas confirmadas, ADR 0008) |
 | Progreso | [`docs/progreso/listing-service.md`](../../docs/progreso/listing-service.md) |
 | Decisiones | ADR 0003 (favoritos aquí), ADR 0005 (catálogo aquí y política `LeadClosed`) |
 
@@ -48,12 +48,13 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 | `registerPropertiesCommand` | `UpdatePropertyCharacteristicsCommand` | Dormitorios y baños ≥ 0, superficie > 0, extras válidos | interno; `PropertyUpdated` si está publicada o reservada |
 | `publishListingCommand` | `PublishPropertyCommand` | Desde `DRAFT` o `PAUSED`; al menos 1 foto; datos completos | `PropertyPublished` |
 | `editListingCommand` | `EditPropertyCommand` | Solo el agente dueño; no si está vendida o alquilada | `PropertyUpdated` si está publicada o reservada |
-| `pauseListingCommand` | `PausePropertyCommand` | Solo si está `PUBLISHED` | `PropertyPaused` |
+| `pauseListingCommand` | `PausePropertyCommand` | Solo si está `PUBLISHED` y sin visitas confirmadas que no terminaron (`PROPERTY_HAS_SCHEDULED_VISITS`, ADR 0008) | `PropertyPaused` |
 | `reserveListingCommand` | `ReservePropertyCommand` | Solo si está `PUBLISHED` | `PropertyReserved` |
 | `cancelListingCommand` | `ReleaseReservationCommand` | Solo si está `RESERVED`; vuelve a `PUBLISHED` | `PropertyPublished` |
 | `buyListingCommand` | `MarkPropertySoldCommand` | Solo `SALE`, desde `PUBLISHED` o `RESERVED`; irreversible | `PropertySold` |
 | `rentListingCommand` | `MarkPropertyRentedCommand` | Solo `RENT`, desde `PUBLISHED` o `RESERVED` | `PropertyRented` |
 | `updateGalleryCommand` | `AddPropertyImagesCommand` | Solo el dueño; JPG/PNG; máx. 5; no si está vendida o alquilada | `PropertyImagesAdded` (interno); `PropertyUpdated` si está publicada o reservada |
+| `updateGalleryCommand` | `RemovePropertyImageCommand` | Solo el dueño; no si está vendida o alquilada; una publicada o reservada no se queda sin fotos (`PROPERTY_LAST_IMAGE`); las demás suben de posición | `PropertyImageRemoved` (interno); `PropertyUpdated` si está publicada o reservada |
 | — | `AddFavoriteCommand` / `RemoveFavoriteCommand` | Solo propiedades `PUBLISHED`; sin repetir | — |
 | — | `ListAgentPropertiesQuery`, `GetPropertyByIdQuery` | El agente ve las suyas en todos los estados | — |
 | — | `SearchCatalogQuery`, `GetCatalogPropertyQuery` | Público; solo `PUBLISHED` y `RESERVED` | — |
@@ -63,6 +64,7 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 
 - **Publica** en `listing.property.events` (clave `propertyId`, retención infinita) con outbox: `PropertyPublished`, `PropertyUpdated`, `PropertyPaused`, `PropertyReserved`, `PropertySold`, `PropertyRented`. Los payloads llevan lo que visit necesita (`agentId`, `status`, `operationType`, `title`, `zone`) para no llamar por HTTP. Schemas: `contracts/events/listing/property-*.v1.schema.json`. `PropertyPublished` y `PropertyUpdated` llevan el estado completo; `PropertyPaused`, `PropertyReserved` (con `actor`: `AGENT` o `SYSTEM`), `PropertySold` y `PropertyRented`, solo el cambio de estado. `PropertyPublished` lleva `previousStatus`.
 - **Consume** `visit.lead.events` (consumer group `listing-service`, desde el principio, idempotente con `processed_events`).
+- **Consume** `visit.visit.events` (mismo grupo) para la copia local `scheduled_visits`: `VisitScheduled` la agrega, `VisitCancelled` y `VisitCompleted` la quitan (`VisitEventTranslator` → `TrackScheduledVisitsPolicy`). Solo la lee `PausePropertyHandler` (ADR 0008).
 
 ### Política: una oportunidad ganada reserva la propiedad (ADR 0005, 3.1)
 
@@ -76,8 +78,9 @@ Máquina de estados (toda otra transición lanza un error de dominio → 409):
 ## CQRS: catálogo público
 
 - El lado comando es el aggregate `Property`. El lado consulta es la tabla `property_catalog`, una proyección desnormalizada que se actualiza **en la misma transacción** que cada comando (upsert al publicar, editar o reservar; borrado al pausar, vender o alquilar).
-- Endpoints públicos (detalle en el OpenAPI): `GET /api/v1/catalog/properties` con filtros `zone` (sin distinguir mayúsculas), `type`, `operation`, `minPrice`, `maxPrice`, `bedrooms` (mínimo), `features` (todas las pedidas), paginación y orden por `price`, `publishedAt`, `areaM2` o `bedrooms`, y `GET /api/v1/catalog/properties/{propertyId}`.
-- Los filtros se arman con un **Builder** (`CatalogCriteria`) y se traducen a SQL con **Specification** (`CatalogSqlSpecifications`). La proyección la escribe `JdbcCatalogProjection` (puerto `CatalogProjection`) y la lee `JdbcCatalogReadModel`.
+- Endpoints públicos (detalle en el OpenAPI): `GET /api/v1/catalog/properties` con filtros `zone` (parte del nombre, sin distinguir mayúsculas ni tildes: `uru` encuentra Urubó; la palabra `zona` al principio se ignora), `type`, `operation`, `minPrice`, `maxPrice`, `bedrooms` (mínimo), `features` (todas las pedidas), paginación y orden por `price`, `publishedAt`, `areaM2` o `bedrooms`, y `GET /api/v1/catalog/properties/{propertyId}`.
+- Los filtros se arman con un **Builder** (`CatalogCriteria`) y se traducen a SQL con **Specification** (`CatalogSqlSpecifications`). La zona se compara con `LIKE` sobre `zone_normalized`, que la proyección guarda con `SearchText` (minúsculas, sin tildes, un espacio entre palabras); el `%` o `_` que escribe la persona se escapa.
+- El resumen (`PropertySummary`) lleva `latitude` y `longitude` para el mapa del catálogo; son `null` si el agente no marcó la ubicación. La proyección la escribe `JdbcCatalogProjection` (puerto `CatalogProjection`) y la lee `JdbcCatalogReadModel`.
 - La proyección es descartable: `RebuildCatalogHandler` la vacía y la vuelve a llenar desde `properties` en una transacción, sin publicar eventos. Se dispara al arrancar con `CATALOG_REBUILD_ON_STARTUP=true` (`CatalogRebuildRunner`); no tiene endpoint para no tocar el contrato público.
 
 ## Estructura (paquete base `com.inmobiliaria.listing`)
@@ -95,8 +98,10 @@ application/
   query/          SearchCatalogQuery, ListAgentPropertiesQuery, ...; CatalogReadModel y PropertyReadModel (puertos)
   policy/         ReserveOnLeadWonPolicy y LeadClosed (evento ya traducido) (reacciona a LeadClosed)
   port/           EventPublisher, CatalogProjection, ImageStorage, ProcessedEventStore, Clock
-  common/         CommandMetadata (actor, usuario, correlationId, causationId), PageRequest, PageResult, ImageUrls
-  exception/      PropertyNotFoundException (404), NotPropertyOwnerException (403), FavoriteNotFoundException (404)
+  common/         CommandMetadata (actor, usuario, correlationId, causationId), PageRequest, PageResult, ImageUrls,
+                  SearchText (texto comparable para buscar: sin tildes ni mayúsculas)
+  exception/      PropertyNotFoundException (404), NotPropertyOwnerException (403), FavoriteNotFoundException (404),
+                  PropertyImageNotFoundException (404)
 infrastructure/
   persistence/    *JpaEntity, PropertyMapper, JpaPropertyRepository, JpaFavoriteRepository,
                   JdbcCatalogProjection, JdbcCatalogReadModel, JdbcPropertyReadModel, CatalogSqlSpecifications
@@ -120,7 +125,7 @@ presentation/
 - **Errores:** `ProblemDetail` de Spring 6+ con `code` y `correlationId`.
 - **Seguridad:** `spring-boot-starter-oauth2-resource-server` con `jwk-set-uri` hacia identity; roles del claim `roles`. Configurar el decoder para aceptar `typ=at+jwt` y rechazar `rt+jwt`.
 - **Kafka:** `spring-kafka`. El `OutboxRelay` publica con `KafkaTemplate` y clave `aggregateId`.
-- **Imágenes:** `POST /api/v1/properties/{id}/images` (multipart, campo `files`) → puerto `ImageStorage` (Adapter). `GET /api/v1/properties/{id}/images/{imageId}` es público y responde 404 si la propiedad está en `DRAFT` o `PAUSED`. El MIME real se detecta por magic bytes (JPG o PNG) y el límite es 5 MB por imagen (rule `seguridad`). Los archivos van a `IMAGE_STORAGE_DIR` (en Docker, el volumen `listing-images`, compartido entre réplicas) con nombre `{propertyId}/{imageId}.{jpg|png}`.
+- **Imágenes:** `POST /api/v1/properties/{id}/images` (multipart, campo `files`) → puerto `ImageStorage` (Adapter). `GET /api/v1/properties/{id}/images/{imageId}` es público y responde 404 si la propiedad está en `DRAFT` o `PAUSED`, salvo para el agente dueño con su token (así revisa las fotos antes de publicar; esa respuesta va con `Cache-Control: private, no-store`). `DELETE` en la misma ruta quita la foto (solo el dueño) y borra el archivo recién cuando la transacción confirma. El MIME real se detecta por magic bytes (JPG o PNG) y el límite es 5 MB por imagen (rule `seguridad`). Los archivos van a `IMAGE_STORAGE_DIR` (en Docker, el volumen `listing-images`, compartido entre réplicas) con nombre `{propertyId}/{imageId}.{jpg|png}`.
 - **Consumidor:** 3 intentos con backoff exponencial y luego `visit.lead.events.dlq`. Un mensaje ilegible va directo a la DLQ. `OUTBOX_RELAY_ENABLED` y `KAFKA_CONSUMER_ENABLED` permiten correr sin Kafka en local.
 - **OpenAPI:** `springdoc-openapi` en `/docs` (JSON en `/v3/api-docs`), igual a `contracts/openapi/listing-service.yaml`.
 

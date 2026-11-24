@@ -14,6 +14,8 @@ public record PropertySummaryResponse(
         String status,
         MoneyDto price,
         String zone,
+        BigDecimal latitude,
+        BigDecimal longitude,
         Integer bedrooms,
         Integer bathrooms,
         BigDecimal areaM2,
@@ -24,7 +26,8 @@ public record PropertySummaryResponse(
 
     public static PropertySummaryResponse from(PropertySummaryView v) {
         return new PropertySummaryResponse(v.id(), v.title(), v.propertyType(), v.operationType(), v.status(),
-                new MoneyDto(v.priceAmount(), v.priceCurrency()), v.zone(), v.bedrooms(), v.bathrooms(),
-                v.areaM2(), v.features(), v.coverImageUrl(), v.publishedAt(), v.updatedAt());
+                new MoneyDto(v.priceAmount(), v.priceCurrency()), v.zone(), v.latitude(), v.longitude(),
+                v.bedrooms(), v.bathrooms(), v.areaM2(), v.features(), v.coverImageUrl(), v.publishedAt(),
+                v.updatedAt());
     }
 }

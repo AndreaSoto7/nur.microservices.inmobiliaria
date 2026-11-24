@@ -66,7 +66,9 @@ erDiagram
         varchar status "PUBLISHED, RESERVED"
         numeric price_amount
         varchar zone
-        varchar zone_normalized "minúsculas"
+        varchar zone_normalized "minúsculas, sin tildes"
+        numeric latitude "nullable"
+        numeric longitude "nullable"
         smallint bedrooms
         smallint bathrooms
         numeric area_m2
@@ -156,7 +158,9 @@ CREATE TABLE property_catalog (
     status           varchar(20)   NOT NULL CHECK (status IN ('PUBLISHED', 'RESERVED')),
     price_amount     numeric(14,2) NOT NULL,
     zone             varchar(100)  NOT NULL,
-    zone_normalized  varchar(100)  NOT NULL,               -- lower(trim(zone)): filtro sin distinguir mayúsculas
+    zone_normalized  varchar(100)  NOT NULL,               -- SearchText: minúsculas y sin tildes; LIKE '%uru%'
+    latitude         numeric(9,6),                         -- para el mapa del catálogo (las dos o ninguna)
+    longitude        numeric(9,6),
     bedrooms         smallint      NOT NULL,
     bathrooms        smallint      NOT NULL,
     area_m2          numeric(10,2) NOT NULL,
@@ -168,6 +172,8 @@ CREATE TABLE property_catalog (
 CREATE INDEX property_catalog_filter_idx   ON property_catalog (operation_type, property_type, price_amount);
 CREATE INDEX property_catalog_zone_idx     ON property_catalog (zone_normalized);
 CREATE INDEX property_catalog_features_idx ON property_catalog USING gin (features);
+-- latitude y longitude llegaron después (V20261123_1200), con el CHECK de rango y de "las dos o ninguna".
+-- El índice de zone_normalized no sirve para LIKE '%…%'; con pocas filas no hace falta pg_trgm.
 
 -- ─── Mensajería ─────────────────────────────────────────────────────────────
 -- outbox y processed_events: ver docs/base-de-datos/README.md

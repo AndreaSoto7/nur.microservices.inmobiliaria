@@ -12,6 +12,7 @@ import com.inmobiliaria.listing.domain.model.PropertyStatus;
 import com.inmobiliaria.listing.domain.model.PropertyType;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -64,13 +65,20 @@ final class PropertyMapper {
         e.features.retainAll(features);
         e.features.addAll(features);
 
-        Set<java.util.UUID> known = e.images.stream().map(i -> i.id).collect(Collectors.toSet());
         List<PropertyImage> images = p.images();
+        Set<java.util.UUID> current = images.stream().map(PropertyImage::id).collect(Collectors.toSet());
+        // orphanRemoval borra la fila; la unique (property_id, position) es DEFERRABLE, así que renumerar no choca.
+        e.images.removeIf(entity -> !current.contains(entity.id));
+        Map<java.util.UUID, PropertyImageJpaEntity> known = e.images.stream()
+                .collect(Collectors.toMap(i -> i.id, i -> i));
         for (int position = 0; position < images.size(); position++) {
             PropertyImage image = images.get(position);
-            if (!known.contains(image.id())) {
+            PropertyImageJpaEntity entity = known.get(image.id());
+            if (entity == null) {
                 e.images.add(new PropertyImageJpaEntity(image.id(), (short) position, image.contentType(),
                         (int) image.sizeBytes(), image.storageKey(), image.uploadedAt()));
+            } else {
+                entity.position = (short) position;
             }
         }
     }

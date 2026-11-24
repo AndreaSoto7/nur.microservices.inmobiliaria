@@ -21,6 +21,8 @@ public sealed interface PropertyEvent {
 
     record PropertyImagesAdded(PropertyId propertyId, Instant occurredAt) implements PropertyEvent {}
 
+    record PropertyImageRemoved(PropertyId propertyId, Instant occurredAt) implements PropertyEvent {}
+
     /** previousStatus distingue una propiedad nueva (DRAFT) de una reanudada o liberada. */
     record PropertyPublished(PropertyId propertyId, PropertyStatus previousStatus, Instant occurredAt)
             implements PropertyEvent {}

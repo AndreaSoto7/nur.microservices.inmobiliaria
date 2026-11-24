@@ -7,7 +7,10 @@ import com.inmobiliaria.listing.domain.model.PropertyStatus;
 import java.util.Optional;
 import java.util.Set;
 
-/** Imagen pública. Responde 404 si la propiedad está en DRAFT o PAUSED (todavía o ya no es visible). */
+/**
+ * Imagen de la galería. Pública mientras la propiedad es visible; si está en DRAFT o PAUSED solo la ve el
+ * agente dueño (para revisar sus fotos antes de publicar). A cualquier otro le responde 404.
+ */
 public class GetPropertyImageHandler {
 
     private static final Set<String> HIDDEN = Set.of(PropertyStatus.DRAFT.name(), PropertyStatus.PAUSED.name());
@@ -22,9 +25,13 @@ public class GetPropertyImageHandler {
 
     public Optional<ImageContent> handle(GetPropertyImageQuery query) {
         return readModel.findImage(query.propertyId(), query.imageId())
-                .filter(image -> !HIDDEN.contains(image.propertyStatus()))
+                .filter(image -> isPublic(image) || image.agentId().equals(query.viewerId()))
                 .flatMap(image -> storage.load(image.storageKey())
-                        .map(bytes -> new ImageContent(image.contentType(), bytes)));
+                        .map(bytes -> new ImageContent(image.contentType(), bytes, isPublic(image))));
+    }
+
+    private static boolean isPublic(PropertyReadModel.ImageLocation image) {
+        return !HIDDEN.contains(image.propertyStatus());
     }
 
     public ImageContent handleOrThrow(GetPropertyImageQuery query) {

@@ -27,7 +27,8 @@ public class JdbcCatalogReadModel implements CatalogReadModel {
         UUID cover = rs.getObject("cover_image_id", UUID.class);
         return new PropertySummaryView(id, rs.getString("title"), rs.getString("property_type"),
                 rs.getString("operation_type"), rs.getString("status"), rs.getBigDecimal("price_amount"), "BOB",
-                rs.getString("zone"), SqlSupport.integer(rs, "bedrooms"), SqlSupport.integer(rs, "bathrooms"),
+                rs.getString("zone"), rs.getBigDecimal("latitude"), rs.getBigDecimal("longitude"),
+                SqlSupport.integer(rs, "bedrooms"), SqlSupport.integer(rs, "bathrooms"),
                 rs.getBigDecimal("area_m2"), SqlSupport.strings(rs, "features"),
                 cover == null ? null : ImageUrls.of(id, cover), SqlSupport.instant(rs, "published_at"),
                 SqlSupport.instant(rs, "updated_at"));

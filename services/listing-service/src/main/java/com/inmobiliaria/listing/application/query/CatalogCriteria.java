@@ -1,11 +1,11 @@
 package com.inmobiliaria.listing.application.query;
 
+import com.inmobiliaria.listing.application.common.SearchText;
 import com.inmobiliaria.listing.domain.model.Amenity;
 import com.inmobiliaria.listing.domain.model.OperationType;
 import com.inmobiliaria.listing.domain.model.PropertyType;
 import java.math.BigDecimal;
 import java.util.EnumSet;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
@@ -37,7 +37,7 @@ public final class CatalogCriteria {
         return new Builder();
     }
 
-    /** Zona normalizada (minúsculas, sin espacios en los bordes), igual que zone_normalized. */
+    /** Parte de la zona a buscar, normalizada como zone_normalized (SearchText). */
     public Optional<String> zone() {
         return Optional.ofNullable(zone);
     }
@@ -82,7 +82,7 @@ public final class CatalogCriteria {
         }
 
         public Builder zone(String zone) {
-            this.zone = zone == null || zone.isBlank() ? null : zone.trim().toLowerCase(Locale.ROOT);
+            this.zone = SearchText.zoneTerm(zone);
             return this;
         }
 
