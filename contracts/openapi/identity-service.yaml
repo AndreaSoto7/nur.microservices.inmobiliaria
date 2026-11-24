@@ -1,14 +1,14 @@
 openapi: 3.1.0
 info:
   title: identity-service
-  version: 1.4.0
+  version: 1.5.0
   description: |
     Registro, autenticación y emisión de JWT RS256 de la Plataforma Inmobiliaria.
 
     - Los clientes llaman siempre a través del gateway (`http://localhost:8080`).
     - Los tokens se validan en el resto de servicios con el JWKS publicado aquí.
     - **Access token** (15 min). Header: `alg=RS256`, `kid` y `typ=at+jwt` (RFC 9068).
-      Claims: `sub` (UUID del usuario), `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`, `iat`, `exp`, `jti` y `tokenType=access`.
+      Claims: `sub` (UUID del usuario), `email`, `name` (nombre y apellido, desde 1.5.0), `roles`, `iss=identity-service`, `aud=inmobiliaria`, `iat`, `exp`, `jti` y `tokenType=access`.
     - **Refresh token** (7 días). Header: `typ=rt+jwt`. Claims: `sub`, `iss`, `iat`, `exp`, `jti`, `fid` (UUID de la familia de tokens), `auth_time` (inicio de la sesión) y `tokenType=refresh`, con
       `aud=identity-service`: solo lo acepta identity. Es de un solo uso: cada refresh entrega un par nuevo, con otros 7 días de vida (sesión deslizante), sin pasar de 30 días desde el login. Al llegar a ese tope, el refresh responde 401 y el usuario debe volver a iniciar sesión.
     - **Cómo valida un consumidor** (gateway y servicios): firma con el JWKS (eligiendo la clave por `kid`), `alg=RS256`,
@@ -49,12 +49,14 @@ paths:
                 value:
                   email: ana.perez@example.com
                   password: S3gura-2026
-                  fullName: Ana Pérez
+                  firstName: Ana
+                  lastName: Pérez
               agent:
                 value:
                   email: carlos.agente@example.com
                   password: S3gura-2026
-                  fullName: Carlos Rojas
+                  firstName: Carlos
+                  lastName: Rojas
                   role: AGENT
       responses:
         '201':
@@ -315,6 +317,8 @@ paths:
               example:
                 id: 6f1c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
                 email: ana.perez@example.com
+                firstName: Ana
+                lastName: Pérez
                 fullName: Ana Pérez
                 roles: [CLIENT]
                 registeredAt: '2026-10-16T14:30:00Z'
@@ -361,6 +365,8 @@ paths:
                 data:
                   - id: 6f1c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01
                     email: ana.perez@example.com
+                    firstName: Ana
+                    lastName: Pérez
                     fullName: Ana Pérez
                     roles: [AGENT]
                     active: true
@@ -680,7 +686,11 @@ components:
   schemas:
     RegisterUserRequest:
       type: object
-      required: [email, password, fullName]
+      description: Nombre y apellido van en firstName y lastName. fullName se acepta solo por compatibilidad.
+      required: [email, password]
+      anyOf:
+        - required: [firstName, lastName]
+        - required: [fullName]
       properties:
         email:
           type: string
@@ -692,10 +702,24 @@ components:
           minLength: 8
           maxLength: 128
           writeOnly: true
+        firstName:
+          type: string
+          minLength: 1
+          maxLength: 75
+          description: Nombre. Se recortan los espacios de más.
+        lastName:
+          type: string
+          minLength: 1
+          maxLength: 75
+          description: Apellido (puede tener varias palabras).
         fullName:
           type: string
           minLength: 1
           maxLength: 150
+          deprecated: true
+          description: |
+            Obsoleto desde 1.5.0; usa firstName y lastName. Si llega solo fullName, la primera palabra es el
+            nombre y el resto el apellido (una sola palabra responde 400 en lastName).
         role:
           type: string
           enum: [CLIENT, AGENT]
@@ -737,7 +761,7 @@ components:
 
     CurrentUser:
       type: object
-      required: [id, email, fullName, roles, registeredAt]
+      required: [id, email, firstName, lastName, fullName, roles, registeredAt]
       properties:
         id:
           type: string
@@ -745,8 +769,14 @@ components:
         email:
           type: string
           format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+          description: Vacío solo en cuentas creadas antes de separar nombre y apellido.
         fullName:
           type: string
+          description: Nombre y apellido juntos. Se mantiene por compatibilidad.
         roles:
           type: array
           items:
@@ -763,7 +793,7 @@ components:
     AdminUser:
       type: object
       description: Lo que un administrador ve de una cuenta. Nunca lleva la contraseña.
-      required: [id, email, fullName, roles, active, registeredAt]
+      required: [id, email, firstName, lastName, fullName, roles, active, registeredAt]
       properties:
         id:
           type: string
@@ -771,8 +801,14 @@ components:
         email:
           type: string
           format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+          description: Vacío solo en cuentas creadas antes de separar nombre y apellido.
         fullName:
           type: string
+          description: Nombre y apellido juntos. Se mantiene por compatibilidad.
         roles:
           type: array
           items:
