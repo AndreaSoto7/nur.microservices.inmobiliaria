@@ -1,0 +1,596 @@
+/* Catálogo con mapa: búsqueda arriba, la lista a la izquierda y el mapa fijo a la derecha. */
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* Barra de búsqueda */
+
+.catalog__search {
+  padding: var(--space-4) var(--gutter);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filters.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 var(--space-4);
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.filters__primary {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 2.2fr) repeat(2, minmax(0, 1fr)) auto;
+  gap: var(--space-3);
+}
+
+.filters__zone input:not([type='radio'], [type='checkbox']) {
+  padding-left: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2355546f' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 0.8rem center;
+  background-size: 1.1rem;
+}
+
+.filters__submit {
+  min-width: 8rem;
+}
+
+.filters__more {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  margin-top: var(--space-3);
+}
+
+.filters__more > summary {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.filters__more-body {
+  margin-top: var(--space-3);
+  padding: var(--space-5);
+  background: var(--color-bg);
+  border-radius: var(--radius-lg);
+  animation: panel-in 180ms var(--ease-out);
+}
+
+/* Limpiar filtros: un enlace en la misma línea que Más filtros. */
+.filters__actions {
+  position: relative;
+  z-index: 1;
+  grid-row: 2;
+  grid-column: 2;
+  align-self: start;
+  margin-top: var(--space-3);
+}
+
+.filters__actions .button--secondary {
+  min-height: 1.75rem;
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  background: none;
+  border: 0;
+}
+
+.filters__actions .button--secondary:hover:not(:disabled) {
+  background: none;
+}
+
+@media (max-width: 900px) {
+  .filters__primary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filters__zone,
+  .filters__submit {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Solo en el ancho mínimo los dos selects se apilan: juntos cortarían su texto. */
+@media (max-width: 359px) {
+  .filters__primary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Lista + mapa */
+
+.catalog__split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(380px, 42%);
+  align-items: start;
+}
+
+.catalog__list {
+  min-width: 0;
+  padding: var(--space-6) var(--space-6) var(--space-10) var(--gutter);
+}
+
+.catalog__intro {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-5);
+}
+
+.catalog__intro h1 {
+  font-size: clamp(1.5rem, 1.15rem + 1vw, 2rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.catalog__lead {
+  color: var(--color-muted);
+}
+
+.catalog__note {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.catalog__map {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 0;
+  height: calc(100dvh - var(--header-height));
+}
+
+.results-bar {
+  margin-bottom: var(--space-4);
+}
+
+/* Atajos de zona */
+
+.zone-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.zone-chip {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  font: inherit;
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.zone-chip__count {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.zone-chip.is-active {
+  font-weight: 600;
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.zone-chip__icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Filas de propiedades */
+
+.property-rows {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-6);
+  padding: 0;
+  list-style: none;
+}
+
+.property-row {
+  position: relative;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px var(--color-border);
+  transition: box-shadow 160ms ease;
+}
+
+.property-row.is-active {
+  box-shadow:
+    0 0 0 2px var(--color-text),
+    var(--shadow-raised);
+}
+
+.property-row__link {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-3);
+  color: inherit;
+  text-decoration: none;
+  border-radius: inherit;
+}
+
+.property-row__link:focus-visible {
+  outline-offset: 2px;
+}
+
+.property-row__media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--color-brand-tint);
+  border-radius: var(--radius-md);
+}
+
+.property-row__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 300ms var(--ease-out);
+}
+
+.property-row__body {
+  display: grid;
+  gap: 2px;
+  align-content: center;
+  min-width: 0;
+}
+
+.property-row__zone {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-zone);
+}
+
+.property-row__zone-icon {
+  flex: none;
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.property-row__title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.property-row__meta,
+.property-row__specs {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.property-row__price {
+  align-self: start;
+  padding-top: var(--space-1);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.property-row .badge {
+  top: var(--space-2);
+  left: var(--space-2);
+}
+
+.property-row--skeleton .property-row__body {
+  gap: var(--space-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .zone-chip:not(.is-active):hover {
+    border-color: var(--color-text);
+  }
+
+  .property-row__link:hover .property-row__media img {
+    transform: scale(1.03);
+  }
+}
+
+@media (max-width: 640px) {
+  .property-row__link {
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: var(--space-3);
+    align-items: start;
+  }
+
+  .property-row__media {
+    grid-row: span 2;
+  }
+
+  .property-row__title {
+    font-size: var(--text-md);
+  }
+
+  .property-row__price {
+    grid-column: 2;
+    padding-top: 0;
+    font-size: var(--text-lg);
+  }
+}
+
+/* Mapa */
+
+.catalog-map,
+.catalog-map__canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Contiene los z-index de Leaflet: sin esto, sus capas pasan por encima de la cabecera fija. */
+.leaflet-container {
+  isolation: isolate;
+  font: inherit;
+  background: #ebeae4;
+}
+
+.leaflet-bar a {
+  color: var(--color-text);
+}
+
+/* OpenStreetMap es muy colorido: más calmo, los precios y el alfiler se leen primero. */
+.leaflet-tile-pane {
+  filter: saturate(0.55) contrast(0.92) brightness(1.04);
+}
+
+.leaflet-container .leaflet-control-attribution {
+  font-size: 0.6875rem;
+}
+
+.price-pin__label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-block;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-text);
+  white-space: nowrap;
+  background: var(--color-surface);
+  border-radius: var(--radius-pill);
+  box-shadow:
+    var(--shadow-pin),
+    0 0 0 1px rgb(28 27 58 / 8%);
+  transform: translate(-50%, -50%);
+  transition:
+    transform 150ms var(--ease-out),
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.price-pin:hover .price-pin__label,
+.price-pin.is-active .price-pin__label {
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.price-pin:focus-visible {
+  outline: none;
+}
+
+.price-pin:focus-visible .price-pin__label {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.location-pin svg {
+  display: block;
+  width: 32px;
+  height: 42px;
+  filter: drop-shadow(0 2px 3px rgb(28 27 58 / 30%));
+}
+
+.location-pin path {
+  fill: var(--color-brand);
+}
+
+.location-pin circle {
+  fill: var(--color-accent);
+}
+
+.map-card-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-raised);
+}
+
+.map-card-popup .leaflet-popup-content {
+  width: 15rem !important;
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* Leaflet pinta de azul todos los enlaces del mapa: la tarjeta usa la tinta del sitio. */
+.leaflet-container a.map-card {
+  display: grid;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.leaflet-container a.map-card:hover .map-card__title {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.map-card__image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
+.map-card__body {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.map-card__price {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.map-card__title {
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+
+.map-card__zone {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-zone);
+}
+
+/* Mapa de la ficha */
+
+.detail__location {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--color-border);
+}
+
+.detail__place,
+.detail__no-location {
+  color: var(--color-muted);
+}
+
+/* En el celular la ficha va foto, precio, datos, descripción y al final el mapa. */
+@media (max-width: 760px) {
+  .detail__location {
+    order: 4;
+    padding-top: 0;
+    border-top: 0;
+  }
+}
+
+.location-map {
+  height: 20rem;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+.location-map__canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Celular y tableta: la lista y un botón que muestra el mapa a pantalla completa. */
+
+.catalog__view-toggle {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .catalog__split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .catalog__list {
+    padding: var(--space-5) var(--gutter) 6rem;
+  }
+
+  .catalog__map {
+    display: none;
+  }
+
+  .catalog[data-view='map'] .catalog__map {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: block;
+    height: 100dvh;
+  }
+
+  .catalog__view-toggle {
+    position: fixed;
+    bottom: max(var(--space-5), env(safe-area-inset-bottom));
+    left: 50%;
+    z-index: 1200;
+    display: inline-flex;
+    gap: var(--space-2);
+    align-items: center;
+    min-height: 3rem;
+    padding: 0 var(--space-5);
+    font: inherit;
+    font-weight: 600;
+    color: var(--color-on-brand);
+    cursor: pointer;
+    background: var(--color-brand);
+    border: 0;
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-raised);
+    translate: -50% 0;
+    transition: scale 160ms var(--ease-out);
+  }
+
+  .catalog__view-toggle:active {
+    scale: 0.97;
+  }
+
+  .catalog__view-toggle:focus-visible {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .catalog__view-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    --gutter: var(--space-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .price-pin__label,
+  .property-row__media img,
+  .catalog__view-toggle {
+    transition: none;
+  }
+
+  .property-row__link:hover .property-row__media img {
+    transform: none;
+  }
+
+  .filters__more-body {
+    animation: none;
+  }
+}

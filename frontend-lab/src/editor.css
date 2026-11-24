@@ -1,0 +1,530 @@
+/* Editor del agente: galería con vista previa y ubicación en el mapa. */
+
+.gallery-editor {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.gallery-editor__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 8.5rem), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gallery-tile {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  min-width: 0;
+}
+
+.gallery-tile__image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--color-brand-tint);
+  border-radius: var(--radius-md);
+}
+
+.gallery-tile--invalid .gallery-tile__image {
+  outline: 2px solid var(--color-error);
+  outline-offset: -2px;
+}
+
+.gallery-tile__badge {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  padding: 2px var(--space-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-radius: var(--radius-pill);
+}
+
+.gallery-tile__remove {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--color-text);
+  cursor: pointer;
+  background: rgb(255 255 255 / 92%);
+  border: 0;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-pin);
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    scale 160ms var(--ease-out);
+}
+
+.gallery-tile__remove:active:not(:disabled) {
+  scale: 0.94;
+}
+
+.gallery-tile__remove:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.gallery-tile__remove-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.gallery-tile__confirm {
+  position: absolute;
+  inset: 0 0 auto;
+  display: grid;
+  gap: var(--space-2);
+  place-content: center;
+  aspect-ratio: 4 / 3;
+  padding: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-on-brand);
+  text-align: center;
+  background: rgb(28 27 58 / 90%);
+  border-radius: var(--radius-md);
+}
+
+.gallery-tile__confirm .action-bar {
+  justify-content: center;
+}
+
+.gallery-tile__confirm .button {
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.gallery-tile__confirm .button--secondary {
+  color: var(--color-on-brand);
+  border-color: rgb(255 255 255 / 55%);
+}
+
+.gallery-tile__confirm .button--secondary:hover:not(:disabled) {
+  background: var(--color-brand-hover);
+}
+
+.gallery-tile__caption {
+  display: grid;
+  min-width: 0;
+  font-size: var(--text-sm);
+}
+
+.gallery-tile__name {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-tile__size {
+  color: var(--color-muted);
+}
+
+.dropzone {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: center;
+  padding: var(--space-8) var(--space-5);
+  color: var(--color-muted);
+  text-align: center;
+  cursor: pointer;
+  background: var(--color-bg);
+  border: 2px dashed var(--color-field-border);
+  border-radius: var(--radius-lg);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.dropzone.is-dragging {
+  background: var(--color-brand-tint);
+  border-color: var(--color-text);
+}
+
+.dropzone:has(input:focus-visible) {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.dropzone__icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--color-text);
+}
+
+.dropzone__title {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.dropzone__link {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.dropzone__hint {
+  font-size: var(--text-sm);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gallery-tile__remove:hover:not(:disabled) {
+    color: var(--color-error);
+    background: var(--color-error-bg);
+  }
+
+  .dropzone:hover {
+    background: var(--color-brand-tint);
+    border-color: var(--color-text);
+  }
+}
+
+/* En una pantalla táctil, el botón de quitar mide lo que un dedo necesita. */
+@media (pointer: coarse) {
+  .gallery-tile__remove {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+/* Ubicación en el formulario de la propiedad */
+
+.location-picker {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.location-picker legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+}
+
+.location-picker__hint,
+.location-picker__coords {
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+.location-map--picker {
+  height: 20rem;
+}
+
+.location-map--picker .leaflet-container {
+  cursor: crosshair;
+}
+
+.location-picker__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--control-height);
+}
+
+.location-picker__manual > summary {
+  width: fit-content;
+  padding-block: var(--space-1);
+  font-weight: 600;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.location-picker__inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  gap: var(--space-3);
+  align-items: end;
+  margin-top: var(--space-2);
+}
+
+.location-picker__inputs .field__error {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 600px) {
+  .location-picker__inputs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .location-picker__inputs .button {
+    grid-column: 1 / -1;
+  }
+
+  .location-map--picker {
+    height: 16rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-tile__remove,
+  .dropzone {
+    transition: none;
+  }
+}
+
+/* Notas de seguimiento de una oportunidad */
+
+.lead-notes__panel {
+  grid-column: 1 / -1;
+}
+
+.lead-notes {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0 0 0 var(--space-4);
+  list-style: none;
+  border-left: 2px solid var(--color-border);
+}
+
+.lead-note {
+  display: grid;
+  gap: 2px;
+}
+
+.lead-note__date {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.lead-note__text {
+  max-width: 70ch;
+  white-space: pre-line;
+}
+
+/* Conversación de una consulta: la pregunta y la respuesta del agente */
+
+.conversation {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.conversation__message {
+  display: grid;
+  gap: var(--space-1);
+  max-width: 70ch;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+}
+
+.conversation__message--reply {
+  margin-left: var(--space-6);
+  background: var(--color-brand-tint);
+}
+
+.conversation__who {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.conversation__text {
+  white-space: pre-line;
+}
+
+@media (max-width: 480px) {
+  .conversation__message--reply {
+    margin-left: var(--space-3);
+  }
+}
+
+/* Asistente de propiedad: un paso por pantalla, con la barra de pasos arriba. */
+
+.wizard {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.wizard-steps__caption {
+  display: none;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.wizard-steps__list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wizard-steps__button {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 0 0 var(--space-1);
+  font: inherit;
+  color: var(--color-muted);
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+.wizard-steps__button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.wizard-steps__button:focus-visible {
+  outline: 2px solid var(--color-link);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+}
+
+.wizard-steps__bar {
+  display: block;
+  height: 4px;
+  background: var(--color-border);
+  border-radius: var(--radius-pill);
+  transition: background-color 200ms ease;
+}
+
+.is-done .wizard-steps__bar {
+  background: var(--color-brand);
+}
+
+.is-current .wizard-steps__bar {
+  background: var(--color-accent);
+}
+
+.wizard-steps__label {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.is-current .wizard-steps__label {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.wizard__card {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.wizard__head {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.wizard__title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  scroll-margin-top: calc(var(--header-height) + var(--space-8));
+}
+
+.wizard__title:focus {
+  outline: none;
+}
+
+.wizard__hint {
+  max-width: 60ch;
+  color: var(--color-muted);
+}
+
+.wizard__unsaved {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.wizard__nav {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.page-header--stacked {
+  display: grid;
+  gap: var(--space-1);
+  justify-content: start;
+}
+
+@media (min-width: 601px) {
+  .form__row--three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* En el celular: solo la barra segmentada y el nombre del paso actual, y los botones siempre a mano. */
+@media (max-width: 600px) {
+  .wizard-steps__caption {
+    display: block;
+  }
+
+  .wizard-steps__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .wizard-steps__button {
+    min-height: 1.5rem;
+    align-content: center;
+  }
+
+  /* En los pasos con campos, Atrás y Siguiente quedan fijos abajo, a lo ancho de la tarjeta. */
+  .wizard__nav--sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 0 calc(var(--space-5) * -1) calc(var(--space-5) * -1);
+    padding: var(--space-3) var(--space-5) calc(var(--space-3) + env(safe-area-inset-bottom));
+    background: var(--color-surface);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    box-shadow: 0 -6px 16px rgb(28 27 58 / 8%);
+  }
+
+  .wizard__nav .button {
+    flex: 0 0 auto;
+  }
+
+  .wizard__nav .button:last-child {
+    flex: 1 1 auto;
+  }
+
+  .form__row--three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form__row--three > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wizard-steps__bar {
+    transition: none;
+  }
+}
