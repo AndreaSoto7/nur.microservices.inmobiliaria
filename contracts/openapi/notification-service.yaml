@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: notification-service
-  version: 1.1.0
+  version: 1.2.0
   description: |
     Avisos dentro de la app para agentes y clientes (ADR 0007). Se crean a partir de eventos de Kafka: la API solo los lee y los marca como leídos.
     Cada usuario ve solo los suyos: el destinatario es el `sub` del access token.
@@ -106,6 +106,32 @@ paths:
                 instance: /api/v1/notifications/7b1e4c2a-9d3f-4a6b-8c21-0f5e6d7c8b9a
                 code: NOTIFICATION_NOT_FOUND
                 correlationId: c0a8e1f2-3b4c-4d5e-8f60-718293a4b5c6
+    delete:
+      tags: [notifications]
+      operationId: deleteNotification
+      summary: Borrar un aviso
+      description: |
+        Para los avisos que ya no le interesan al usuario. Borrado el aviso, el evento que lo creó no lo vuelve a
+        crear. Si es de otro usuario, responde 404: no se revela que existe.
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: notificationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204':
+          description: Aviso borrado.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: El aviso no existe o es de otro usuario.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 
   /health:
     get:

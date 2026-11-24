@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: listing-service
-  version: 0.3.0
+  version: 0.4.0
   description: |
     Propiedades, galería, favoritos y catálogo público de la Plataforma Inmobiliaria.
 
@@ -333,6 +333,50 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         '204': { description: Imagen quitada }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404':
+          description: '`PROPERTY_NOT_FOUND` o `PROPERTY_IMAGE_NOT_FOUND`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    patch:
+      tags: [images]
+      operationId: movePropertyImage
+      summary: Mover una imagen a otra posición de la galería
+      description: |
+        Solo el agente dueño; no si está `SOLD` o `RENTED`. La posición 0 es la portada: la que se ve en el
+        catálogo. Las demás imágenes se corren. Moverla a donde ya está no cambia nada.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PropertyId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: imageId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [position]
+              properties:
+                position:
+                  type: integer
+                  minimum: 0
+                  maximum: 4
+                  description: Posición nueva, desde 0. Debe ser menor que la cantidad de imágenes.
+            example: { position: 0 }
+      responses:
+        '204': { description: Imagen movida }
+        '400':
+          description: '`VALIDATION_ERROR` o `PROPERTY_IMAGE_INVALID_POSITION` (fuera de la galería)'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/NotOwner' }
         '404':
