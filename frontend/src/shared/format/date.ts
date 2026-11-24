@@ -1,4 +1,20 @@
 const dateTime = new Intl.DateTimeFormat('es-BO', { dateStyle: 'medium', timeStyle: 'short' })
+const dayLabel = new Intl.DateTimeFormat('es-BO', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+})
+const timeLabel = new Intl.DateTimeFormat('es-BO', { hour: 'numeric', minute: '2-digit' })
+
+/** "mar, 25 nov": el día de una visita en la agenda. */
+export function formatDay(iso: string): string {
+  return dayLabel.format(new Date(iso))
+}
+
+/** "15:00": la hora sola, en la hora local de quien mira. */
+export function formatTime(iso: string): string {
+  return timeLabel.format(new Date(iso))
+}
 
 /** La API manda UTC (ISO-8601); se muestra en la hora local de quien mira. */
 export function formatDateTime(iso: string): string {

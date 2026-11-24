@@ -9,6 +9,7 @@ import { Pagination } from '../../../../shared/ui/Pagination'
 import { RowListSkeleton } from '../../../../shared/ui/RowListSkeleton'
 import { usePropertyTitles } from '../../usePropertyTitles'
 import { LeadRow } from '../components/LeadRow'
+import { LeadNotesSection } from './LeadNotesSection'
 import { useAgentLeads } from '../useAgentLeads'
 
 export function AgentLeadsPage() {
@@ -69,13 +70,14 @@ export function AgentLeadsPage() {
                 key={lead.id}
                 lead={lead}
                 title={titles[lead.propertyId]}
-                href={`/agent/properties/${lead.propertyId}`}
+                href={`/properties/${lead.propertyId}`}
                 busy={busyLeadId === lead.id}
                 error={failedLeadId === lead.id ? actionError : undefined}
                 noteSaved={noteSavedLeadId === lead.id}
                 reserving={reservingLeadId === lead.id}
                 onAddNote={handleAddNote}
                 onClose={handleClose}
+                notes={<LeadNotesSection leadId={lead.id} />}
               />
             ))}
           </ul>

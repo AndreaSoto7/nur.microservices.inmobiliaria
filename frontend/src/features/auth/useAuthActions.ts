@@ -27,10 +27,14 @@ export function useRegister() {
       await login({ email: request.email, password: request.password })
     },
   })
+  const fieldErrors = mutation.error instanceof ApiError ? mutation.error.fieldErrors : {}
+  const message = mutation.error ? errorMessage(mutation.error) : undefined
   return {
     register: mutation.mutateAsync,
     submitting: mutation.isPending,
-    error: mutation.error ? errorMessage(mutation.error) : undefined,
-    fieldErrors: mutation.error instanceof ApiError ? mutation.error.fieldErrors : {},
+    // identity marca el campo de un error de dominio (contraseña débil, email ya registrado): si el
+    // mensaje general es el mismo que el del campo, solo se muestra junto al campo.
+    error: message && Object.values(fieldErrors).includes(message) ? undefined : message,
+    fieldErrors,
   }
 }

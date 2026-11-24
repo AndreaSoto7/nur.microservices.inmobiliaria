@@ -4,7 +4,15 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import { App } from './app/App'
 import { AuthProvider } from './core/auth/AuthContext'
+import '@fontsource/barlow/400.css'
+import '@fontsource/barlow/500.css'
+import '@fontsource/barlow/600.css'
+import '@fontsource/barlow/700.css'
 import './index.css'
+import './skin.css'
+import './catalog.css'
+import './editor.css'
+import './visits.css'
 
 const queryClient = new QueryClient({
   defaultOptions: {

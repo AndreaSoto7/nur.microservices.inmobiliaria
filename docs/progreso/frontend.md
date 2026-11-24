@@ -8,6 +8,7 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| feat | El frontend nuevo (antes `frontend-lab/`) reemplaza al anterior en `frontend/` y se sirve en el 5173: mapa, asistente de propiedad, visitas con contrapropuesta, contacto del interesado, aviso emergente de avisos nuevos, nombre y apellido. La CSP de nginx permite los mosaicos del mapa. Probado en Chrome contra el stack | _(pendiente)_ |
 | feat | Cabecera más limpia: enlace a Inicio, campanita de avisos y menú con el nombre del usuario para Favoritos, Mi cuenta y Cerrar sesión. Probado en navegador y a 390 px | #119 |
 | feat | Panel de administrador: lista de usuarios con filtro por rol, cambiar roles, desactivar y activar. Probado contra el stack real, en navegador y con CSP | #117 |
 | feat | Las visitas muestran el título que trae `propertyTitle`: ya no sale "Propiedad no disponible" al venderse o alquilarse la propiedad, ni se pide cada título aparte. Probado contra el stack real | #114 |

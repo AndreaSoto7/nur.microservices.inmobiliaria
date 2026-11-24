@@ -4,6 +4,7 @@ import { Button } from '../../../shared/ui/Button'
 import { ErrorMessage } from '../../../shared/ui/ErrorMessage'
 import { TextAreaField } from '../../../shared/ui/TextAreaField'
 import { TextField } from '../../../shared/ui/TextField'
+import { keepPhoneCharacters, PHONE_MAX_LENGTH, phoneProblem } from '../../../shared/format/phone'
 
 export interface InquiryValues {
   name: string
@@ -33,9 +34,13 @@ export const InquiryForm = memo(function InquiryForm({
   const [email, setEmail] = useState(initialEmail)
   const [phone, setPhone] = useState('')
   const [message, setMessage] = useState('')
+  const [phoneError, setPhoneError] = useState<string>()
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const problem = phoneProblem(phone)
+    setPhoneError(problem)
+    if (problem) return
     onSubmitInquiry({ name, email, phone, message })
   }
 
@@ -63,11 +68,16 @@ export const InquiryForm = memo(function InquiryForm({
       <TextField
         label="Teléfono (opcional)"
         type="tel"
+        inputMode="tel"
         autoComplete="tel"
-        maxLength={30}
+        placeholder="+591 71234567"
+        maxLength={PHONE_MAX_LENGTH}
         value={phone}
-        error={fieldErrors.contactPhone}
-        onChange={(event) => setPhone(event.target.value)}
+        error={phoneError ?? fieldErrors.contactPhone}
+        onChange={(event) => {
+          setPhone(keepPhoneCharacters(event.target.value))
+          setPhoneError(undefined)
+        }}
       />
       <TextAreaField
         label="Mensaje"

@@ -20,34 +20,52 @@ interface PropertyFiltersProps {
 }
 
 /**
- * Dumb: edita un borrador local y avisa con onFiltersChange al buscar. Para reiniciarlo cuando cambia
- * la URL, el container le pasa un `key` distinto.
+ * Dumb: lo que se elige (operación, tipo, dormitorios, características) se aplica al momento; lo que se
+ * escribe (zona y precios) espera a "Buscar" o Enter, para no buscar a cada tecla. Cuando la URL cambia
+ * desde afuera (atajos de zona, limpiar, orden), el borrador vuelve a lo que dice la URL.
  */
 export const PropertyFilters = memo(function PropertyFilters({
   value,
   onFiltersChange,
 }: PropertyFiltersProps) {
   const [draft, setDraft] = useState<CatalogFilters>(value)
+  const [applied, setApplied] = useState(value)
+  const advancedCount = advancedFilterCount(value)
+  // "Más filtros" queda como lo dejó la persona: no se cierra al quitar el último filtro.
+  const [moreOpen, setMoreOpen] = useState(advancedCount > 0)
+  if (applied !== value) {
+    setApplied(value)
+    setDraft(value)
+    if (advancedFilterCount(value) > 0) setMoreOpen(true)
+  }
 
   function update<K extends keyof CatalogFilters>(key: K, next: CatalogFilters[K]) {
     setDraft((current) => ({ ...current, [key]: next }))
   }
 
+  function apply(next: CatalogFilters) {
+    setDraft(next)
+    onFiltersChange({ ...next, zone: next.zone?.trim() || undefined })
+  }
+
+  /** Para selects y casillas: elegir ya es la intención, no hace falta "Buscar". */
+  function applyNow<K extends keyof CatalogFilters>(key: K, next: CatalogFilters[K]) {
+    apply({ ...draft, [key]: next })
+  }
+
   function toggleFeature(feature: Feature) {
-    setDraft((current) => ({
-      ...current,
-      features: current.features.includes(feature)
-        ? current.features.filter((item) => item !== feature)
-        : [...current.features, feature],
-    }))
+    applyNow(
+      'features',
+      draft.features.includes(feature)
+        ? draft.features.filter((item) => item !== feature)
+        : [...draft.features, feature],
+    )
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    onFiltersChange({ ...draft, zone: draft.zone?.trim() || undefined })
+    apply(draft)
   }
-
-  const advancedCount = advancedFilterCount(value)
 
   return (
     <form className="filters card" onSubmit={handleSubmit} aria-label="Filtros del catálogo">
@@ -67,7 +85,10 @@ export const PropertyFilters = memo(function PropertyFilters({
           <select
             value={draft.operation ?? ''}
             onChange={(event) =>
-              update('operation', (event.target.value || undefined) as CatalogFilters['operation'])
+              applyNow(
+                'operation',
+                (event.target.value || undefined) as CatalogFilters['operation'],
+              )
             }
           >
             <option value="">Venta o alquiler</option>
@@ -83,7 +104,7 @@ export const PropertyFilters = memo(function PropertyFilters({
           <select
             value={draft.type ?? ''}
             onChange={(event) =>
-              update('type', (event.target.value || undefined) as CatalogFilters['type'])
+              applyNow('type', (event.target.value || undefined) as CatalogFilters['type'])
             }
           >
             <option value="">Cualquiera</option>
@@ -98,7 +119,11 @@ export const PropertyFilters = memo(function PropertyFilters({
           Buscar
         </Button>
       </div>
-      <details className="filters__more" open={advancedCount > 0}>
+      <details
+        className="filters__more"
+        open={moreOpen}
+        onToggle={(event) => setMoreOpen(event.currentTarget.open)}
+      >
         <summary>{advancedCount > 0 ? `Más filtros (${advancedCount})` : 'Más filtros'}</summary>
         <div className="filters__more-body">
           <div className="filters__secondary">
@@ -126,7 +151,7 @@ export const PropertyFilters = memo(function PropertyFilters({
               Dormitorios
               <select
                 value={draft.bedrooms ?? ''}
-                onChange={(event) => update('bedrooms', numberOrUndefined(event.target.value))}
+                onChange={(event) => applyNow('bedrooms', numberOrUndefined(event.target.value))}
               >
                 <option value="">Cualquiera</option>
                 {[1, 2, 3, 4].map((count) => (

@@ -7,9 +7,12 @@ import {
 import { Button } from '../../../shared/ui/Button'
 import { EmptyState } from '../../../shared/ui/EmptyState'
 import { ErrorMessage } from '../../../shared/ui/ErrorMessage'
+import { ArrowLeftIcon } from '../../../shared/ui/icons'
 import { LoadingState } from '../../../shared/ui/LoadingState'
 import { FavoriteControl } from '../../favorites/containers/FavoriteControl'
 import { ImageGallery } from '../components/ImageGallery'
+import { LocationMap } from '../components/LocationMap'
+import { PropertyDescription } from '../components/PropertyDescription'
 import { PropertySpecs } from '../components/PropertySpecs'
 import { usePropertyDetail } from '../usePropertyDetail'
 import { PropertyContactSection } from './PropertyContactSection'
@@ -22,7 +25,8 @@ export function PropertyDetailPage() {
   return (
     <section className="page page--wide">
       <Link to="/" className="back-link">
-        ← Volver al catálogo
+        <ArrowLeftIcon className="back-link__icon" />
+        Volver al catálogo
       </Link>
 
       {loading && <LoadingState label="Cargando la propiedad…" />}
@@ -45,30 +49,30 @@ export function PropertyDetailPage() {
       {property && (
         <article className="detail">
           <header className="detail__header">
-            <h1>{property.title}</h1>
-            <p className="detail__meta">
-              {PROPERTY_TYPE_LABELS[property.propertyType]} en{' '}
-              {OPERATION_LABELS[property.operationType].toLowerCase()} · {property.location.zone}
-            </p>
+            <div className="detail__heading">
+              <h1>{property.title}</h1>
+              <p className="detail__meta">
+                {PROPERTY_TYPE_LABELS[property.propertyType]} en{' '}
+                {OPERATION_LABELS[property.operationType].toLowerCase()} · {property.location.zone}
+              </p>
+            </div>
+            <p className="detail__price">{formatPrice(property.price, property.operationType)}</p>
           </header>
           <div className="detail__layout">
             <div className="detail__main">
               <ImageGallery images={property.images} title={property.title} />
-              {property.description && (
-                <section className="detail__description">
-                  <h2>Descripción</h2>
-                  <p>{property.description}</p>
-                </section>
-              )}
+              <div className="detail__facts">
+                <PropertySpecs property={property} />
+              </div>
+              <LocationMap location={property.location} title={property.title} />
             </div>
-            <aside className="card detail__aside" aria-label="Datos de la propiedad">
-              <p className="detail__price">{formatPrice(property.price, property.operationType)}</p>
+            <aside className="card detail__aside" aria-label="Sobre la propiedad">
+              {property.description && <PropertyDescription text={property.description} />}
               {property.status === 'RESERVED' && (
                 <p className="notice notice--warning">Reservada: no recibe visitas nuevas</p>
               )}
-              <PropertySpecs property={property} />
-              <FavoriteControl propertyId={property.id} propertyStatus={property.status} />
               <PropertyContactSection propertyId={property.id} propertyStatus={property.status} />
+              <FavoriteControl propertyId={property.id} propertyStatus={property.status} />
             </aside>
           </div>
         </article>

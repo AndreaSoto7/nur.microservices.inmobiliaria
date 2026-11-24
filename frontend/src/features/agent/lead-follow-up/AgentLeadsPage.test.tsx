@@ -49,21 +49,66 @@ describe('AgentLeadsPage', () => {
     expect(within(row).getByText('Abierta')).toBeInTheDocument()
   })
 
-  it.each([
-    ['WON', 'Ganada'],
-    ['LOST', 'Perdida'],
-  ] as const)('a lead closed as %s says %s and has no actions', async (outcome, label) => {
+  it('shows who the lead is with, with links to write and call', async () => {
     routeFetch({
       ...base(),
-      [LIST]: () => listOf([lead({ status: 'CLOSED', outcome, closedAt: '2026-10-17T14:30:00Z' })]),
+      [LIST]: () =>
+        listOf([
+          lead({
+            client: {
+              name: 'Diego Interesado',
+              email: 'diego@example.com',
+              phone: '+591 7123-4567',
+            },
+          }),
+        ]),
     })
 
     renderApp('/agent/leads')
 
     const row = await screen.findByRole('listitem')
-    expect(within(row).getByText(label)).toBeInTheDocument()
-    expect(within(row).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(row).getByText('Diego Interesado')).toBeInTheDocument()
+    expect(within(row).getByRole('link', { name: 'diego@example.com' })).toHaveAttribute(
+      'href',
+      'mailto:diego@example.com',
+    )
+    expect(within(row).getByRole('link', { name: '+591 7123-4567' })).toHaveAttribute(
+      'href',
+      'tel:+59171234567',
+    )
   })
+
+  it('says so when the client never left contact data', async () => {
+    routeFetch({ ...base(), [LIST]: () => listOf([lead()]) })
+
+    renderApp('/agent/leads')
+
+    expect(await screen.findByText('Interesado sin datos de contacto')).toBeInTheDocument()
+  })
+
+  it.each([
+    ['WON', 'Ganada'],
+    ['LOST', 'Perdida'],
+  ] as const)(
+    'a lead closed as %s says %s and only offers to read its notes',
+    async (outcome, label) => {
+      routeFetch({
+        ...base(),
+        [LIST]: () =>
+          listOf([lead({ status: 'CLOSED', outcome, closedAt: '2026-10-17T14:30:00Z' })]),
+      })
+
+      renderApp('/agent/leads')
+
+      const row = await screen.findByRole('listitem')
+      expect(within(row).getByText(label)).toBeInTheDocument()
+      expect(
+        within(row)
+          .getAllByRole('button')
+          .map((button) => button.textContent),
+      ).toEqual(['Ver notas'])
+    },
+  )
 
   it('records a follow-up note and confirms it was saved', async () => {
     const fetchMock = routeFetch({
@@ -194,5 +239,39 @@ describe('AgentLeadsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Reintentar' }))
 
     expect(await screen.findByText('Todavía no tienes oportunidades')).toBeInTheDocument()
+  })
+
+  it('shows the follow-up notes when asked, oldest first', async () => {
+    routeFetch({
+      ...base(),
+      [LIST]: () => listOf([lead()]),
+      [`GET ${FOLLOW_UP}`]: () =>
+        jsonResponse(200, {
+          data: [
+            {
+              id: 'n1',
+              leadId: LEAD_ID,
+              note: 'Llamé al cliente.',
+              createdAt: '2026-10-16T15:00:00Z',
+            },
+            {
+              id: 'n2',
+              leadId: LEAD_ID,
+              note: 'Quiere ver el patio.',
+              createdAt: '2026-10-17T15:00:00Z',
+            },
+          ],
+          page: { number: 1, size: 100, totalElements: 2, totalPages: 1 },
+        }),
+    })
+    const user = userEvent.setup()
+    renderApp('/agent/leads')
+
+    await user.click(await screen.findByRole('button', { name: /^Ver notas/ }))
+
+    const notes = await screen.findByRole('list', { name: 'Notas de seguimiento' })
+    const items = within(notes).getAllByRole('listitem')
+    expect(items[0]).toHaveTextContent('Llamé al cliente.')
+    expect(items[1]).toHaveTextContent('Quiere ver el patio.')
   })
 })

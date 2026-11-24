@@ -91,6 +91,25 @@ describe('NotificationsPage', () => {
     expect(patch?.[1]?.body).toBe('{"read":true}')
   })
 
+  it('deletes a notification that no longer matters', async () => {
+    let deleted = false
+    const fetchMock = routeFetch({
+      ...sessionRoutes(currentUser),
+      [LIST]: () => jsonResponse(200, pageOf(deleted ? [] : [notification()])),
+      [`DELETE /api/v1/notifications/${NOTIFICATION_ID}`]: () => {
+        deleted = true
+        return jsonResponse(204)
+      },
+    })
+    const user = userEvent.setup()
+    renderApp('/notifications')
+
+    await user.click(await screen.findByRole('button', { name: /^Borrar aviso/ }))
+
+    await waitFor(() => expect(screen.queryByRole('listitem')).not.toBeInTheDocument())
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(true)
+  })
+
   it('shows the error when it could not be marked as read', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
@@ -178,7 +197,7 @@ describe('notification counter in the header', () => {
   it('says how many notifications are unread', async () => {
     routeFetch({ ...sessionRoutes(currentUser), [LIST]: withUnread(3) })
 
-    renderApp('/account')
+    renderApp('/favorites')
 
     expect(await screen.findByRole('link', { name: 'Avisos, 3 sin leer' })).toHaveAttribute(
       'href',
@@ -189,7 +208,7 @@ describe('notification counter in the header', () => {
   it('shows no counter when nothing is unread', async () => {
     routeFetch({ ...sessionRoutes(currentUser), [LIST]: withUnread(0) })
 
-    renderApp('/account')
+    renderApp('/favorites')
 
     expect(await screen.findByRole('link', { name: 'Avisos' })).toBeInTheDocument()
   })
@@ -201,7 +220,7 @@ describe('notification counter in the header', () => {
         jsonResponse(503, problem(503, 'GATEWAY_SERVICE_UNAVAILABLE', 'No disponible.')),
     })
 
-    renderApp('/account')
+    renderApp('/favorites')
 
     expect(await screen.findByRole('link', { name: 'Avisos' })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()

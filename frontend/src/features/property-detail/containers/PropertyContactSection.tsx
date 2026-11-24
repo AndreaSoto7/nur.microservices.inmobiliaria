@@ -35,12 +35,14 @@ export function PropertyContactSection({
   }
   if (!hasRole('CLIENT') || !user) return null
 
-  function handleVisit({ proposedAt, note }: VisitRequestValues) {
+  function handleVisit({ proposedAt, note, phone }: VisitRequestValues) {
     const clientNote = note.trim()
+    const contactPhone = phone.trim()
     visit.requestVisit({
       propertyId,
       proposedAt: localInputToUtc(proposedAt),
       ...(clientNote ? { clientNote } : {}),
+      ...(contactPhone ? { contactPhone } : {}),
     })
   }
 
@@ -55,13 +57,14 @@ export function PropertyContactSection({
     })
   }
 
+  // Los dos paneles comparten `name`: abrir uno cierra el otro, así no se apilan dos formularios.
   return (
     <>
-      <details className="contact-panel">
+      <details className="contact-panel" name="property-contact">
         <summary>Solicitar una visita</summary>
         {visit.sent ? (
           <p className="notice notice--success" role="status">
-            Solicitud enviada. El agente va a confirmar el horario.{' '}
+            Solicitud enviada. El agente va a confirmar el horario o proponerte otro.{' '}
             <Link to="/my-visits">Ver mis visitas</Link>
           </p>
         ) : (
@@ -74,7 +77,7 @@ export function PropertyContactSection({
           />
         )}
       </details>
-      <details className="contact-panel">
+      <details className="contact-panel" name="property-contact">
         <summary>Enviar una consulta</summary>
         {inquiry.sent ? (
           <p className="notice notice--success" role="status">

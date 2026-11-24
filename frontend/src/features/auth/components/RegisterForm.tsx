@@ -24,7 +24,8 @@ export const RegisterForm = memo(function RegisterForm({
   error,
   fieldErrors = {},
 }: RegisterFormProps) {
-  const [fullName, setFullName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState<RegistrableRole>('CLIENT')
@@ -32,20 +33,37 @@ export const RegisterForm = memo(function RegisterForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    onSubmit({ fullName: fullName.trim(), email: email.trim(), password, role })
+    onSubmit({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim(),
+      password,
+      role,
+    })
   }
 
   return (
     <form className="form" onSubmit={handleSubmit}>
-      <TextField
-        label="Nombre completo"
-        autoComplete="name"
-        required
-        maxLength={150}
-        value={fullName}
-        error={fieldErrors.fullName}
-        onChange={(event) => setFullName(event.target.value)}
-      />
+      <div className="form__row">
+        <TextField
+          label="Nombre"
+          autoComplete="given-name"
+          required
+          maxLength={75}
+          value={firstName}
+          error={fieldErrors.firstName}
+          onChange={(event) => setFirstName(event.target.value)}
+        />
+        <TextField
+          label="Apellido"
+          autoComplete="family-name"
+          required
+          maxLength={75}
+          value={lastName}
+          error={fieldErrors.lastName}
+          onChange={(event) => setLastName(event.target.value)}
+        />
+      </div>
       <TextField
         label="Email"
         type="email"

@@ -1,19 +1,17 @@
+import { ArrowLeftIcon } from '../../../../shared/ui/icons'
 import { Link, useParams } from 'react-router'
 import { Button } from '../../../../shared/ui/Button'
 import { EmptyState } from '../../../../shared/ui/EmptyState'
 import { ErrorMessage } from '../../../../shared/ui/ErrorMessage'
 import { LoadingState } from '../../../../shared/ui/LoadingState'
 import { PropertyStatusBadge } from '../../properties-admin/components/PropertyStatusBadge'
-import { PropertyDataForm } from '../components/PropertyDataForm'
-import { PropertyFeaturesSection } from './PropertyFeaturesSection'
-import { PropertyImagesSection } from './PropertyImagesSection'
-import { PropertyStatusSection } from './PropertyStatusSection'
-import { toEditRequest, valuesFromDetail, type PropertyFormValues } from '../propertyFormValues'
 import { useEditProperty } from '../usePropertyForm'
+import { PropertyWizard } from './PropertyWizard'
 
 const BACK_LINK = (
   <Link to="/agent/properties" className="back-link">
-    ← Mis propiedades
+    <ArrowLeftIcon className="back-link__icon" />
+    Mis propiedades
   </Link>
 )
 
@@ -23,14 +21,14 @@ export function PropertyEditPage() {
 
   if (editor.loading) {
     return (
-      <section className="page page--medium">
+      <section className="page page--wide">
         <LoadingState label="Cargando la propiedad…" />
       </section>
     )
   }
   if (editor.notFound) {
     return (
-      <section className="page page--medium">
+      <section className="page page--wide">
         {BACK_LINK}
         <EmptyState title="Propiedad no encontrada" titleAs="h1">
           Puede que la dirección esté mal.
@@ -55,45 +53,20 @@ export function PropertyEditPage() {
   const { property } = editor
   const closed = property.status === 'SOLD' || property.status === 'RENTED'
 
-  function handleSave(values: PropertyFormValues) {
-    editor.saveProperty(toEditRequest(values, property.location))
-  }
-
   return (
-    <section className="page page--medium">
+    <section className="page page--wide">
       {BACK_LINK}
       <div className="page-header">
         <h1>Editar propiedad</h1>
         <PropertyStatusBadge status={property.status} />
       </div>
-      <div className="editor">
-        {closed ? (
-          <p className="notice notice--warning">
-            Esta propiedad ya se cerró y ya no se puede editar.
-          </p>
-        ) : (
-          <>
-            <PropertyStatusSection property={property} />
-            <div className="card editor__section">
-              <h2>Datos</h2>
-              <PropertyDataForm
-                key={property.id}
-                initialValues={valuesFromDetail(property)}
-                lockKind
-                submitLabel="Guardar cambios"
-                submitVariant="secondary"
-                submitting={editor.submitting}
-                saved={editor.saved}
-                error={editor.error}
-                fieldErrors={editor.fieldErrors}
-                onSubmit={handleSave}
-              />
-            </div>
-            <PropertyFeaturesSection key={`features-${property.id}`} property={property} />
-            <PropertyImagesSection property={property} />
-          </>
-        )}
-      </div>
+      {closed ? (
+        <p className="notice notice--warning">
+          Esta propiedad ya se cerró y ya no se puede editar.
+        </p>
+      ) : (
+        <PropertyWizard key={property.id} property={property} />
+      )}
     </section>
   )
 }

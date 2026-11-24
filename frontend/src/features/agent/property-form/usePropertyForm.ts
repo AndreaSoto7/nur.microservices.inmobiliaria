@@ -1,44 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, errorMessage } from '../../../core/api/problem'
 import { propertiesApi } from '../../../core/api/propertiesApi'
-import type {
-  CreatePropertyRequest,
-  EditPropertyRequest,
-  UpdateFeaturesRequest,
-} from '../../../core/models/listing'
+import { gatewayUrl } from '../../../core/config'
+import type { PropertyDetail } from '../../../core/models/listing'
 import { invalidateProperty } from '../properties-admin/usePropertyTransition'
 
-function mutationState(mutation: { isPending: boolean; error: Error | null }) {
-  return {
-    submitting: mutation.isPending,
-    error: mutation.error ? errorMessage(mutation.error) : undefined,
-    fieldErrors: mutation.error instanceof ApiError ? mutation.error.fieldErrors : {},
-  }
-}
-
-const CREATE_TIMEOUT_MESSAGE =
-  'El servidor tardó demasiado y puede que el borrador se haya creado igual. Revisa Mis propiedades antes de volver a intentarlo.'
-
-/** Facade de crear una propiedad. */
-export function useCreateProperty() {
-  const queryClient = useQueryClient()
-  const mutation = useMutation({
-    mutationFn: (request: CreatePropertyRequest) => propertiesApi.create(request),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agent-properties'] }),
-  })
-  const state = mutationState(mutation)
-  // El POST no es idempotente: si se cortó la espera, el borrador pudo guardarse igual.
-  const timedOut = mutation.error instanceof ApiError && mutation.error.status === 504
-  return {
-    createProperty: mutation.mutateAsync,
-    ...state,
-    error: timedOut ? CREATE_TIMEOUT_MESSAGE : state.error,
-  }
-}
-
-/** Facade de editar una propiedad. Un 404 es "no encontrada", no un error técnico. */
+/** Facade de la propiedad que se edita. Un 404 es "no encontrada", no un error técnico. */
 export function useEditProperty(propertyId: string) {
-  const queryClient = useQueryClient()
   const result = useQuery({
     queryKey: ['agent-property', propertyId],
     queryFn: ({ signal }) => propertiesApi.get(propertyId, signal),
@@ -47,32 +15,79 @@ export function useEditProperty(propertyId: string) {
   })
   const notFound = result.error instanceof ApiError && result.error.status === 404
 
-  const save = useMutation({
-    mutationFn: (request: EditPropertyRequest) => propertiesApi.update(propertyId, request),
-    onSuccess: () => invalidateProperty(queryClient, propertyId),
-  })
-
   return {
     property: result.data,
     loading: result.isPending,
     notFound,
     loadError: result.isError && !notFound ? errorMessage(result.error) : undefined,
     retry: result.refetch,
-    saveProperty: save.mutate,
-    saved: save.isSuccess,
-    ...mutationState(save),
   }
 }
 
-/** Facade de las características de una propiedad. */
-export function useUpdateFeatures(propertyId: string) {
+/** Facade para ordenar la galería: mover una foto, o hacerla portada (posición 0). */
+export function useMoveImage(propertyId: string) {
   const queryClient = useQueryClient()
   const mutation = useMutation({
-    mutationFn: (request: UpdateFeaturesRequest) =>
-      propertiesApi.updateFeatures(propertyId, request),
+    mutationFn: (input: { imageId: string; position: number }) =>
+      propertiesApi.moveImage(propertyId, input.imageId, input.position),
     onSuccess: () => invalidateProperty(queryClient, propertyId),
   })
-  return { saveFeatures: mutation.mutate, saved: mutation.isSuccess, ...mutationState(mutation) }
+  return {
+    moveImage: mutation.mutate,
+    movingId: mutation.isPending ? mutation.variables.imageId : undefined,
+    error: mutation.error ? errorMessage(mutation.error) : undefined,
+  }
+}
+
+/** Facade para quitar una foto de la galería. */
+export function useRemoveImage(propertyId: string) {
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: (imageId: string) => propertiesApi.removeImage(propertyId, imageId),
+    onSuccess: () => invalidateProperty(queryClient, propertyId),
+  })
+  return {
+    removeImage: mutation.mutate,
+    removingId: mutation.isPending ? mutation.variables : undefined,
+    error: mutation.error ? errorMessage(mutation.error) : undefined,
+  }
+}
+
+/**
+ * De dónde sale cada miniatura. Si la propiedad es visible, la URL pública; si es un borrador o está
+ * pausada, listing solo se la da a su agente: se pide con el token y se muestra como data: URL (la CSP del
+ * frontend admite data:, no blob:).
+ */
+export function useImageSources(
+  property: PropertyDetail | undefined,
+): Record<string, string | undefined> {
+  const images = property?.images ?? []
+  const visible =
+    property !== undefined && property.status !== 'DRAFT' && property.status !== 'PAUSED'
+  const results = useQueries({
+    queries: images.map((image) => ({
+      queryKey: ['owner-image', image.id],
+      queryFn: async ({ signal }: { signal: AbortSignal }) =>
+        toDataUrl(await propertiesApi.imageBlob(image.url, signal)),
+      enabled: !visible,
+      staleTime: Infinity,
+    })),
+  })
+  return Object.fromEntries(
+    images.map((image, index) => [
+      image.id,
+      visible ? gatewayUrl(image.url) : results[index]?.data,
+    ]),
+  )
+}
+
+function toDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(blob)
+  })
 }
 
 /** Facade de la subida de fotos. */

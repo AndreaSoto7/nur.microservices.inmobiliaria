@@ -38,7 +38,7 @@ export function AgentInquiriesPage() {
                 key={inquiry.id}
                 inquiry={inquiry}
                 title={titles[inquiry.propertyId]}
-                href={`/agent/properties/${inquiry.propertyId}`}
+                href={`/properties/${inquiry.propertyId}`}
                 expanded={openId === inquiry.id}
                 onToggle={handleToggle}
               >

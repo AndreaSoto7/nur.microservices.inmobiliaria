@@ -1,16 +1,27 @@
 import type { Page } from '../models/listing'
-import type { CreatedResponse, Lead, LeadOutcome, LeadStatus } from '../models/visit'
+import type { CreatedResponse, Lead, LeadFollowUp, LeadOutcome, LeadStatus } from '../models/visit'
 import { apiRequest } from './httpClient'
 
 const leadPath = (leadId: string) => `/api/v1/leads/${encodeURIComponent(leadId)}`
 
 // Oportunidades del agente (contracts/openapi/visit-service.yaml). Todo POST exige Idempotency-Key.
 export const leadsApi = {
-  list: (params: { status?: LeadStatus; page: number }, signal?: AbortSignal) => {
+  list: (
+    params: { status?: LeadStatus; page: number; propertyId?: string },
+    signal?: AbortSignal,
+  ) => {
     const query = new URLSearchParams({ page: String(params.page), sort: 'openedAt,desc' })
     if (params.status) query.set('status', params.status)
+    if (params.propertyId) query.set('propertyId', params.propertyId)
     return apiRequest<Page<Lead>>(`/api/v1/leads?${query}`, { auth: true, signal })
   },
+
+  /** Las notas en el orden en que se escribieron; 100 alcanzan para el seguimiento de una oportunidad. */
+  followUps: (leadId: string, signal?: AbortSignal) =>
+    apiRequest<Page<LeadFollowUp>>(`${leadPath(leadId)}/follow-ups?size=100&sort=createdAt,asc`, {
+      auth: true,
+      signal,
+    }),
 
   addFollowUp: (leadId: string, note: string, idempotencyKey: string) =>
     apiRequest<CreatedResponse>(`${leadPath(leadId)}/follow-ups`, {

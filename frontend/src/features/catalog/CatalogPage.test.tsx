@@ -24,7 +24,8 @@ describe('public catalog', () => {
     const list = await screen.findByRole('list', { name: 'Propiedades' })
     expect(within(list).getAllByRole('article')).toHaveLength(2)
     expect(screen.getAllByText('Bs 1.285.000')).toHaveLength(2)
-    expect(screen.getAllByText(/Casa en venta · Equipetrol/)).toHaveLength(2)
+    expect(screen.getAllByText('Casa en venta')).toHaveLength(2)
+    expect(screen.getAllByText('Equipetrol')).toHaveLength(2)
     expect(screen.getByText('Reservada')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Casa con jardín en Equipetrol' })).toHaveAttribute(
       'src',
@@ -49,26 +50,62 @@ describe('public catalog', () => {
     expect(screen.getByLabelText('Zona')).toHaveValue('Equipetrol')
   })
 
-  it('searching with filters goes back to page 1 and fetches the new results', async () => {
+  it('choosing a type applies it right away, with the zone already typed, from page 1', async () => {
     const fetchMock = mockFetch(
       jsonResponse(200, page([summary()], { totalPages: 3, totalElements: 30 })),
-      jsonResponse(200, page([summary({ id: 'filtrada', title: 'Con piscina' })])),
+      jsonResponse(200, page([summary({ id: 'filtrada', title: 'Depto en Urubó' })])),
     )
     const user = userEvent.setup()
     renderApp('/?page=2')
     await screen.findByRole('list', { name: 'Propiedades' })
 
     await user.type(screen.getByLabelText('Zona'), 'Urubó')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
     await user.selectOptions(screen.getByLabelText('Tipo'), 'APARTMENT')
-    await user.click(screen.getByLabelText('Piscina'))
-    await user.click(screen.getByRole('button', { name: 'Buscar' }))
 
-    expect(await screen.findByText('Con piscina')).toBeInTheDocument()
+    expect(await screen.findByText('Depto en Urubó')).toBeInTheDocument()
     const query = requestedQuery(fetchMock, 1)
     expect(query.get('zone')).toBe('Urubó')
     expect(query.get('type')).toBe('APARTMENT')
-    expect(query.get('features')).toBe('POOL')
     expect(query.get('page')).toBe('1')
+  })
+
+  it('a feature applies when ticked, and "Más filtros" stays open after unticking it', async () => {
+    const fetchMock = mockFetch(
+      jsonResponse(200, page([summary()])),
+      jsonResponse(200, page([summary({ id: 'piscina', title: 'Con piscina' })])),
+      jsonResponse(200, page([summary()])),
+    )
+    const user = userEvent.setup()
+    renderApp('/')
+    await screen.findByRole('list', { name: 'Propiedades' })
+
+    await user.click(screen.getByText('Más filtros'))
+    await user.click(screen.getByLabelText('Piscina'))
+    expect(await screen.findByText('Con piscina')).toBeInTheDocument()
+    expect(requestedQuery(fetchMock, 1).get('features')).toBe('POOL')
+
+    await user.click(screen.getByLabelText('Piscina'))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    expect(requestedQuery(fetchMock, 2).get('features')).toBeNull()
+    expect(screen.getByLabelText('Piscina').closest('details')).toHaveAttribute('open')
+  })
+
+  it('the typed zone waits for Buscar', async () => {
+    const fetchMock = mockFetch(
+      jsonResponse(200, page([summary()])),
+      jsonResponse(200, page([summary({ id: 'z', title: 'En Equipetrol' })])),
+    )
+    const user = userEvent.setup()
+    renderApp('/')
+    await screen.findByRole('list', { name: 'Propiedades' })
+
+    await user.type(screen.getByLabelText('Zona'), '  Equipetrol  ')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await user.click(screen.getByRole('button', { name: 'Buscar' }))
+
+    expect(await screen.findByText('En Equipetrol')).toBeInTheDocument()
+    expect(requestedQuery(fetchMock, 1).get('zone')).toBe('Equipetrol')
   })
 
   it('paginates with Siguiente', async () => {
@@ -179,6 +216,48 @@ describe('public catalog', () => {
         'Casa con jardín en Equipetrol',
       ),
     )
-    expect(screen.getByText('Calle 7 Oeste #120', { exact: false })).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: 'Ubicación' })).getByText(/Calle 7 Oeste #120/),
+    ).toBeInTheDocument()
+  })
+
+  it('puts each located property on the map with its price', async () => {
+    mockFetch(
+      jsonResponse(
+        200,
+        page([
+          summary({ latitude: -17.7633, longitude: -63.1956 }),
+          summary({ id: 'sin-ubicacion', title: 'Depto sin ubicación', zone: 'Norte' }),
+        ]),
+      ),
+    )
+
+    renderApp('/')
+
+    await screen.findByRole('list', { name: 'Propiedades' })
+    const map = screen.getByRole('region', { name: 'Mapa de propiedades' })
+    expect(within(map).getByTitle('Casa con jardín en Equipetrol, Bs 1.285.000')).toHaveTextContent(
+      'Bs 1,29 M',
+    )
+    expect(within(map).queryByTitle(/Depto sin ubicación/)).not.toBeInTheDocument()
+    expect(screen.getByText(/1 propiedad no aparece en el mapa/)).toBeInTheDocument()
+  })
+
+  it('a zone shortcut filters the catalog by that zone', async () => {
+    const fetchMock = mockFetch(
+      jsonResponse(200, page([summary(), summary({ id: 'otra', zone: 'Urubó' })])),
+      jsonResponse(200, page([summary({ id: 'otra', zone: 'Urubó' })])),
+    )
+    const user = userEvent.setup()
+    renderApp('/')
+
+    await user.click(
+      within(await screen.findByRole('group', { name: 'Filtrar por zona' })).getByRole('button', {
+        name: /Urubó/,
+      }),
+    )
+
+    await waitFor(() => expect(requestedQuery(fetchMock, 1).get('zone')).toBe('Urubó'))
+    expect(await screen.findByRole('button', { name: /Zona: Urubó/ })).toBeInTheDocument()
   })
 })

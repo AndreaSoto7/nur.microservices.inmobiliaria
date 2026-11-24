@@ -6,8 +6,10 @@ import { errorMessage } from '../../core/api/problem'
 import { parsePageParam } from '../../shared/format/pageParam'
 
 const PAGE_SIZE = 20
-/** Los avisos nacen de eventos: nadie le avisa al navegador, así que el contador se vuelve a pedir. */
-const UNREAD_POLL_MS = 60_000
+/** Los avisos nacen de eventos: nadie le avisa al navegador, así que se vuelven a pedir cada tanto. */
+const UNREAD_POLL_MS = 30_000
+/** Los últimos sin leer: alcanzan para el contador (totalElements) y para anunciar los nuevos. */
+const LATEST_UNREAD = 5
 
 /** Facade de la página de avisos: el filtro y la página viven en la URL. */
 export function useNotificationsPage() {
@@ -24,6 +26,11 @@ export function useNotificationsPage() {
 
   const markRead = useMutation({
     mutationFn: notificationsApi.markRead,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  })
+
+  const remove = useMutation({
+    mutationFn: notificationsApi.remove,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   })
 
@@ -50,17 +57,31 @@ export function useNotificationsPage() {
     error: result.isError ? errorMessage(result.error) : undefined,
     retry: result.refetch,
     markRead: markRead.mutate,
-    markingId: markRead.isPending ? markRead.variables : null,
-    markError: markRead.error ? errorMessage(markRead.error) : undefined,
+    remove: remove.mutate,
+    /** El aviso con una acción en curso: sus botones se desactivan. */
+    busyId: markRead.isPending ? markRead.variables : remove.isPending ? remove.variables : null,
+    actionError: markRead.error
+      ? errorMessage(markRead.error)
+      : remove.error
+        ? errorMessage(remove.error)
+        : undefined,
   }
 }
 
-/** Facade del contador de la cabecera. Si falla no molesta: simplemente no hay número. */
-export function useUnreadCount(): number {
-  const result = useQuery({
-    queryKey: ['notifications', 'unread-count'],
-    queryFn: ({ signal }) => notificationsApi.list({ page: 1, size: 1, unread: true }, signal),
+/**
+ * Los últimos avisos sin leer, consultados cada 30 segundos. La comparten el contador de la cabecera y el
+ * anuncio de avisos nuevos: es una sola request. Si falla no molesta: no hay número ni anuncio.
+ */
+export function useLatestUnread() {
+  return useQuery({
+    queryKey: ['notifications', 'unread-latest'],
+    queryFn: ({ signal }) =>
+      notificationsApi.list({ page: 1, size: LATEST_UNREAD, unread: true }, signal),
     refetchInterval: UNREAD_POLL_MS,
   })
-  return result.data?.page.totalElements ?? 0
+}
+
+/** Facade del contador de la cabecera. */
+export function useUnreadCount(): number {
+  return useLatestUnread().data?.page.totalElements ?? 0
 }

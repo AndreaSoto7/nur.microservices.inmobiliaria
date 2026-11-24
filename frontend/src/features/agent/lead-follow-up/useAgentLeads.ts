@@ -34,7 +34,10 @@ export function useAgentLeads() {
       const { outcome, note } = input
       await leadsApi.close(input.leadId, { outcome, ...(note ? { note } : {}) }, keyFor(input))
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agent-leads'] }),
+    onSuccess: (_, input) => {
+      queryClient.invalidateQueries({ queryKey: ['lead-notes', input.leadId] })
+      return queryClient.invalidateQueries({ queryKey: ['agent-leads'] })
+    },
   })
 
   const changeStatus = useCallback(
@@ -65,5 +68,19 @@ export function useAgentLeads() {
     noteSavedLeadId: done?.kind === 'note' ? done.leadId : null,
     /** La reserva la hace listing al recibir el evento: la UI no la da por hecha todavía. */
     reservingLeadId: done?.kind === 'close' && done.outcome === 'WON' ? done.leadId : null,
+  }
+}
+
+/** Facade de las notas de una oportunidad: se piden recién cuando el agente las abre. */
+export function useLeadNotes(leadId: string) {
+  const query = useQuery({
+    queryKey: ['lead-notes', leadId],
+    queryFn: ({ signal }) => leadsApi.followUps(leadId, signal),
+  })
+  return {
+    notes: query.data?.data,
+    total: query.data?.page.totalElements ?? 0,
+    loading: query.isPending,
+    error: query.error ? errorMessage(query.error) : undefined,
   }
 }

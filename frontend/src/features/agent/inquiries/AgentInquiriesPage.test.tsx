@@ -1,7 +1,14 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
-import { agentUser, jsonResponse, problem, routeFetch, sessionRoutes } from '../../../test/http'
+import {
+  agentUser,
+  jsonResponse,
+  problem,
+  routeFetch,
+  sentBodies,
+  sessionRoutes,
+} from '../../../test/http'
 import { detail, PROPERTY_ID } from '../../../test/listingFixtures'
 import { renderApp } from '../../../test/renderApp'
 
@@ -40,7 +47,7 @@ describe('AgentInquiriesPage', () => {
     expect(within(row).getByRole('heading', { name: 'María Pérez' })).toBeInTheDocument()
     expect(await within(row).findByRole('link', { name: 'Mi casa' })).toHaveAttribute(
       'href',
-      `/agent/properties/${PROPERTY_ID}`,
+      `/properties/${PROPERTY_ID}`,
     )
   })
 
@@ -138,5 +145,37 @@ describe('AgentInquiriesPage', () => {
     await user.click(screen.getByRole('button', { name: 'Reintentar' }))
 
     expect(await screen.findByText('Todavía no recibiste consultas')).toBeInTheDocument()
+  })
+
+  it('replies an unanswered inquiry and then shows the reply instead of the form', async () => {
+    let replied = false
+    const fetchMock = routeFetch({
+      ...base(),
+      [LIST]: listOf([summary]),
+      [DETAIL]: () =>
+        jsonResponse(
+          200,
+          replied ? { ...full, reply: 'Sí, se aceptan.', repliedAt: '2026-10-17T10:00:00Z' } : full,
+        ),
+      [`POST /api/v1/inquiries/${INQUIRY_ID}/reply`]: () => {
+        replied = true
+        return jsonResponse(200, { id: INQUIRY_ID })
+      },
+    })
+    const user = userEvent.setup()
+    renderApp('/agent/inquiries')
+
+    expect(await screen.findByText('Sin responder')).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: /^Ver consulta/ }))
+    await user.type(await screen.findByLabelText('Tu respuesta'), 'Sí, se aceptan.')
+    await user.click(screen.getByRole('button', { name: 'Enviar respuesta' }))
+
+    expect(await screen.findByText(/Respuesta del agente/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Tu respuesta')).not.toBeInTheDocument()
+    expect(sentBodies(fetchMock, 'POST', `/api/v1/inquiries/${INQUIRY_ID}/reply`)).toEqual([
+      { message: 'Sí, se aceptan.' },
+    ])
+    const call = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/reply'))
+    expect(new Headers(call?.[1]?.headers).get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/)
   })
 })

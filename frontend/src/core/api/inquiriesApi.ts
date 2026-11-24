@@ -4,7 +4,10 @@ import { apiRequest } from './httpClient'
 
 // Consultas (contracts/openapi/visit-service.yaml). Todo POST exige Idempotency-Key.
 export const inquiriesApi = {
-  /** Las asignadas al agente del token. No trae el mensaje: se pide al abrir cada una. */
+  /**
+   * Las del token: un agente ve las asignadas; un cliente, las que envió. No trae el mensaje ni la
+   * respuesta: se piden al abrir cada una.
+   */
   list: (params: { page: number }, signal?: AbortSignal) =>
     apiRequest<Page<InquirySummary>>(
       `/api/v1/inquiries?page=${params.page}&sort=createdAt%2Cdesc`,
@@ -15,6 +18,14 @@ export const inquiriesApi = {
     apiRequest<Inquiry>(`/api/v1/inquiries/${encodeURIComponent(inquiryId)}`, {
       auth: true,
       signal,
+    }),
+
+  reply: (inquiryId: string, message: string, idempotencyKey: string) =>
+    apiRequest<CreatedResponse>(`/api/v1/inquiries/${encodeURIComponent(inquiryId)}/reply`, {
+      method: 'POST',
+      body: { message },
+      auth: true,
+      headers: { 'Idempotency-Key': idempotencyKey },
     }),
 
   send: (request: SendInquiryRequest, idempotencyKey: string) =>

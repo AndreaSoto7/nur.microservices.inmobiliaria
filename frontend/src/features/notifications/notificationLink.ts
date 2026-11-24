@@ -15,7 +15,11 @@ const LINKS_BY_TYPE: Record<string, NotificationLink> = {
   VISIT_COMPLETED: MY_VISITS,
   VISIT_REQUESTED: VISIT_REQUESTS,
   VISIT_CANCELLED_BY_CLIENT: VISIT_REQUESTS,
+  VISIT_TIME_PROPOSED: { href: '/my-visits', label: 'Ver la propuesta' },
+  VISIT_TIME_PROPOSED_BY_CLIENT: VISIT_REQUESTS,
+  VISIT_PROPOSAL_ACCEPTED: VISIT_REQUESTS,
   INQUIRY_RECEIVED: { href: '/agent/inquiries', label: 'Ver consultas' },
+  INQUIRY_REPLIED: { href: '/my-inquiries', label: 'Ver la respuesta' },
 }
 
 /**

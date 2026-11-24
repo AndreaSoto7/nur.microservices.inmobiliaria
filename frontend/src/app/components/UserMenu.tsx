@@ -4,13 +4,20 @@ import { ChevronDownIcon } from '../../shared/ui/icons'
 
 interface UserMenuProps {
   userName: string
+  /** Se muestra arriba de las opciones: reemplaza a la antigua página "Mi cuenta". */
+  userEmail?: string
   /** Los enlaces los pone el container: este componente no conoce el router. */
   children: ReactNode
   onLogout: () => void
 }
 
 /** Dumb: botón con el nombre del usuario que despliega sus opciones. */
-export const UserMenu = memo(function UserMenu({ userName, children, onLogout }: UserMenuProps) {
+export const UserMenu = memo(function UserMenu({
+  userName,
+  userEmail,
+  children,
+  onLogout,
+}: UserMenuProps) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -44,10 +51,22 @@ export const UserMenu = memo(function UserMenu({ userName, children, onLogout }:
         onClick={() => setOpen((current) => !current)}
       >
         <span className="user-menu__name">{userName}</span>
+        <span className="user-menu__initials" aria-hidden="true">
+          {userName
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((word) => word[0].toUpperCase())
+            .join('')}
+        </span>
         <ChevronDownIcon className="user-menu__chevron" />
       </button>
       {open && (
         <div className="user-menu__panel" onClick={() => setOpen(false)}>
+          <p className="user-menu__who">
+            <span className="user-menu__who-name">{userName}</span>
+            {userEmail && <span className="user-menu__who-email">{userEmail}</span>}
+          </p>
           {children}
           <button type="button" className="user-menu__logout" onClick={onLogout}>
             Cerrar sesión

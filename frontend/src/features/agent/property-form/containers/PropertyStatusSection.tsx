@@ -11,8 +11,7 @@ export function PropertyStatusSection({ property }: { property: PropertyDetail }
   const blockers = canPublish ? publishBlockers(property) : []
 
   return (
-    <div className="card editor__section">
-      <h2>Estado</h2>
+    <div className="editor__section">
       <PublishChecklist blockers={blockers} />
       <PropertyActions
         title={property.title}

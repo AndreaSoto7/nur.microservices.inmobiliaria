@@ -19,6 +19,8 @@ const ANA_ID = '22222222-2222-4222-8222-222222222222'
 const adminSession = {
   ...currentUser,
   id: ADMIN_ID,
+  firstName: 'Admin',
+  lastName: 'Demo',
   fullName: 'Admin Demo',
   roles: ['ADMIN' as const],
 }
@@ -26,6 +28,8 @@ const adminSession = {
 const ana = (overrides: Partial<AdminUser> = {}): AdminUser => ({
   id: ANA_ID,
   email: 'ana@example.com',
+  firstName: 'Ana',
+  lastName: 'Pérez',
   fullName: 'Ana Pérez',
   roles: ['CLIENT'],
   active: true,
@@ -35,6 +39,8 @@ const ana = (overrides: Partial<AdminUser> = {}): AdminUser => ({
 const self = (): AdminUser => ({
   id: ADMIN_ID,
   email: 'admin@example.com',
+  firstName: 'Admin',
+  lastName: 'Demo',
   fullName: 'Admin Demo',
   roles: ['ADMIN'],
   active: true,

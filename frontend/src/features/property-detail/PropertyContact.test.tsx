@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import {
@@ -31,6 +31,9 @@ const keysSentTo = (fetchMock: ReturnType<typeof routeFetch>, path: string) =>
     .filter(([url, init]) => init?.method === 'POST' && String(url).endsWith(path))
     .map(([, init]) => (init?.headers as Record<string, string>)['Idempotency-Key'])
 
+/** Cada panel de contacto tiene su formulario: la visita y la consulta piden teléfono las dos. */
+const panel = (summary: string) => screen.getByText(summary).closest('details') as HTMLElement
+
 async function openVisitForm(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByText('Solicitar una visita'))
 }
@@ -57,6 +60,32 @@ describe('requesting a visit from the detail page', () => {
       { propertyId: PROPERTY_ID, proposedAt: new Date('2099-01-15T10:30').toISOString() },
     ])
     expect(keysSentTo(fetchMock, '/api/v1/visits')[0]).toMatch(/^[0-9a-f-]{36}$/)
+  })
+
+  it('includes the phone so the agent can call, and checks it first', async () => {
+    const fetchMock = routeFetch({
+      ...routes(),
+      'POST /api/v1/visits': () => jsonResponse(201, { id: 'visita-1' }),
+    })
+    const user = userEvent.setup()
+    renderApp(path)
+
+    await openVisitForm(user)
+    await user.type(screen.getByLabelText('Fecha y hora'), '2099-01-15T10:30')
+    const phone = within(panel('Solicitar una visita')).getByLabelText('Teléfono (opcional)')
+    await user.type(phone, '123')
+    await user.click(screen.getByRole('button', { name: 'Solicitar visita' }))
+    expect(screen.getByText(/entre 7 y 15 dígitos/)).toBeInTheDocument()
+    expect(sentBodies(fetchMock, 'POST', '/api/v1/visits')).toEqual([])
+
+    await user.type(phone, '4567')
+    await user.click(screen.getByRole('button', { name: 'Solicitar visita' }))
+
+    await waitFor(() =>
+      expect(sentBodies(fetchMock, 'POST', '/api/v1/visits')).toEqual([
+        expect.objectContaining({ contactPhone: '1234567' }),
+      ]),
+    )
   })
 
   it('includes the note when one was written', async () => {
@@ -159,7 +188,10 @@ describe('sending an inquiry from the detail page', () => {
     renderApp(path)
 
     await openInquiryForm(user)
-    await user.type(screen.getByLabelText('Teléfono (opcional)'), '70000000')
+    await user.type(
+      within(panel('Enviar una consulta')).getByLabelText('Teléfono (opcional)'),
+      '70000000',
+    )
     await user.type(screen.getByLabelText('Mensaje'), 'Hola')
     await user.click(screen.getByRole('button', { name: 'Enviar consulta' }))
 

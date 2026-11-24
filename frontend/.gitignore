@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Salidas de las skills de diseño (capturas, caché y verificaciones): se regeneran al usarlas.
+.taste-skill/
+.impeccable/mocks/

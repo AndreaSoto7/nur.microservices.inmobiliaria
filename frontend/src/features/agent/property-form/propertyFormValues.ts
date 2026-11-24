@@ -6,6 +6,7 @@ import type {
   PropertyDetail,
   PropertyType,
 } from '../../../core/models/listing'
+import { coordinatesOf, type Coordinates } from '../../../shared/map/mapConfig'
 
 /** Lo que edita el formulario, como texto: un input numérico vacío no es 0. */
 export interface PropertyFormValues {
@@ -16,6 +17,8 @@ export interface PropertyFormValues {
   amount: string
   zone: string
   address: string
+  /** Lo que el agente marcó en el mapa, o null. */
+  coordinates: Coordinates | null
 }
 
 export const EMPTY_PROPERTY_VALUES: PropertyFormValues = {
@@ -26,6 +29,7 @@ export const EMPTY_PROPERTY_VALUES: PropertyFormValues = {
   amount: '',
   zone: '',
   address: '',
+  coordinates: null,
 }
 
 export function valuesFromDetail(property: PropertyDetail): PropertyFormValues {
@@ -37,15 +41,24 @@ export function valuesFromDetail(property: PropertyDetail): PropertyFormValues {
     amount: String(property.price.amount),
     zone: property.location.zone,
     address: property.location.address ?? '',
+    coordinates: coordinatesOf(property.location),
   }
 }
 
-/** `base` conserva lo que el formulario no muestra: el PUT reemplaza la ubicación completa. */
+/** El PUT reemplaza la ubicación completa: zona, dirección y coordenadas salen del formulario. */
 function toLocation(values: PropertyFormValues, base?: Location): Location {
   const location: Location = { ...base, zone: values.zone.trim() }
   const address = values.address.trim()
   if (address) location.address = address
   else delete location.address
+  // Las dos coordenadas van juntas o no va ninguna (contrato de listing).
+  if (values.coordinates) {
+    location.latitude = values.coordinates.latitude
+    location.longitude = values.coordinates.longitude
+  } else {
+    delete location.latitude
+    delete location.longitude
+  }
   return location
 }
 

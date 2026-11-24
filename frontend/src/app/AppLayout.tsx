@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { Link, NavLink, Outlet, useNavigate } from 'react-router'
 import { useAuth } from '../core/auth/AuthContext'
+import { NotificationToaster } from '../features/notifications/containers/NotificationToaster'
 import { NotificationsNavLink } from '../features/notifications/containers/NotificationsNavLink'
 import { HouseIcon } from '../shared/ui/icons'
 import { AppHeader } from './components/AppHeader'
@@ -41,8 +42,8 @@ export function AppLayout() {
 
   const menuItems = (
     <>
+      {hasRole('CLIENT') && <NavLink to="/my-inquiries">Mis consultas</NavLink>}
       {(hasRole('CLIENT') || hasRole('AGENT')) && <NavLink to="/favorites">Favoritos</NavLink>}
-      <NavLink to="/account">Mi cuenta</NavLink>
     </>
   )
 
@@ -58,9 +59,11 @@ export function AppLayout() {
         links={links}
         menuItems={menuItems}
         userName={user?.fullName ?? null}
+        userEmail={user?.email}
         loading={status === 'loading'}
         onLogout={handleLogout}
       />
+      {status === 'authenticated' && user && <NotificationToaster userId={user.id} />}
       <main className="app-main">
         <Outlet />
       </main>
