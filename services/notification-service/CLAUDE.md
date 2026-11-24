@@ -30,7 +30,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 - `MarkReadBy` es idempotente: marcar dos veces conserva la primera fecha.
 - `MarkReadBy` lo pide solo su destinatario. A cualquier otro le responde `ErrNotificationNotFound` (404): no se revela que existe.
 
-**Tipos (`NotificationType`):** `WELCOME`, `VISIT_REQUESTED`, `PROPERTY_RESERVED`, `INQUIRY_RECEIVED`, `VISIT_SCHEDULED`, `VISIT_REJECTED`, `VISIT_CANCELLED`, `VISIT_CANCELLED_BY_CLIENT` y `VISIT_COMPLETED`.
+**Tipos (`NotificationType`):** `WELCOME`, `VISIT_REQUESTED`, `PROPERTY_RESERVED`, `INQUIRY_RECEIVED`, `INQUIRY_REPLIED`, `VISIT_SCHEDULED`, `VISIT_TIME_PROPOSED`, `VISIT_TIME_PROPOSED_BY_CLIENT`, `VISIT_PROPOSAL_ACCEPTED`, `VISIT_REJECTED`, `VISIT_CANCELLED`, `VISIT_CANCELLED_BY_CLIENT` y `VISIT_COMPLETED`.
 
 ## Casos de uso
 
@@ -50,7 +50,11 @@ Consumer group `notification-service`, desde el principio de cada topic: `identi
 | `VisitRequested` | `agentId` | `VISIT_REQUESTED` |
 | `PropertyReserved` con `actor: SYSTEM` | `agentId` | `PROPERTY_RESERVED` |
 | `InquiryReceived` | `agentId` | `INQUIRY_RECEIVED` |
-| `VisitScheduled` | `clientId` | `VISIT_SCHEDULED` |
+| `InquiryReplied` | `clientId` | `INQUIRY_REPLIED` |
+| `VisitScheduled` con `actor: AGENT` (o sin `actor`) | `clientId` | `VISIT_SCHEDULED` |
+| `VisitScheduled` con `actor: CLIENT` (aceptó la propuesta del agente) | `agentId` | `VISIT_PROPOSAL_ACCEPTED` |
+| `VisitTimeProposed` con `proposedBy: AGENT` | `clientId` | `VISIT_TIME_PROPOSED` |
+| `VisitTimeProposed` con `proposedBy: CLIENT` | `agentId` | `VISIT_TIME_PROPOSED_BY_CLIENT` |
 | `VisitRejected` | `clientId` | `VISIT_REJECTED` |
 | `VisitCancelled` con `actor: AGENT` o `SYSTEM` | `clientId` | `VISIT_CANCELLED` |
 | `VisitCancelled` con `actor: CLIENT` | `agentId` | `VISIT_CANCELLED_BY_CLIENT` |

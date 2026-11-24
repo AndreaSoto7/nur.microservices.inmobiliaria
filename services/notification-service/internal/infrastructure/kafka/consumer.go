@@ -47,7 +47,10 @@ type Policies interface {
 	OnVisitRequested(ctx context.Context, eventID, agentID, propertyID, visitID string) error
 	OnPropertyReserved(ctx context.Context, eventID, agentID, propertyID, actor string) error
 	OnInquiryReceived(ctx context.Context, eventID, agentID, propertyID string) error
+	OnInquiryReplied(ctx context.Context, eventID, clientID, propertyID string) error
 	OnVisitScheduled(ctx context.Context, eventID, clientID, propertyID, visitID string) error
+	OnVisitTimeProposed(ctx context.Context, eventID, clientID, agentID, propertyID, visitID, proposedBy string) error
+	OnVisitProposalAccepted(ctx context.Context, eventID, agentID, propertyID, visitID string) error
 	OnVisitRejected(ctx context.Context, eventID, clientID, propertyID, visitID string) error
 	OnVisitCancelled(ctx context.Context, eventID, clientID, agentID, propertyID, visitID, actor string) error
 	OnVisitCompleted(ctx context.Context, eventID, clientID, propertyID, visitID string) error
@@ -209,6 +212,7 @@ type eventPayload struct {
 	ClientID   string `json:"clientId"`
 	AgentID    string `json:"agentId"`
 	Actor      string `json:"actor"`
+	ProposedBy string `json:"proposedBy"`
 }
 
 // handlerFor es el anti-corruption layer: traduce cada evento a una llamada a la política. Filtra por tipo y
@@ -250,9 +254,21 @@ func (c *Consumer) policyFor(event envelope) (func(context.Context, eventPayload
 		return func(ctx context.Context, p eventPayload) error {
 			return c.policies.OnInquiryReceived(ctx, id, p.AgentID, p.PropertyID)
 		}, true
+	case "InquiryReplied":
+		return func(ctx context.Context, p eventPayload) error {
+			return c.policies.OnInquiryReplied(ctx, id, p.ClientID, p.PropertyID)
+		}, true
 	case "VisitScheduled":
 		return func(ctx context.Context, p eventPayload) error {
+			// Sin actor (eventos viejos) o con AGENT, la programó el agente: se le avisa al cliente.
+			if p.Actor == "CLIENT" {
+				return c.policies.OnVisitProposalAccepted(ctx, id, p.AgentID, p.PropertyID, p.VisitID)
+			}
 			return c.policies.OnVisitScheduled(ctx, id, p.ClientID, p.PropertyID, p.VisitID)
+		}, true
+	case "VisitTimeProposed":
+		return func(ctx context.Context, p eventPayload) error {
+			return c.policies.OnVisitTimeProposed(ctx, id, p.ClientID, p.AgentID, p.PropertyID, p.VisitID, p.ProposedBy)
 		}, true
 	case "VisitRejected":
 		return func(ctx context.Context, p eventPayload) error {

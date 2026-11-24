@@ -123,8 +123,20 @@ func (p *fakePolicies) OnInquiryReceived(_ context.Context, event, agent, proper
 	return p.record("OnInquiryReceived", event, agent, propertyID)
 }
 
+func (p *fakePolicies) OnInquiryReplied(_ context.Context, event, client, propertyID string) error {
+	return p.record("OnInquiryReplied", event, client, propertyID)
+}
+
 func (p *fakePolicies) OnVisitScheduled(_ context.Context, event, client, propertyID, visitID string) error {
 	return p.record("OnVisitScheduled", event, client, propertyID, visitID)
+}
+
+func (p *fakePolicies) OnVisitTimeProposed(_ context.Context, event, client, agent, propertyID, visitID, by string) error {
+	return p.record("OnVisitTimeProposed", event, client, agent, propertyID, visitID, by)
+}
+
+func (p *fakePolicies) OnVisitProposalAccepted(_ context.Context, event, agent, propertyID, visitID string) error {
+	return p.record("OnVisitProposalAccepted", event, agent, propertyID, visitID)
 }
 
 func (p *fakePolicies) OnVisitRejected(_ context.Context, event, client, propertyID, visitID string) error {
@@ -185,9 +197,18 @@ func TestEachEventReachesItsPolicyAndIsCommitted(t *testing.T) {
 		{"InquiryReceived", segmentio.Message{Topic: "visit.inquiry.events", Value: eventValue("InquiryReceived", 1,
 			fmt.Sprintf(`{"inquiryId":%q,"propertyId":%q,"clientId":%q,"agentId":%q}`, visit, property, userID, agentID))},
 			policyCall{"OnInquiryReceived", []string{eventID, agentID, property}}},
+		{"InquiryReplied", segmentio.Message{Topic: "visit.inquiry.events", Value: eventValue("InquiryReplied", 1,
+			fmt.Sprintf(`{"inquiryId":%q,"propertyId":%q,"clientId":%q,"agentId":%q}`, visit, property, userID, agentID))},
+			policyCall{"OnInquiryReplied", []string{eventID, userID, property}}},
 		{"VisitScheduled", segmentio.Message{Topic: "visit.visit.events", Value: eventValue("VisitScheduled", 1,
 			fmt.Sprintf(`{"visitId":%q,"propertyId":%q,"clientId":%q,"agentId":%q,"scheduledStart":"2026-11-07T10:00:00Z","scheduledEnd":"2026-11-07T11:00:00Z"}`, visit, property, userID, agentID))},
 			policyCall{"OnVisitScheduled", []string{eventID, userID, property, visit}}},
+		{"VisitScheduled by the client", segmentio.Message{Topic: "visit.visit.events", Value: eventValue("VisitScheduled", 1,
+			fmt.Sprintf(`{"visitId":%q,"propertyId":%q,"clientId":%q,"agentId":%q,"scheduledStart":"2026-11-07T10:00:00Z","scheduledEnd":"2026-11-07T11:00:00Z","actor":"CLIENT"}`, visit, property, userID, agentID))},
+			policyCall{"OnVisitProposalAccepted", []string{eventID, agentID, property, visit}}},
+		{"VisitTimeProposed", segmentio.Message{Topic: "visit.visit.events", Value: eventValue("VisitTimeProposed", 1,
+			fmt.Sprintf(`{"visitId":%q,"propertyId":%q,"clientId":%q,"agentId":%q,"proposedAt":"2026-11-07T10:00:00Z","proposedBy":"AGENT"}`, visit, property, userID, agentID))},
+			policyCall{"OnVisitTimeProposed", []string{eventID, userID, agentID, property, visit, "AGENT"}}},
 		{"VisitRejected", segmentio.Message{Topic: "visit.visit.events", Value: eventValue("VisitRejected", 1,
 			fmt.Sprintf(`{"visitId":%q,"propertyId":%q,"clientId":%q,"agentId":%q,"actor":"AGENT","reason":"motivo privado"}`, visit, property, userID, agentID))},
 			policyCall{"OnVisitRejected", []string{eventID, userID, property, visit}}},

@@ -109,10 +109,39 @@ func (p *EventPolicies) OnInquiryReceived(ctx context.Context, eventID, agentID,
 	})
 }
 
+// OnInquiryReplied le avisa al cliente que el agente respondió su consulta.
+func (p *EventPolicies) OnInquiryReplied(ctx context.Context, eventID, clientID, propertyID string) error {
+	return p.notify.Handle(ctx, NotifyOnEventCommand{
+		EventID: eventID, RecipientID: clientID, Type: domain.TypeInquiryReplied, PropertyID: propertyID,
+	})
+}
+
 // OnVisitScheduled le avisa al cliente que su visita tiene horario.
 func (p *EventPolicies) OnVisitScheduled(ctx context.Context, eventID, clientID, propertyID, visitID string) error {
 	return p.notify.Handle(ctx, NotifyOnEventCommand{
 		EventID: eventID, RecipientID: clientID, Type: domain.TypeVisitScheduled, PropertyID: propertyID, VisitID: visitID,
+	})
+}
+
+// OnVisitTimeProposed le avisa a la otra parte que hay un horario nuevo para la visita pendiente.
+// Un proposedBy desconocido no avisa a nadie.
+func (p *EventPolicies) OnVisitTimeProposed(ctx context.Context, eventID, clientID, agentID, propertyID, visitID, proposedBy string) error {
+	command := NotifyOnEventCommand{EventID: eventID, PropertyID: propertyID, VisitID: visitID}
+	switch proposedBy {
+	case ActorAgent:
+		command.RecipientID, command.Type = clientID, domain.TypeVisitTimeProposed
+	case ActorClient:
+		command.RecipientID, command.Type = agentID, domain.TypeVisitTimeByClient
+	default:
+		return nil
+	}
+	return p.notify.Handle(ctx, command)
+}
+
+// OnVisitProposalAccepted le avisa al agente que el cliente aceptó su horario: la visita quedó programada.
+func (p *EventPolicies) OnVisitProposalAccepted(ctx context.Context, eventID, agentID, propertyID, visitID string) error {
+	return p.notify.Handle(ctx, NotifyOnEventCommand{
+		EventID: eventID, RecipientID: agentID, Type: domain.TypeVisitProposalAccepted, PropertyID: propertyID, VisitID: visitID,
 	})
 }
 

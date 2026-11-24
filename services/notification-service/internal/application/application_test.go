@@ -157,6 +157,23 @@ func TestPropertyReservedOnlyNotifiesWhenTheSystemReservedIt(t *testing.T) {
 	}
 }
 
+func TestInquiryRepliedNotifiesTheClient(t *testing.T) {
+	store := newStore()
+
+	err := newPolicies(store).OnInquiryReplied(context.Background(), eventOne, userA, property)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	notification := store.only(t)
+	if notification.RecipientID() != userA || notification.Type() != domain.TypeInquiryReplied {
+		t.Errorf("aviso = %s para %s", notification.Type(), notification.RecipientID())
+	}
+	if notification.Message() != "El agente respondió tu consulta." {
+		t.Errorf("mensaje = %q", notification.Message())
+	}
+}
+
 func TestInquiryReceivedNotifiesTheAgent(t *testing.T) {
 	store := newStore()
 
@@ -456,5 +473,44 @@ func TestListAcceptsTheMaximumSize(t *testing.T) {
 	_, err := NewListNotifications(newStore()).Handle(context.Background(), ListNotificationsQuery{UserID: userA, Page: 1, Size: MaxPageSize})
 	if err != nil {
 		t.Errorf("error = %v", err)
+	}
+}
+
+func TestVisitTimeProposedNotifiesTheOtherSide(t *testing.T) {
+	for _, tc := range []struct {
+		by        string
+		recipient string
+		kind      domain.NotificationType
+	}{
+		{"AGENT", userA, domain.TypeVisitTimeProposed},
+		{"CLIENT", userB, domain.TypeVisitTimeByClient},
+	} {
+		t.Run(tc.by, func(t *testing.T) {
+			store := newStore()
+
+			err := newPolicies(store).OnVisitTimeProposed(context.Background(), eventOne, userA, userB, property, visit, tc.by)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			notification := store.only(t)
+			if notification.RecipientID() != tc.recipient || notification.Type() != tc.kind {
+				t.Errorf("aviso = %s para %s", notification.Type(), notification.RecipientID())
+			}
+		})
+	}
+}
+
+func TestVisitProposalAcceptedNotifiesTheAgent(t *testing.T) {
+	store := newStore()
+
+	err := newPolicies(store).OnVisitProposalAccepted(context.Background(), eventOne, userB, property, visit)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	notification := store.only(t)
+	if notification.RecipientID() != userB || notification.Type() != domain.TypeVisitProposalAccepted {
+		t.Errorf("aviso = %s para %s", notification.Type(), notification.RecipientID())
 	}
 }
