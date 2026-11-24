@@ -79,7 +79,7 @@ Ningún servicio llama a otro por HTTP. El detalle de cada flecha está en el `C
 - **Dinero:** `{ "amount": 125000.00, "currency": "BOB" }`. Una sola moneda, **BOB**. Nunca float en el dominio.
 - **JSON:** camelCase en APIs y eventos. Enums en `UPPER_SNAKE_CASE`.
 - **Errores HTTP:** RFC 9457 `application/problem+json` (rule `api-rest`).
-- **Auth:** identity emite un JWT RS256 de 15 min (`sub`, `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`, header `typ=at+jwt`) con refresh token. Roles: `CLIENT`, `AGENT`, `ADMIN`. Cada servicio valida el token con el JWKS (rule `seguridad`).
+- **Auth:** identity emite un JWT RS256 de 15 min (`sub`, `email`, `name`, `roles`, `iss=identity-service`, `aud=inmobiliaria`, header `typ=at+jwt`) con refresh token. Roles: `CLIENT`, `AGENT`, `ADMIN`. Cada servicio valida el token con el JWKS (rule `seguridad`).
 - **Trazabilidad:** `X-Correlation-Id` en HTTP y en los eventos. Logs en JSON, sin datos personales ni tokens.
 
 ## Lenguaje ubicuo (compartido entre servicios)
