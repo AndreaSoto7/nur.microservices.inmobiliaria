@@ -19,7 +19,11 @@ const (
 	TypeVisitRequested         NotificationType = "VISIT_REQUESTED"
 	TypePropertyReserved       NotificationType = "PROPERTY_RESERVED"
 	TypeInquiryReceived        NotificationType = "INQUIRY_RECEIVED"
+	TypeInquiryReplied         NotificationType = "INQUIRY_REPLIED"
 	TypeVisitScheduled         NotificationType = "VISIT_SCHEDULED"
+	TypeVisitTimeProposed      NotificationType = "VISIT_TIME_PROPOSED"
+	TypeVisitTimeByClient      NotificationType = "VISIT_TIME_PROPOSED_BY_CLIENT"
+	TypeVisitProposalAccepted  NotificationType = "VISIT_PROPOSAL_ACCEPTED"
 	TypeVisitRejected          NotificationType = "VISIT_REJECTED"
 	TypeVisitCancelled         NotificationType = "VISIT_CANCELLED"
 	TypeVisitCancelledByClient NotificationType = "VISIT_CANCELLED_BY_CLIENT"
@@ -32,7 +36,11 @@ var messages = map[NotificationType]string{
 	TypeVisitRequested:         "Recibiste una nueva solicitud de visita.",
 	TypePropertyReserved:       "Tu propiedad quedó reservada porque ganaste una oportunidad.",
 	TypeInquiryReceived:        "Recibiste una nueva consulta.",
+	TypeInquiryReplied:         "El agente respondió tu consulta.",
 	TypeVisitScheduled:         "Tu visita quedó programada.",
+	TypeVisitTimeProposed:      "El agente te propone otro horario para tu visita.",
+	TypeVisitTimeByClient:      "Un interesado propuso otro horario para su visita.",
+	TypeVisitProposalAccepted:  "Un interesado aceptó tu horario: la visita quedó programada.",
 	TypeVisitRejected:          "Tu solicitud de visita fue rechazada.",
 	TypeVisitCancelled:         "Tu visita fue cancelada.",
 	TypeVisitCancelledByClient: "Un interesado canceló su visita.",
