@@ -6,8 +6,13 @@ Docker Compose con Kafka (KRaft), Kafka UI, Consul y los servicios. Las decision
 
 ```bash
 bash infra/scripts/generate-env.sh      # una sola vez: crea infra/.env con secretos aleatorios
-docker compose -f infra/docker-compose.yml up -d --build
+docker compose up -d --build
 ```
+
+Si tras reconstruir Docker conserva contenedores con la imagen anterior (observado en Compose
+`v2.38.1-desktop.1`), ejecuta `docker compose up -d --no-build` para aplicar las imágenes construidas.
+Los volúmenes y datos se conservan. Es el mismo comportamiento descrito en el
+[reporte de Compose sobre imágenes reconstruidas](https://github.com/docker/compose/issues/12774).
 
 | Qué | Dónde |
 |---|---|
@@ -59,7 +64,9 @@ python infra/scripts/demo.py admin    # crea la cuenta de administrador
   2. `LeadClosed` (`WON`) hace que listing reserve la propiedad.
   3. `PropertyReserved` hace que visit rechace la solicitud pendiente y mantenga la programada.
   4. `PropertySold` hace que visit cancele la visita programada.
-  5. notification crea los avisos de cada usuario.
+  5. Notification debe crear nueve avisos concretos: tres bienvenidas, dos solicitudes para el agente,
+     una reserva para el agente y programación, rechazo y cancelación para sus clientes. Cada uno se
+     comprueba por destinatario, tipo y propiedad/visita cuando corresponde.
 
   Si una reacción no llega en 45 s, el script termina con código 1 y dice cuál falló. Cada request lleva un `X-Correlation-Id` que empieza con `demo-`, para buscarlo en los logs. Los eventos se ven en la UI de Kafka.
 - El gateway limita login y registro por minuto (`RATE_LIMIT_AUTH_PER_MINUTE`). Si responde 429, el script espera lo que indica `Retry-After` y reintenta.

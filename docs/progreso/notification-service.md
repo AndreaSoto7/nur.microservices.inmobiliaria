@@ -9,8 +9,8 @@
 | Tipo | Qué se hizo | PR |
 |---|---|---|
 | feat | Borrar un aviso (`DELETE /notifications/{id}`, solo su destinatario; el evento que lo creó no lo vuelve a crear). Contrato 1.2.0 | _(pendiente)_ |
-| feat | Avisos de contrapropuesta: `VISIT_TIME_PROPOSED` al cliente, `VISIT_TIME_PROPOSED_BY_CLIENT` y `VISIT_PROPOSAL_ACCEPTED` al agente. Migración `0005`. Probado contra el stack real | _(pendiente)_ |
-| feat | Aviso `INQUIRY_REPLIED` al cliente cuando el agente responde su consulta (`InquiryReplied`). Migración `0004` | _(pendiente)_ |
+| feat | Avisos de contrapropuesta: `VISIT_TIME_PROPOSED` al cliente, `VISIT_TIME_PROPOSED_BY_CLIENT` y `VISIT_PROPOSAL_ACCEPTED` al agente. Migración `0005`. Probado contra el stack real | #125 |
+| feat | Aviso `INQUIRY_REPLIED` al cliente cuando el agente responde su consulta (`InquiryReplied`). Migración `0004` | #125 |
 | feat | Aviso de visita realizada para el cliente. Probado contra el stack real: se marcó desde la pantalla del agente | #108 |
 | docs | Contrato del aviso de visita realizada: tipo nuevo, consumidor en el catálogo y ADR 0007 | #107 |
 | feat | Avisos de consultas y visitas: programada, rechazada y cancelada para el cliente; consulta recibida y cancelación del cliente para el agente. Probado contra el stack real | #105 |
