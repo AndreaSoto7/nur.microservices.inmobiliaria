@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: listing-service
-  version: 0.2.0
+  version: 0.3.0
   description: |
     Propiedades, galería, favoritos y catálogo público de la Plataforma Inmobiliaria.
 
@@ -10,7 +10,8 @@ info:
     - **Autenticación:** `Authorization: Bearer <access token>` emitido por identity (RS256, `typ=at+jwt`,
       `iss=identity-service`, `aud=inmobiliaria`). Roles del claim `roles`. El `sub` es el `agentId` o el `clientId`.
     - **Públicos (sin token):** `GET /api/v1/catalog/properties`, `GET /api/v1/catalog/properties/{propertyId}`
-      y `GET /api/v1/properties/{propertyId}/images/{imageId}`.
+      y `GET /api/v1/properties/{propertyId}/images/{imageId}` (el agente dueño puede mandar su token para ver
+      las fotos de un borrador o de una propiedad pausada).
     - **Comandos (CQRS):** devuelven como máximo el id creado. Las transiciones de estado son `POST` a un
       sub-recurso de acción y responden `204`. Una transición que no está en la máquina de estados responde
       `409 PROPERTY_INVALID_TRANSITION`.
@@ -297,8 +298,10 @@ paths:
       tags: [images]
       operationId: getPropertyImage
       summary: Descargar una imagen (público)
-      description: Responde 404 si la propiedad está en `DRAFT` o `PAUSED`.
-      security: []
+      description: |
+        Responde 404 si la propiedad está en `DRAFT` o `PAUSED`, salvo que la pida el agente dueño con su token:
+        así puede revisar las fotos antes de publicar. En ese caso la respuesta es `Cache-Control: private, no-store`.
+      security: [{}, { bearerAuth: [] }]
       parameters:
         - $ref: '#/components/parameters/PropertyId'
         - name: imageId
@@ -312,6 +315,32 @@ paths:
             image/jpeg: { schema: { type: string, format: binary } }
             image/png: { schema: { type: string, format: binary } }
         '404': { $ref: '#/components/responses/PropertyNotFound' }
+    delete:
+      tags: [images]
+      operationId: removePropertyImage
+      summary: Quitar una imagen de la galería
+      description: |
+        Solo el agente dueño; no si está `SOLD` o `RENTED`. Las demás imágenes suben de posición: si se quita la
+        portada, la siguiente pasa a serlo. Una propiedad `PUBLISHED` o `RESERVED` no puede quedarse sin fotos
+        (`409 PROPERTY_LAST_IMAGE`).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/PropertyId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: imageId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Imagen quitada }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/NotOwner' }
+        '404':
+          description: '`PROPERTY_NOT_FOUND` o `PROPERTY_IMAGE_NOT_FOUND`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409': { $ref: '#/components/responses/Conflict' }
 
   /api/v1/catalog/properties:
     get:
@@ -322,7 +351,13 @@ paths:
       security: []
       parameters:
         - $ref: '#/components/parameters/CorrelationId'
-        - { name: zone, in: query, description: 'Zona exacta, sin distinguir mayúsculas.', schema: { type: string }, example: equipetrol }
+        - name: zone
+          in: query
+          description: |
+            Parte del nombre de la zona, sin distinguir mayúsculas ni tildes: `uru` encuentra Urubó. La palabra
+            `zona` al principio se ignora (`zona norte` busca `norte`).
+          schema: { type: string, maxLength: 100 }
+          example: uru
         - { name: type, in: query, schema: { $ref: '#/components/schemas/PropertyType' } }
         - { name: operation, in: query, schema: { $ref: '#/components/schemas/OperationType' } }
         - { name: minPrice, in: query, schema: { type: number, minimum: 0 } }
@@ -357,6 +392,8 @@ paths:
                     status: PUBLISHED
                     price: { amount: 1285000.00, currency: BOB }
                     zone: Equipetrol
+                    latitude: -17.7633
+                    longitude: -63.1956
                     bedrooms: 3
                     bathrooms: 2
                     areaM2: 240.50
@@ -648,6 +685,8 @@ components:
         status: { $ref: '#/components/schemas/PropertyStatus' }
         price: { $ref: '#/components/schemas/Money' }
         zone: { type: string }
+        latitude: { type: [number, 'null'], description: 'Coordenadas para el mapa. null si el agente no las cargó; van juntas.' }
+        longitude: { type: [number, 'null'] }
         bedrooms: { type: [integer, 'null'] }
         bathrooms: { type: [integer, 'null'] }
         areaM2: { type: [number, 'null'] }

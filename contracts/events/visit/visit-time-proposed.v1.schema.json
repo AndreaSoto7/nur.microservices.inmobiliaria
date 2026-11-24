@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inmobiliaria.local/contracts/events/visit/visit-time-proposed.v1.schema.json",
+  "title": "VisitTimeProposed v1 (payload)",
+  "description": "El agente o el cliente propusieron otro horario para una visita pendiente. La visita sigue REQUESTED.",
+  "type": "object",
+  "required": ["visitId", "propertyId", "clientId", "agentId", "proposedAt", "proposedBy"],
+  "properties": {
+    "visitId": { "$ref": "#/$defs/uuid", "description": "Coincide con aggregateId del envelope." },
+    "propertyId": { "$ref": "#/$defs/uuid" },
+    "clientId": { "$ref": "#/$defs/uuid" },
+    "agentId": { "$ref": "#/$defs/uuid" },
+    "proposedAt": { "$ref": "#/$defs/utcDateTime" },
+    "proposedBy": { "type": "string", "enum": ["AGENT", "CLIENT"] }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "utcDateTime": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+    }
+  },
+  "examples": [
+    {
+      "visitId": "5142a8be-97ea-479b-9a40-02162994fb36",
+      "propertyId": "3f6c2a7e-1b2d-4c8e-9f10-5a6b7c8d9e01",
+      "clientId": "81b4586e-348a-48ba-bc93-93341e3b0b4c",
+      "agentId": "8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "proposedAt": "2026-11-12T21:00:00Z",
+      "proposedBy": "AGENT"
+    }
+  ]
+}

@@ -19,7 +19,7 @@ Esta es la fuente de verdad de los eventos entre servicios. Si un evento no est�
 | `identity.user.events` | identity-service | User | notification, audit* |
 | `listing.property.events` | listing-service | Property | visit, notification, audit* |
 | `visit.inquiry.events` | visit-service | Inquiry | notification, audit* |
-| `visit.visit.events` | visit-service | Visit | notification, audit* |
+| `visit.visit.events` | visit-service | Visit | notification, listing, audit* |
 | `visit.lead.events` | visit-service | Lead | listing, audit* |
 
 \* `audit-service` es opcional ([ADR 0005](../../docs/adr/0005-realinear-servicios-y-cadenas-de-eventos.md), sección 5). Si no se construye, esos topics quedan sin ese consumidor.
@@ -38,11 +38,13 @@ Esta es la fuente de verdad de los eventos entre servicios. Si un evento no est�
 | `PropertySold` | 1 | listing.property.events | listing | visit, audit* | Una propiedad pasa a `SOLD` |
 | `PropertyRented` | 1 | listing.property.events | listing | visit, audit* | Una propiedad pasa a `RENTED` |
 | [`InquiryReceived`](visit/inquiry-received.v1.schema.json) | 1 | visit.inquiry.events | visit | notification, audit* | Un interesado envía una consulta |
+| [`InquiryReplied`](visit/inquiry-replied.v1.schema.json) | 1 | visit.inquiry.events | visit | notification, audit* | El agente responde una consulta |
 | [`VisitRequested`](visit/visit-requested.v1.schema.json) | 1 | visit.visit.events | visit | notification, audit* | Un interesado solicita una visita |
-| [`VisitScheduled`](visit/visit-scheduled.v1.schema.json) | 1 | visit.visit.events | visit | notification, audit* | El agente programa la visita |
+| [`VisitScheduled`](visit/visit-scheduled.v1.schema.json) | 1 | visit.visit.events | visit | notification, listing, audit* | El agente programa la visita |
+| [`VisitTimeProposed`](visit/visit-time-proposed.v1.schema.json) | 1 | visit.visit.events | visit | notification, audit* | El agente o el cliente proponen otro horario para una visita pendiente |
 | [`VisitRejected`](visit/visit-rejected.v1.schema.json) | 1 | visit.visit.events | visit | notification, audit* | El agente rechaza la solicitud, o el sistema la rechaza porque la propiedad se reservó, vendió o alquiló |
-| [`VisitCancelled`](visit/visit-cancelled.v1.schema.json) | 1 | visit.visit.events | visit | notification, audit* | El cliente o el agente cancela, o el sistema la cancela porque la propiedad se vendió o alquiló |
-| [`VisitCompleted`](visit/visit-completed.v1.schema.json) | 1 | visit.visit.events | visit | notification, audit* | La visita se realizó |
+| [`VisitCancelled`](visit/visit-cancelled.v1.schema.json) | 1 | visit.visit.events | visit | notification, listing, audit* | El cliente o el agente cancela, o el sistema la cancela porque la propiedad se vendió o alquiló |
+| [`VisitCompleted`](visit/visit-completed.v1.schema.json) | 1 | visit.visit.events | visit | notification, listing, audit* | La visita se realizó |
 | [`LeadOpened`](visit/lead-opened.v1.schema.json) | 1 | visit.lead.events | visit | audit* | Una consulta o solicitud de visita abre una oportunidad |
 | [`LeadFollowUpRegistered`](visit/lead-follow-up-registered.v1.schema.json) | 1 | visit.lead.events | visit | audit* | El agente registra un seguimiento de la oportunidad |
 | [`LeadClosed`](visit/lead-closed.v1.schema.json) | 1 | visit.lead.events | visit | listing, audit* | El agente cierra la oportunidad como ganada (`WON`) o perdida (`LOST`) |
@@ -67,7 +69,11 @@ Detalle y reglas en el [ADR 0005](../../docs/adr/0005-realinear-servicios-y-cade
 | `VisitRequested` | `agentId` | `VISIT_REQUESTED` |
 | `PropertyReserved` con `actor: SYSTEM` | `agentId` | `PROPERTY_RESERVED` |
 | `InquiryReceived` | `agentId` | `INQUIRY_RECEIVED` |
-| `VisitScheduled` | `clientId` | `VISIT_SCHEDULED` |
+| `InquiryReplied` | `clientId` | `INQUIRY_REPLIED` |
+| `VisitScheduled` (sin `actor` o con `actor: AGENT`) | `clientId` | `VISIT_SCHEDULED` |
+| `VisitScheduled` con `actor: CLIENT` | `agentId` | `VISIT_PROPOSAL_ACCEPTED` |
+| `VisitTimeProposed` con `proposedBy: AGENT` | `clientId` | `VISIT_TIME_PROPOSED` |
+| `VisitTimeProposed` con `proposedBy: CLIENT` | `agentId` | `VISIT_TIME_PROPOSED_BY_CLIENT` |
 | `VisitRejected` | `clientId` | `VISIT_REJECTED` |
 | `VisitCancelled` con `actor: AGENT` o `SYSTEM` | `clientId` | `VISIT_CANCELLED` |
 | `VisitCancelled` con `actor: CLIENT` | `agentId` | `VISIT_CANCELLED_BY_CLIENT` |
