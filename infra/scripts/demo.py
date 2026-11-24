@@ -286,7 +286,14 @@ SAMPLES = [
 
 def sign_in(gw: Gateway, email: str, password: str, full_name: str, role: str) -> User:
     """Registra la cuenta si no existe (409 = ya estaba) y entra."""
-    registration = {"email": email, "password": password, "fullName": full_name, "role": role}
+    first_name, _, last_name = full_name.partition(" ")
+    registration = {
+        "email": email,
+        "password": password,
+        "firstName": first_name,
+        "lastName": last_name,
+        "role": role,
+    }
     expect(gw.call("POST", "/api/v1/auth/register", registration), 201, 409, what=f"Registrar {email}")
     login = expect(
         gw.call("POST", "/api/v1/auth/login", {"email": email, "password": password}),
@@ -714,7 +721,7 @@ def create_admin(gw: Gateway) -> None:
         os.environ["DJANGO_SUPERUSER_PASSWORD"] = DEMO_PASSWORD
         # fmt: off
         docker("exec", "-e", "DJANGO_SUPERUSER_PASSWORD", ids[0], "python", "manage.py", "createsuperuser",
-               "--noinput", "--email", ADMIN_EMAIL, "--full_name", "Admin Demo")
+               "--noinput", "--email", ADMIN_EMAIL, "--first_name", "Admin", "--last_name", "Demo")
         # fmt: on
         print("Administrador creado.")
     print(f"Entra en http://localhost:5173 con {ADMIN_EMAIL} y ve a «Usuarios».")
