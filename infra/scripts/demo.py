@@ -2,6 +2,7 @@
 """Datos de ejemplo y demostración de las cadenas de eventos (ADR 0005), todo a través del gateway.
 
     python infra/scripts/demo.py seed     # agente, interesado, propiedades con fotos, favoritos y visitas
+                                          # (si ya están cargadas, les agrega la ubicación del mapa)
     python infra/scripts/demo.py chains   # recorre las políticas entre listing y visit y muestra cada reacción
     python infra/scripts/demo.py balance  # réplicas en Consul y round robin del gateway (--failover: Circuit Breaker)
     python infra/scripts/demo.py admin    # crea la cuenta de administrador para el panel de usuarios
@@ -190,6 +191,9 @@ class Sample:
     area_m2: float
     features: list[str]
     colors: list[tuple[int, int, int]]
+    # Coordenadas simuladas dentro de la zona (el enunciado lo permite): ubican la propiedad en el mapa.
+    latitude: float
+    longitude: float
 
 
 SAMPLES = [
@@ -204,6 +208,8 @@ SAMPLES = [
         240.5,
         ["GARAGE", "GARDEN", "PET_FRIENDLY"],
         [(235, 225, 200), (210, 190, 160)],
+        -17.7633,
+        -63.1956,
     ),
     Sample(
         "Departamento amoblado cerca del centro",
@@ -216,6 +222,8 @@ SAMPLES = [
         55,
         ["FURNISHED", "ELEVATOR", "AIR_CONDITIONING"],
         [(200, 205, 215)],
+        -17.7868,
+        -63.1797,
     ),
     Sample(
         "Casa con piscina en el Urubó",
@@ -228,6 +236,8 @@ SAMPLES = [
         420,
         ["POOL", "GARAGE", "SECURITY", "GARDEN"],
         [(245, 240, 230), (225, 200, 170), (190, 210, 200)],
+        -17.7655,
+        -63.2437,
     ),
     Sample(
         "Departamento con balcón en Las Palmas",
@@ -240,6 +250,8 @@ SAMPLES = [
         98,
         ["BALCONY", "ELEVATOR", "COMMON_AREAS"],
         [(215, 195, 175), (230, 230, 220)],
+        -17.7962,
+        -63.2031,
     ),
     Sample(
         "Casa familiar en alquiler en el Norte",
@@ -252,6 +264,8 @@ SAMPLES = [
         180,
         ["GARAGE", "GARDEN", "SECURITY"],
         [(240, 215, 180)],
+        -17.7392,
+        -63.1718,
     ),
     Sample(
         "Monoambiente para estudiantes cerca de la UAGRM",
@@ -264,6 +278,8 @@ SAMPLES = [
         32,
         ["FURNISHED", "PET_FRIENDLY"],
         [(205, 220, 230)],
+        -17.7769,
+        -63.1925,
     ),
 ]
 
@@ -281,6 +297,38 @@ def sign_in(gw: Gateway, email: str, password: str, full_name: str, role: str) -
     return User(me["id"], email, login["accessToken"])
 
 
+def location_of(sample: Sample) -> dict:
+    return {
+        "zone": sample.zone,
+        "address": "Calle de ejemplo #123",
+        "latitude": sample.latitude,
+        "longitude": sample.longitude,
+    }
+
+
+def locate_existing(gw: Gateway, agent: User) -> None:
+    """Datos cargados antes de que existiera el mapa: agrega las coordenadas a las propiedades que no las tienen."""
+    by_title = {sample.title: sample for sample in SAMPLES}
+    mine = expect(gw.call("GET", "/api/v1/properties?size=100", token=agent.token), 200, what="Mis propiedades")
+    located = 0
+    for summary in mine["data"]:
+        sample = by_title.get(summary["title"])
+        if sample is None or summary.get("latitude") is not None or summary["status"] in ("SOLD", "RENTED"):
+            continue
+        path = f"/api/v1/properties/{summary['id']}"
+        detail = expect(gw.call("GET", path, token=agent.token), 200, what=f"Leer «{summary['title']}»")
+        location = {**detail["location"], "latitude": sample.latitude, "longitude": sample.longitude}
+        body = {
+            "title": detail["title"],
+            "description": detail["description"],
+            "price": detail["price"],
+            "location": location,
+        }
+        expect(gw.call("PUT", path, body, token=agent.token), 204, what=f"Ubicar «{summary['title']}»")
+        located += 1
+    print(f"   ✔ {located} propiedades ubicadas en el mapa" if located else "   Ya estaban ubicadas en el mapa.")
+
+
 def publish_property(gw: Gateway, agent: User, sample: Sample) -> str:
     created = expect(
         gw.call(
@@ -292,7 +340,7 @@ def publish_property(gw: Gateway, agent: User, sample: Sample) -> str:
                 "propertyType": sample.property_type,
                 "operationType": sample.operation,
                 "price": {"amount": sample.amount, "currency": "BOB"},
-                "location": {"zone": sample.zone, "address": "Calle de ejemplo #123"},
+                "location": location_of(sample),
             },
             token=agent.token,
         ),
@@ -382,6 +430,7 @@ def seed(gw: Gateway) -> None:
     mine = expect(gw.call("GET", "/api/v1/properties?size=1", token=agent.token), 200, what="Mis propiedades")
     if mine["page"]["totalElements"] > 0:
         print("   La agente ya tiene propiedades: no se cargan de nuevo.")
+        locate_existing(gw, agent)
         print_accounts()
         return
     print("2. Propiedades publicadas, con características y fotos")
