@@ -7,9 +7,20 @@ import { visitsApi } from '../../core/api/visitsApi'
 import { VISIT_STATUSES, type VisitStatus } from '../../core/models/visit'
 import { parsePageParam } from '../../shared/format/pageParam'
 
-interface CancelInput {
-  visitId: string
-  reason?: string
+export type MyVisitAction =
+  | { kind: 'cancel'; visitId: string; reason?: string }
+  | { kind: 'accept'; visitId: string }
+  | { kind: 'propose'; visitId: string; proposedAt: string }
+
+function runAction(action: MyVisitAction, key: string) {
+  switch (action.kind) {
+    case 'cancel':
+      return visitsApi.cancel(action.visitId, action.reason, key)
+    case 'accept':
+      return visitsApi.acceptProposal(action.visitId, key)
+    case 'propose':
+      return visitsApi.proposeTime(action.visitId, action.proposedAt, key)
+  }
 }
 
 /** Facade de "Mis visitas": el estado y la página viven en la URL. */
@@ -26,9 +37,8 @@ export function useMyVisits() {
     placeholderData: keepPreviousData,
   })
 
-  const cancel = useMutation({
-    mutationFn: (input: CancelInput) =>
-      visitsApi.cancel(input.visitId, input.reason, keyFor(input)),
+  const action = useMutation({
+    mutationFn: (input: MyVisitAction) => runAction(input, keyFor(input)),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-visits'] }),
   })
 
@@ -51,8 +61,10 @@ export function useMyVisits() {
     loading: result.isPending,
     error: result.isError ? errorMessage(result.error) : undefined,
     retry: result.refetch,
-    cancelVisit: cancel.mutate,
-    cancellingId: cancel.isPending ? cancel.variables.visitId : null,
-    cancelError: cancel.error ? errorMessage(cancel.error) : undefined,
+    runAction: action.mutate,
+    busyVisitId: action.isPending ? action.variables.visitId : null,
+    /** El error se muestra en la fila que lo causó. */
+    failedVisitId: action.isError ? action.variables.visitId : null,
+    actionError: action.error ? errorMessage(action.error) : undefined,
   }
 }

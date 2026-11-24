@@ -17,8 +17,9 @@ export function NotificationsPage() {
     error,
     retry,
     markRead,
-    markingId,
-    markError,
+    remove,
+    busyId,
+    actionError,
   } = useNotificationsPage()
 
   return (
@@ -45,12 +46,13 @@ export function NotificationsPage() {
         </div>
       ) : page && page.data.length > 0 ? (
         <>
-          {markError && <ErrorMessage message={markError} />}
+          {actionError && <ErrorMessage message={actionError} />}
           <NotificationList
             notifications={page.data}
             linkFor={notificationLink}
-            markingId={markingId}
+            busyId={busyId}
             onMarkRead={markRead}
+            onRemove={remove}
           />
           <Pagination
             page={page.page.number}

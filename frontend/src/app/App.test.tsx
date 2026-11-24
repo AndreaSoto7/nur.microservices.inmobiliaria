@@ -9,22 +9,22 @@ describe('session flow', () => {
   it('redirects to login when opening a protected route without a session', async () => {
     mockFetch()
 
-    renderApp('/account')
+    renderApp('/notifications')
 
     expect(await screen.findByRole('heading', { name: 'Ingresar' })).toBeInTheDocument()
   })
 
-  it('after signing in returns to the protected route and shows the profile', async () => {
+  it('after signing in returns to the protected route', async () => {
     const fetchMock = mockFetch(jsonResponse(200, tokens()), jsonResponse(200, currentUser))
     const user = userEvent.setup()
-    renderApp('/account')
+    renderApp('/notifications')
 
     await user.type(await screen.findByLabelText('Email'), 'ana@example.com')
     await user.type(screen.getByLabelText('Contraseña'), 'secreta123')
     await user.click(screen.getByRole('button', { name: 'Ingresar' }))
 
-    expect(await screen.findByRole('heading', { name: 'Mi cuenta' })).toBeInTheDocument()
-    expect(screen.getByText('Ana Pérez', { selector: 'dd' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Avisos' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Menú de Ana Pérez' })).toBeInTheDocument()
     expect(fetchMock.mock.calls[0][0]).toBe('http://localhost:8080/api/v1/auth/login')
     expect(tokenStore.getRefreshToken()).toBe('refresh-1')
   })
@@ -50,9 +50,9 @@ describe('session flow', () => {
     localStorage.setItem('inmobiliaria.refreshToken', 'refresh-guardado')
     mockFetch(jsonResponse(200, tokens('nuevo')), jsonResponse(200, currentUser))
 
-    renderApp('/account')
+    renderApp('/notifications')
 
-    expect(await screen.findByRole('heading', { name: 'Mi cuenta' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Avisos' })).toBeInTheDocument()
   })
 
   it('registers the account with the chosen role and signs in', async () => {
@@ -68,7 +68,8 @@ describe('session flow', () => {
 
     expect(await screen.findByRole('button', { name: 'Menú de Ana Pérez' })).toBeInTheDocument()
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
-      fullName: 'Ana Pérez',
+      firstName: 'Ana',
+      lastName: 'Pérez',
       email: 'ana@example.com',
       role: 'AGENT',
     })
@@ -90,10 +91,29 @@ describe('session flow', () => {
     expect(await screen.findByText('Introduzca un email válido.')).toBeInTheDocument()
     expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true')
   })
+
+  it('shows an already registered email only next to the field', async () => {
+    const message = 'Ya existe un usuario con ese email.'
+    mockFetch(
+      jsonResponse(409, {
+        ...problem(409, 'USER_EMAIL_ALREADY_REGISTERED', message),
+        errors: [{ field: 'email', message }],
+      }),
+    )
+    const user = userEvent.setup()
+    renderApp('/register')
+
+    await fillRegisterForm(user)
+
+    expect(await screen.findByText(message)).toBeInTheDocument()
+    expect(screen.getAllByText(message)).toHaveLength(1)
+    expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true')
+  })
 })
 
 async function fillRegisterForm(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(await screen.findByLabelText('Nombre completo'), 'Ana Pérez')
+  await user.type(await screen.findByLabelText('Nombre'), 'Ana')
+  await user.type(screen.getByLabelText('Apellido'), 'Pérez')
   await user.type(screen.getByLabelText('Email'), 'ana@example.com')
   await user.type(screen.getByLabelText(/Contraseña/), '12345678')
   await user.click(screen.getByLabelText('Soy agente y publico propiedades'))

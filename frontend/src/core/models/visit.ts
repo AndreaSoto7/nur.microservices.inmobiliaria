@@ -9,9 +9,23 @@ export const VISIT_STATUSES = [
 ] as const
 export type VisitStatus = (typeof VISIT_STATUSES)[number]
 
+/** Cómo contactar al interesado: lo último que dejó al consultar o pedir una visita. Solo trae lo conocido. */
+export interface ClientContact {
+  name?: string
+  email?: string
+  phone?: string
+}
+
+/** Quién propuso el horario pendiente: el interesado al pedir la visita, o el agente al sugerir otro. */
+export type VisitProposer = 'CLIENT' | 'AGENT'
+
 export interface Visit {
   id: string
   propertyId: string
+  /** El interesado: el agente lo usa para encontrar su oportunidad. */
+  clientId?: string
+  client?: ClientContact
+  proposedBy?: VisitProposer
   propertyTitle?: string
   status: VisitStatus
   proposedAt: string
@@ -27,6 +41,8 @@ export interface RequestVisitRequest {
   /** UTC, con Z al final. */
   proposedAt: string
   clientNote?: string
+  /** Opcional, para que el agente pueda llamar. */
+  contactPhone?: string
 }
 
 export interface SendInquiryRequest {
@@ -46,22 +62,35 @@ export interface InquirySummary {
   propertyId: string
   contactName: string
   createdAt: string
+  /** Solo si el agente ya respondió. */
+  repliedAt?: string
 }
 
 export interface Inquiry extends InquirySummary {
   contactEmail: string
   contactPhone?: string
   message: string
+  /** La respuesta del agente (una por consulta). */
+  reply?: string
 }
 
 export const LEAD_STATUSES = ['OPEN', 'CLOSED'] as const
 export type LeadStatus = (typeof LEAD_STATUSES)[number]
 export type LeadOutcome = 'WON' | 'LOST'
 
+/** Nota de seguimiento de una oportunidad (solo la ve su agente). */
+export interface LeadFollowUp {
+  id: string
+  leadId: string
+  note: string
+  createdAt: string
+}
+
 export interface Lead {
   id: string
   propertyId: string
   clientId: string
+  client?: ClientContact
   status: LeadStatus
   openedAt: string
   closedAt?: string

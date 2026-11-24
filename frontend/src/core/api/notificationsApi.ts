@@ -15,4 +15,11 @@ export const notificationsApi = {
       body: { read: true },
       auth: true,
     }),
+
+  /** Borra un aviso que ya no interesa; el evento que lo creó no lo vuelve a crear. */
+  remove: (notificationId: string) =>
+    apiRequest<void>(`/api/v1/notifications/${encodeURIComponent(notificationId)}`, {
+      method: 'DELETE',
+      auth: true,
+    }),
 }

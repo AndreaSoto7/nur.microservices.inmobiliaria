@@ -1,6 +1,5 @@
 import { Link, Navigate, Route, Routes } from 'react-router'
 import { RequireAuth } from '../core/auth/RequireAuth'
-import { AccountPage } from '../features/account/containers/AccountPage'
 import { AdminUsersPage } from '../features/admin/containers/AdminUsersPage'
 import { AgentInquiriesPage } from '../features/agent/inquiries/containers/AgentInquiriesPage'
 import { AgentLeadsPage } from '../features/agent/lead-follow-up/containers/AgentLeadsPage'
@@ -13,6 +12,7 @@ import { CatalogPage } from '../features/catalog/containers/CatalogPage'
 import { FavoritesPage } from '../features/favorites/containers/FavoritesPage'
 import { LoginPage } from '../features/auth/containers/LoginPage'
 import { RegisterPage } from '../features/auth/containers/RegisterPage'
+import { MyInquiriesPage } from '../features/my-inquiries/containers/MyInquiriesPage'
 import { MyVisitsPage } from '../features/my-visits/containers/MyVisitsPage'
 import { NotificationsPage } from '../features/notifications/containers/NotificationsPage'
 import { PropertyDetailPage } from '../features/property-detail/containers/PropertyDetailPage'
@@ -28,14 +28,6 @@ export function App() {
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
         <Route
-          path="account"
-          element={
-            <RequireAuth>
-              <AccountPage />
-            </RequireAuth>
-          }
-        />
-        <Route
           path="notifications"
           element={
             <RequireAuth>
@@ -48,6 +40,14 @@ export function App() {
           element={
             <RequireAuth roles={['CLIENT']}>
               <MyVisitsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="my-inquiries"
+          element={
+            <RequireAuth roles={['CLIENT']}>
+              <MyInquiriesPage />
             </RequireAuth>
           }
         />

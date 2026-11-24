@@ -9,7 +9,8 @@ export type RegistrableRole = Exclude<Role, 'ADMIN'>
 export interface RegisterUserRequest {
   email: string
   password: string
-  fullName: string
+  firstName: string
+  lastName: string
   role?: RegistrableRole
 }
 
@@ -32,6 +33,10 @@ export interface TokenPair {
 export interface CurrentUser {
   id: string
   email: string
+  firstName: string
+  /** Vacío solo en cuentas creadas antes de separar nombre y apellido. */
+  lastName: string
+  /** Nombre y apellido juntos. */
   fullName: string
   roles: Role[]
   registeredAt: string

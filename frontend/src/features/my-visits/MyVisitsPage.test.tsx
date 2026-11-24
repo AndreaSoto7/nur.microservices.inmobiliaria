@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import {
@@ -16,6 +16,8 @@ import { visit, VISIT_ID, visitPage } from '../../test/visitFixtures'
 
 const LIST = 'GET /api/v1/visits'
 const CANCEL_PATH = `/api/v1/visits/${VISIT_ID}/cancel`
+const ACCEPT_PATH = `/api/v1/visits/${VISIT_ID}/accept-proposal`
+const PROPOSE_PATH = `/api/v1/visits/${VISIT_ID}/propose-time`
 
 describe('MyVisitsPage', () => {
   it('shows the status and the property title, with a link to its page', async () => {
@@ -30,7 +32,70 @@ describe('MyVisitsPage', () => {
     expect(link).toHaveAttribute('href', `/properties/${PROPERTY_ID}`)
     const row = screen.getByRole('listitem')
     expect(within(row).getByText('Solicitada')).toBeInTheDocument()
-    expect(within(row).getByText('Fecha propuesta')).toBeInTheDocument()
+    expect(within(row).getByText('Horario que pediste')).toBeInTheDocument()
+    expect(within(row).getByText(/Esperando que el agente confirme/)).toBeInTheDocument()
+  })
+
+  it('accepts the time the agent proposed', async () => {
+    let status: 'REQUESTED' | 'SCHEDULED' = 'REQUESTED'
+    const fetchMock = routeFetch({
+      ...sessionRoutes(currentUser),
+      [LIST]: () => jsonResponse(200, visitPage([visit({ status, proposedBy: 'AGENT' })])),
+      [`POST ${ACCEPT_PATH}`]: () => {
+        status = 'SCHEDULED'
+        return jsonResponse(200, { id: VISIT_ID, status })
+      },
+    })
+    const user = userEvent.setup()
+    renderApp('/my-visits')
+
+    expect(await screen.findByText('Propuesta del agente')).toBeInTheDocument()
+    expect(screen.getByText(/^El agente te propone este horario/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^Aceptar horario/ }))
+
+    await waitFor(() =>
+      expect(within(screen.getByRole('listitem')).getByText('Programada')).toBeInTheDocument(),
+    )
+    expect(sentBodies(fetchMock, 'POST', ACCEPT_PATH)).toEqual([{}])
+  })
+
+  it('answers the agent with another time, in UTC', async () => {
+    const fetchMock = routeFetch({
+      ...sessionRoutes(currentUser),
+      [LIST]: () => jsonResponse(200, visitPage([visit({ proposedBy: 'AGENT' })])),
+      [`POST ${PROPOSE_PATH}`]: () =>
+        jsonResponse(200, { id: VISIT_ID, status: 'REQUESTED', proposedBy: 'CLIENT' }),
+    })
+    const user = userEvent.setup()
+    renderApp('/my-visits')
+
+    await user.click(await screen.findByRole('button', { name: /^Proponer otro horario/ }))
+    fireEvent.change(screen.getByLabelText('Fecha y hora de la visita'), {
+      target: { value: '2099-01-17T09:30' },
+    })
+    await user.click(screen.getByRole('button', { name: 'Enviar horario' }))
+
+    await waitFor(() =>
+      expect(sentBodies(fetchMock, 'POST', PROPOSE_PATH)).toEqual([
+        { proposedAt: new Date('2099-01-17T09:30').toISOString() },
+      ]),
+    )
+  })
+
+  it('cannot accept a proposal whose time already passed', async () => {
+    routeFetch({
+      ...sessionRoutes(currentUser),
+      [LIST]: () =>
+        jsonResponse(
+          200,
+          visitPage([visit({ proposedBy: 'AGENT', proposedAt: '2020-01-15T14:30:00Z' })]),
+        ),
+    })
+
+    renderApp('/my-visits')
+
+    expect(await screen.findByRole('button', { name: /^Aceptar horario/ })).toBeDisabled()
+    expect(screen.getByText(/ya pasó/)).toBeInTheDocument()
   })
 
   it('keeps the title when the property is no longer in the catalog', async () => {

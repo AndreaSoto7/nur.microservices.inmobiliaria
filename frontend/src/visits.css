@@ -1,0 +1,403 @@
+/* Visitas: agenda del agente, propuestas de horario y el diálogo al marcar una visita realizada. */
+
+.muted {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.notice--neutral {
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-brand-tint);
+}
+
+/* Una línea de estado dentro de la fila: no la saca del diseño de dos columnas. */
+.row-card__note {
+  max-width: 60ch;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.row-card__note--warning {
+  font-weight: 600;
+  color: var(--color-warning);
+}
+
+.link-button {
+  justify-self: start;
+  padding: var(--space-1) 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-link);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+/* Con tres botones (Aceptar, Proponer otro horario, Rechazar) la columna de acciones necesita más. */
+@media (min-width: 900px) {
+  .row-list--visits:has(.action-bar > :nth-child(3)) {
+    --row-actions: 27rem;
+  }
+}
+
+/* Próximas visitas del agente */
+
+.agenda {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.agenda__title {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.agenda__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agenda__item {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-md);
+}
+
+.agenda__when {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-2);
+  align-items: baseline;
+}
+
+.agenda__day {
+  font-size: var(--text-sm);
+  color: var(--color-muted);
+}
+
+.agenda__day::first-letter {
+  text-transform: uppercase;
+}
+
+.agenda__time {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda__what {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Diálogo modal: centrado en la pantalla grande, hoja que sube desde abajo en el celular. */
+
+.dialog {
+  width: min(100% - 2rem, 30rem);
+  max-height: calc(100dvh - 2rem);
+  padding: var(--space-6);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgb(28 27 58 / 28%);
+}
+
+.dialog[open] {
+  animation: dialog-in 220ms var(--ease-out);
+}
+
+.dialog::backdrop {
+  background: rgb(28 27 58 / 45%);
+  animation: backdrop-in 220ms ease;
+}
+
+.dialog__title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.dialog__lead {
+  margin-top: calc(var(--space-3) * -1);
+  color: var(--color-muted);
+}
+
+.dialog__body {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.outcome-options {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.outcome-options legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-weight: 600;
+}
+
+.radio--rich {
+  align-items: flex-start;
+  margin: 0;
+  padding-block: var(--space-3);
+}
+
+.radio--rich input {
+  margin-top: 0.2em;
+}
+
+.radio__text {
+  display: grid;
+  gap: 2px;
+}
+
+.radio__hint {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--color-muted);
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    padding: var(--space-5) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .dialog[open] {
+    animation: sheet-in 280ms var(--ease-out);
+  }
+
+  .dialog__actions .button {
+    flex: 1 1 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog[open],
+  .dialog::backdrop {
+    animation: none;
+  }
+}
+
+/* Botón de solo ícono (borrar un aviso): cuadrado, con el nombre de la acción en aria-label. */
+.button.icon-button {
+  justify-content: center;
+  /* Siempre en el borde derecho de la fila, haya o no "Marcar como leído". */
+  margin-left: auto;
+  width: var(--control-height);
+  padding: 0;
+  color: var(--color-muted);
+}
+
+.icon-button__icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button.icon-button:hover:not(:disabled) {
+    color: var(--color-error);
+    background: var(--color-error-bg);
+  }
+}
+
+/* A quién contactar, en Solicitudes y Oportunidades: el nombre y, al lado, cómo escribir o llamar. */
+
+.contact-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  align-items: baseline;
+  font-size: var(--text-sm);
+}
+
+.contact-line__name {
+  font-weight: 600;
+}
+
+.contact-line__link {
+  overflow-wrap: anywhere;
+  color: var(--color-link);
+  text-underline-offset: 0.2em;
+}
+
+.contact-line--empty {
+  color: var(--color-muted);
+}
+
+/* Anuncio de un aviso nuevo: baja desde arriba, bajo la cabecera, y se va solo a los 6 segundos. */
+
+.toast-region {
+  position: fixed;
+  top: calc(var(--header-height) + var(--space-3));
+  left: 50%;
+  z-index: 60;
+  width: min(100% - 2rem, 28rem);
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  color: var(--color-on-brand);
+  pointer-events: auto;
+  background: var(--color-brand);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 40px rgb(28 27 58 / 28%);
+  animation: toast-in 260ms var(--ease-out);
+}
+
+.toast.is-leaving {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+
+.toast__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--color-accent);
+}
+
+.toast__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.toast__title {
+  font-weight: 600;
+}
+
+.toast__message {
+  font-size: var(--text-sm);
+  color: var(--color-on-brand-muted);
+}
+
+.toast__action {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-on-accent);
+  white-space: nowrap;
+  text-decoration: none;
+  background: var(--color-accent);
+  border-radius: var(--radius-md);
+}
+
+.toast__close {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--color-on-brand-muted);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: var(--radius-pill);
+}
+
+.toast__close-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.toast :focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .toast__action:hover {
+    background: var(--color-accent-hover);
+  }
+
+  .toast__close:hover {
+    color: var(--color-on-brand);
+    background: var(--color-brand-hover);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+/* En el celular la cabecera no queda fija: el anuncio baja hasta arriba de la pantalla. */
+@media (max-width: 760px) {
+  .toast-region {
+    top: var(--space-3);
+  }
+
+  .toast {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .toast__action {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast,
+  .toast.is-leaving {
+    transform: none;
+    animation: none;
+  }
+}

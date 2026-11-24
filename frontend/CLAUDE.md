@@ -1,6 +1,6 @@
 # frontend — React + Vite + TypeScript
 
-Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están todas las pantallas del enunciado: registro, login, "Mi cuenta", catálogo, detalle, favoritos, avisos, consultas y visitas del interesado, el panel de agente y la administración de usuarios. Si algo no coincide con el código, corrígelo en el mismo PR.
+Instrucciones para trabajar en el frontend. Complementa al `CLAUDE.md` raíz, que siempre aplica. Ya están todas las pantallas del enunciado: registro, login, catálogo con mapa, detalle, favoritos, avisos, consultas y visitas del interesado, el panel de agente y la administración de usuarios. Este frontend nació en `frontend-lab/` para probar las skills de diseño (Emil Kowalski, Impeccable y Taste) y reemplazó al anterior. Si algo no coincide con el código, corrígelo en el mismo PR.
 
 ## Ficha
 
@@ -31,6 +31,11 @@ Nunca se llama a un microservicio directo.
 
 Paleta, tokens, tipografía, estados de pantalla y accesibilidad: [`docs/convenciones-frontend.md`](../docs/convenciones-frontend.md). Síguelas en toda pantalla nueva.
 
+- Tokens en `src/index.css` (índigo `#1c1b3a`, amarillo `#f2b705`, zona `#b4235c`, fondo `#f5f6f2`) y la piel en `src/skin.css`. Estilos por zona: `catalog.css` (catálogo, mapa, ficha), `editor.css` (asistente de propiedad y galería), `visits.css` (visitas, avisos, diálogos).
+- Tipografía Barlow, empaquetada con `@fontsource/barlow` (sin fuentes externas: la CSP no las permite).
+- El contexto de diseño (para quién es, qué evitar) está en `PRODUCT.md`. Las skills de diseño del repo (`emil-design-eng`, `impeccable`, `design-taste-frontend`) lo leen.
+- Hover solo con `@media (hover: hover)`: en el celular, un toque dejaba el botón resaltado.
+
 ## Smart y Dumb components
 
 **Los Smart piensan, los Dumb muestran.** Es el principio de responsabilidad única aplicado a la UI. El antipatrón a evitar es el **"componente Dios"**: fetch, estado, lógica de negocio, llamadas a la API y render en un solo componente.
@@ -54,19 +59,19 @@ frontend/src/
     api/           httpClient.ts (apiRequest; admite headers propios y FormData), problem.ts (ApiError a partir del problem+json), catalogApi.ts, propertiesApi.ts, favoritesApi.ts, notificationsApi.ts, visitsApi.ts, inquiriesApi.ts, leadsApi.ts, idempotency.ts
     auth/          tokenStore, session (refresh single-flight), authApi, AuthContext (useAuth), RequireAuth
     models/        tipos que reflejan contracts/openapi (identity.ts, listing.ts, notification.ts, visit.ts)
-  shared/format/   fechas en hora local, formato de precio (Bs, / mes en alquiler) y etiquetas en español de tipos, operaciones, estados y extras
-  shared/ui/       dumbs genéricos: Button, TextField, SelectField, TextAreaField, FilterSelect, StatusBadge, RowListSkeleton, ErrorMessage, LoadingState, Pagination, EmptyState, icons
+  shared/format/   fechas en hora local, formato de precio (Bs, / mes en alquiler), teléfono y etiquetas en español de tipos, operaciones, estados y extras
+  shared/map/      mapConfig.ts: mosaicos de OpenStreetMap (VITE_MAP_TILE_URL), centro de Santa Cruz y alfiler
+  shared/ui/       dumbs genéricos: Button, TextField, SelectField, TextAreaField, FilterSelect, StatusBadge, Dialog (<dialog> modal), ContactLine, RowListSkeleton, ErrorMessage, LoadingState, Pagination, EmptyState, icons
   test/            setup de Vitest, mocks de fetch y renderApp
   features/
     auth/          LoginPage, RegisterPage (smart) · LoginForm, RegisterForm (dumb) · useAuthActions (facade)
-    account/       AccountPage (smart) · ProfileCard (dumb)
     catalog/
       containers/  CatalogPage.tsx                                          (smart)
-      components/  PropertyFilters  SortSelect  PropertyCard  PropertyCardList  PropertyGridSkeleton   (dumb)
+      components/  PropertyFilters  SortSelect  ZoneChips  PropertyRow  PropertyRowList  CatalogMap  PropertyRowsSkeleton   (dumb)
       useCatalog.ts                                                         (facade)
       catalogFilters.ts   filtros ↔ URL ↔ query del contrato (funciones puras, con tests)
     property-detail/
-      containers/  PropertyDetailPage  PropertyContactSection   (smart) · components/ ImageGallery  PropertySpecs  VisitRequestForm  InquiryForm   (dumb)
+      containers/  PropertyDetailPage  PropertyContactSection   (smart) · components/ ImageGallery  PropertySpecs  PropertyDescription  LocationMap  VisitRequestForm  InquiryForm   (dumb)
       usePropertyDetail.ts (facade; un 404 es "ya no está disponible", no un error)
       usePropertyContact.ts (facade de solicitar visita y enviar consulta)
     agent/
@@ -78,13 +83,13 @@ frontend/src/
         useAgentProperties.ts (facade; estado y página en la URL) · usePropertyTransition.ts (facade)
         propertyActions.ts    qué transiciones ofrecer según el estado (función pura, con tests)
       property-form/
-        containers/  PropertyCreatePage  PropertyEditPage  PropertyStatusSection  PropertyFeaturesSection  PropertyImagesSection   (smart)
-        components/  PropertyDataForm  PropertyFeaturesForm  PropertyImagesForm  PublishChecklist   (dumb)
-        usePropertyForm.ts (facade) · propertyFormValues.ts (formulario ↔ request del contrato)
+        containers/  PropertyCreatePage  PropertyEditPage  PropertyWizard  PropertyStatusSection  PropertyImagesSection   (smart)
+        components/  WizardSteps  BasicsFields  LocationFields  LocationPicker  DetailsFields  PropertyImagesForm  ReviewSummary  WizardPreview  PublishChecklist   (dumb)
+        usePropertyWizard.ts (facade del asistente) · usePropertyForm.ts (carga, fotos) · propertyFormValues.ts (formulario ↔ request del contrato) · propertyWizard.ts (pasos, con tests)
         propertyRequirements.ts   qué falta para publicar y validación de fotos (funciones puras, con tests)
       visit-requests/
-        containers/  AgentVisitsPage   (smart) · components/ AgentVisitRow  ScheduleVisitForm   (dumb)
-        useAgentVisits.ts (facade) · visitActions.ts (cuándo se puede marcar realizada, con tests)
+        containers/  AgentVisitsPage   (smart) · components/ AgentVisitRow  AgentAgenda  TimeProposalForm  VisitOutcomeDialog   (dumb)
+        useAgentVisits.ts (facade, con la agenda) · useVisitOutcome.ts (marcar realizada y cerrar o anotar la oportunidad) · visitActions.ts (choques, agenda y cuándo se puede marcar realizada, con tests)
       inquiries/
         containers/  AgentInquiriesPage  InquiryDetailSection   (smart) · components/ InquiryRow  InquiryContent   (dumb)
         useAgentInquiries.ts (facade)
@@ -95,8 +100,8 @@ frontend/src/
       containers/  FavoritesPage  FavoriteControl   (smart) · components/ FavoriteList  FavoriteToggle   (dumb)
       useFavorites.ts   (facade de la página y del botón)
     notifications/
-      containers/  NotificationsPage  NotificationsNavLink   (smart) · components/ NotificationList   (dumb)
-      useNotifications.ts   (facade de la página y del contador)
+      containers/  NotificationsPage  NotificationsNavLink  NotificationToaster   (smart) · components/ NotificationList  NotificationToast   (dumb)
+      useNotifications.ts   (facade de la página, del contador y de los últimos sin leer) · notificationToast.ts (qué anunciar, con tests)
     admin/
       containers/  AdminUsersPage   (smart) · components/ AdminUserRow  RolesForm   (dumb)
       useAdminUsers.ts (facade; rol y página en la URL)
@@ -107,48 +112,53 @@ frontend/src/
 
 | Smart (container) | Dumbs que usa |
 |---|---|
-| `CatalogPage`: filtros en la URL, catálogo de listing vía `useCatalog` | `PropertyFilters` (`onFiltersChange`), `SortSelect` (`onSortChange`), `PropertyCardList`, `PropertyGridSkeleton`, `Pagination` |
+| `CatalogPage`: filtros en la URL, catálogo de listing vía `useCatalog` | `PropertyFilters` (`onFiltersChange`), `ZoneChips`, `SortSelect` (`onSortChange`), `PropertyRowList`, `CatalogMap` (`onActivate`, `onSelect`), `Pagination` |
 | `PropertyDetailPage` | `ImageGallery`, `PropertySpecs`, `FavoriteControl`, `PropertyContactSection` |
 | `PropertyContactSection` | `VisitRequestForm` (`onSubmitRequest`), `InquiryForm` (`onSubmitInquiry`) |
-| `NotificationsPage` | `NotificationList` (`onMarkRead`), `Pagination` |
+| `NotificationsPage` | `NotificationList` (`onMarkRead`, `onRemove`), `Pagination` |
+| `NotificationToaster` | `NotificationToast` (`onClose`, `onHold`) |
 | `AdminUsersPage` | `AdminUserRow` (`onAssignRoles`, `onDeactivate`, `onActivate`), `RolesForm`, `FilterSelect`, `Pagination` |
-| `MyVisitsPage` | `MyVisitRow` (`onCancel`), `VisitDetails`, `ReasonPanel`, `FilterSelect`, `Pagination` |
+| `MyVisitsPage` | `MyVisitRow` (`onCancel`, `onAccept`, `onPropose`), `VisitDetails`, `ReasonPanel`, `TimeProposalForm`, `FilterSelect`, `Pagination` |
 | `FavoritesPage`, `FavoriteControl` | `FavoriteList` (`onRemove`), `FavoriteToggle` (`onToggle`), `Pagination` |
 | `AgentPropertiesPage` | `PropertyAdminList` (`onTransition`), `PropertyActions` (`onRun`), `PropertyStatusBadge`, `FilterSelect` (`onChange`) |
-| `PropertyCreatePage`, `PropertyEditPage` | `PropertyDataForm` (`onSubmit`), `PropertyFeaturesForm` (`onSubmit`), `PropertyImagesForm` (`onUpload`), `PublishChecklist`, `PropertyActions` |
-| `AgentVisitsPage` | `AgentVisitRow` (`onSchedule`, `onReject`, `onCancel`, `onComplete`), `ScheduleVisitForm`, `ReasonPanel`, `VisitDetails` |
+| `PropertyWizard` (en `PropertyCreatePage` y `PropertyEditPage`) | `WizardSteps` (`onSelect`), `BasicsFields`, `LocationFields`, `DetailsFields` (`onChange`), `PropertyImagesForm` (`onUpload`, `onRemove`, `onMove`), `ReviewSummary`, `WizardPreview`, `PublishChecklist`, `PropertyActions` |
+| `AgentVisitsPage` | `AgentAgenda`, `AgentVisitRow` (`onAccept`, `onPropose`, `onReject`, `onCancel`, `onComplete`), `VisitOutcomeDialog` (`onSubmit`), `TimeProposalForm`, `ContactLine`, `ReasonPanel`, `VisitDetails` |
 | `AgentInquiriesPage` | `InquiryRow` (`onToggle`), `InquiryDetailSection`, `InquiryContent` |
 | `AgentLeadsPage` | `LeadRow` (`onAddNote`, `onClose`), `CloseLeadForm` (`onClose(outcome, note)`), `ReasonPanel` |
 
 ## Catálogo
 
 - Ruta `/` (pública). Los filtros viven en la URL (`?zone=…&operation=RENT&features=POOL,GARAGE&page=2`): se comparten, se recargan y funcionan con atrás/adelante. Lo inválido se descarta (`catalogFilters.ts`).
-- `PropertyFilters` edita un borrador y avisa al buscar; el container le pasa `key={filtersKey}` para reiniciarlo cuando cambia la URL. Buscar vuelve a la página 1. El orden está junto a los resultados y aplica al momento, sin pasar por el borrador.
+- `PropertyFilters`: lo que se elige (operación, tipo, dormitorios, características) se aplica al momento; lo que se escribe (zona, precios) espera a "Buscar" o Enter. Si la URL cambia desde afuera (atajos de zona, limpiar, orden), el borrador vuelve a la URL. Filtrar vuelve a la página 1.
+- **Mapa:** `CatalogMap` (Leaflet + react-leaflet) muestra el precio de cada propiedad como marcador y encuadra los resultados. Al pasar por una fila se ilumina su precio. En el celular, "Ver mapa" lo abre a pantalla completa. Las propiedades sin coordenadas no aparecen y la lista lo avisa.
+- **Zona:** listing busca por parte del nombre, sin tildes ni mayúsculas (`uru` encuentra Urubó). `ZoneChips` ofrece las zonas de los resultados.
 - `keepPreviousData`: al cambiar de página se sigue viendo la anterior hasta que llega la nueva.
 - Las rutas de imágenes vienen relativas al gateway: `gatewayUrl()` de `core/config.ts` las vuelve absolutas. Si una foto no carga, la tarjeta muestra "Sin foto".
-- Detalle en `/properties/:propertyId` (`GET /api/v1/catalog/properties/{id}`): solo `PUBLISHED` o `RESERVED`; un 404 se muestra como "no disponible" y no se reintenta.
+- Detalle en `/properties/:propertyId` (`GET /api/v1/catalog/properties/{id}`): solo `PUBLISHED` o `RESERVED`; un 404 se muestra como "no disponible" y no se reintenta. El precio va junto al título; la tarjeta de al lado lleva la descripción ("Leer más" si es larga) y, debajo, cómo contactar. La galería tiene flechas y se desliza en el celular. "Solicitar una visita" y "Enviar una consulta" comparten `name` en `<details>`: abrir uno cierra el otro.
 
 ## Mis propiedades (agente)
 
 - Rutas `/agent/properties`, `/agent/properties/new` y `/agent/properties/:propertyId`, solo con rol `AGENT`. El filtro de estado y la página viven en la URL.
 - `availableActions` solo evita ofrecer acciones imposibles: las reglas las hace cumplir listing, y sus 409 se muestran con su `detail`. Vender y alquilar son irreversibles, por eso piden confirmación.
-- El tipo y la operación no se editan (contrato). El `PUT` reemplaza la ubicación completa: al guardar se conservan la latitud y la longitud, aunque el formulario no las muestre.
+- **Asistente en pasos** (`PropertyWizard`): Datos, Ubicación, Detalles, Fotos y Publicar; el paso vive en la URL (`?paso=`). Lo escrito no se pierde al volver atrás. Al crear, el borrador se crea al terminar los detalles (las fotos necesitan que exista); si falla lo que sigue, reintentar no crea otro. Al editar, salir de un paso con cambios los guarda. Un error de la API lleva al paso de ese campo. A la derecha, `WizardPreview` muestra cómo se ve en el catálogo.
+- El tipo y la operación no se editan (contrato). El `PUT` reemplaza la ubicación completa: zona, dirección y coordenadas salen del formulario. La ubicación se marca tocando el mapa, arrastrando el alfiler o escribiendo las coordenadas.
 - Publicar exige dormitorios, baños, superficie y al menos una foto: `PublishChecklist` lo explica y el botón queda desactivado hasta completarlo.
-- **Fotos:** `GET .../images/{id}` es público y responde 404 si la propiedad está en `DRAFT` o `PAUSED`, así que ahí solo se muestra la cantidad, sin miniaturas. La vista previa local tampoco se usa: la CSP bloquea `blob:`. El front revisa formato, tamaño y cantidad antes de subir, pero la firma real la valida listing.
+- **Fotos:** las de un borrador o una propiedad pausada solo las ve su agente: se piden con el token y se muestran como `data:` URL (la CSP no admite `blob:`). Las elegidas se ven antes de subirlas, cada una con su problema si lo tiene. Se pueden quitar y ordenar (flechas y "Hacer portada"); la primera es la portada del catálogo. El front revisa formato, tamaño y cantidad, pero la firma real la valida listing.
 - `POST /properties` no es idempotente: ante un 504 se avisa que el borrador pudo crearse, para que no se duplique al reintentar.
 
 ## Solicitudes de visita (agente)
 
 - Ruta `/agent/visit-requests`, dentro del panel de agente (`AgentLayout`). `/agent` lleva a sus propiedades. Todas las rutas del panel exigen rol `AGENT`.
-- El horario propuesto viene cargado con la fecha que pidió el interesado. El título viene en la visita.
-- "Marcar realizada" solo aparece cuando terminó el horario: antes, visit responde `VISIT_COMPLETION_TOO_EARLY`.
+- Arriba, `AgentAgenda` muestra las próximas visitas programadas. Cada solicitud avisa si choca con una de ellas o si el horario ya pasó, y en esos casos no deja aceptarla (visit igual rechaza un choque). Aceptar programa en el horario pedido; "Proponer otro horario" se lo manda al interesado, que acepta o contrapropone. Mientras espera su respuesta, la fila lo dice.
+- Cada fila muestra a quién contactar (`ContactLine`: nombre, email y teléfono con `mailto:` y `tel:`). El título lleva a la ficha pública, no al editor.
+- "Marcar realizada" solo aparece cuando terminó el horario: antes, visit responde `VISIT_COMPLETION_TOO_EARLY`. Abre un diálogo con una nota y cómo quedó el interesado: sigue interesado (nota en su oportunidad), cierra el trato (la gana y reserva la propiedad) o no le interesó (la pierde).
 - El error de una acción se muestra en su fila y el formulario sigue abierto, para corregir sin volver a escribir.
 
 ## Consultas y oportunidades (agente)
 
 - Rutas `/agent/inquiries` y `/agent/leads`. El mensaje de una consulta se pide recién al abrirla.
 - Cerrar una oportunidad como ganada dispara `LeadClosed`, y listing reserva la propiedad al recibirlo. La pantalla dice que queda reservada "en unos instantes" y no asume el cambio.
-- **Límites del contrato:** no hay endpoint para listar las notas de seguimiento, así que se guardan pero no se muestran. Una oportunidad solo trae `clientId`, sin nombre, y por eso la fila no dice quién es el interesado.
+- El agente responde cada consulta una vez; el interesado la ve en "Mis consultas". "Ver notas" muestra el seguimiento de una oportunidad. Cada oportunidad muestra a quién contactar (`client` de visit: lo último que el interesado le dio a ese agente).
 
 ## Favoritos
 
@@ -166,7 +176,7 @@ frontend/src/
 
 ## Cabecera
 
-- A la vista: Inicio, la sección principal de cada rol y la campanita de avisos. Favoritos, Mi cuenta y Cerrar sesión están en el menú con el nombre del usuario.
+- A la vista: Inicio, la sección principal de cada rol y la campanita de avisos. El menú con el nombre del usuario muestra arriba el nombre y el email, y lleva a Mis consultas, Favoritos y Cerrar sesión (no hay página "Mi cuenta").
 - El menú es un botón con `aria-expanded` que despliega enlaces. Se cierra al elegir una opción, con Escape (el foco vuelve al botón) y al hacer clic afuera.
 
 ## Avisos
@@ -174,14 +184,17 @@ frontend/src/
 - Ruta `/notifications`, para cualquier usuario con sesión. El filtro "Solo sin leer" y la página viven en la URL.
 - `type` es `string` y no un enum: el contrato pide tolerar tipos nuevos, y el texto ya viene en `message`.
 - `notificationLink` decide a qué pantalla lleva cada aviso según su tipo. Con un tipo desconocido lleva a la ficha pública de la propiedad, o a ningún lado si no hay propiedad.
-- El contador de la cabecera se vuelve a pedir cada 60 s, porque los avisos nacen de eventos y nadie le avisa al navegador. Se monta solo con sesión. Si notification no responde, el enlace sigue ahí sin número.
+- Los últimos sin leer se vuelven a pedir cada 30 s (`useLatestUnread`), porque los avisos nacen de eventos y nadie le avisa al navegador. Una sola request sirve al contador y al anuncio. Se monta solo con sesión. Si notification no responde, el enlace sigue ahí sin número.
+- **Anuncio de avisos nuevos:** `NotificationToaster` muestra un mensaje que baja desde arriba con un título según el tipo ("Tienes una nueva consulta") y un botón para ir a verlo; se va solo a los 6 s, salvo con el puntero encima. Hasta qué aviso ya se anunció se guarda por usuario en `localStorage`: al recargar no se repite. En `/notifications` no anuncia nada.
+- Cada aviso se puede borrar; el evento que lo creó no lo vuelve a crear.
 
 ## Consultas y visitas (interesado)
 
 - Se envían desde el detalle, solo con rol `CLIENT` y si la propiedad está `PUBLISHED`. Sin sesión, un enlace lleva a ingresar y vuelve a la misma ficha.
 - **`Idempotency-Key` obligatorio en los POST de visit:** `useIdempotencyKey` reutiliza la clave si se reintenta lo mismo, para que un corte de red no duplique la solicitud, y usa otra si cambió el contenido, porque el servicio responde 422. `crypto.randomUUID` no existe fuera de HTTPS o localhost: `newIdempotencyKey` tiene alternativa para cuando se abre por la IP de la red local.
 - El `datetime-local` da hora local: se manda en UTC con `localInputToUtc`.
-- **Mis visitas** (`/my-visits`, solo `CLIENT`): el estado y la página viven en la URL. Una visita solo se cancela si está `SCHEDULED`. El título viene en la visita (`propertyTitle`, de la copia local de visit), así que se ve aunque la propiedad ya no esté publicada. Si falta, muestra "Propiedad no disponible".
+- La solicitud de visita pide un teléfono opcional, para que el agente pueda llamar (mismas reglas que la consulta).
+- **Mis visitas** (`/my-visits`, solo `CLIENT`): el estado y la página viven en la URL. Si el agente propuso otro horario, el interesado lo acepta o propone otro. Una visita solo se cancela si está `SCHEDULED`. El título viene en la visita (`propertyTitle`, de la copia local de visit), así que se ve aunque la propiedad ya no esté publicada. Si falta, muestra "Propiedad no disponible".
 - **Motivos:** las políticas de visit dejan `PROPERTY_RESERVED` o `PROPERTY_UNAVAILABLE` como motivo. `visitReasonLabel` los pasa a español; el motivo que escribe una persona se muestra tal cual.
 
 ## Sesión y tokens
@@ -199,6 +212,7 @@ frontend/src/
 - `nginx/default.conf.template`: las rutas del router devuelven `index.html` (`no-cache`); `/assets/` con hash se cachea un año; `/healthz` para el `HEALTHCHECK`.
 - `nginx/security-headers.inc.template`: CSP, `nosniff`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`. Se incluye en cada `location` porque un `add_header` local anula los heredados.
 - `API_ORIGIN` (variable del contenedor, la reemplaza envsubst al arrancar) tiene que ser el mismo origen que `VITE_API_BASE_URL`: si no, la CSP bloquea las llamadas al gateway.
+- `MAP_TILE_ORIGIN` (por defecto `https://tile.openstreetmap.org`) entra en `img-src`: sin él, el mapa queda gris. Si se cambia `VITE_MAP_TILE_URL`, hay que cambiar este origen.
 - Si se agrega un estilo inline, una fuente externa o un script de terceros, hay que ajustar la CSP en el mismo PR.
 
 ## Reglas
@@ -224,4 +238,5 @@ npm run build
 - **Rules que se cargan solas:** `testing`, `patrones-diseno` (Facade, Smart/Dumb), `principios-solid`, `seguridad`.
 - **Skills:** `/componente-front` para cada pantalla, `/revisar`, `/crear-pr`.
 - **Agente revisor:** ninguno por defecto: `/revisar` tiene el checklist de frontend. `revisor-seguridad` si se toca el manejo de tokens.
-- **Librerías:** React Router 7 y TanStack Query 5, decididas en el ADR 0004.
+- **Librerías:** React Router 7 y TanStack Query 5, decididas en el ADR 0004. Mapas con Leaflet 1.9 y react-leaflet 5.
+- **Skills de diseño:** `frontend-ui-engineering` (encadena `emil-design-eng`, `impeccable` y `design-taste-frontend`) y revisar en Chrome a 1440 y 390 px.

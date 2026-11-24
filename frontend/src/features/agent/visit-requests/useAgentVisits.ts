@@ -4,29 +4,34 @@ import { useSearchParams } from 'react-router'
 import { useIdempotencyKey } from '../../../core/api/idempotency'
 import { errorMessage } from '../../../core/api/problem'
 import { visitsApi } from '../../../core/api/visitsApi'
-import { VISIT_STATUSES, type VisitStatus } from '../../../core/models/visit'
+import { VISIT_STATUSES, type Visit, type VisitStatus } from '../../../core/models/visit'
 import { parsePageParam } from '../../../shared/format/pageParam'
 
 export type VisitAction =
-  | { kind: 'schedule'; visitId: string; scheduledStart: string }
+  | { kind: 'accept'; visitId: string; scheduledStart: string }
+  | { kind: 'propose'; visitId: string; proposedAt: string }
   | { kind: 'reject'; visitId: string; reason: string }
   | { kind: 'cancel'; visitId: string; reason?: string }
-  | { kind: 'complete'; visitId: string }
 
 function runAction(action: VisitAction, key: string) {
   switch (action.kind) {
-    case 'schedule':
+    case 'accept':
       return visitsApi.schedule(action.visitId, action.scheduledStart, key)
+    case 'propose':
+      return visitsApi.proposeTime(action.visitId, action.proposedAt, key)
     case 'reject':
       return visitsApi.reject(action.visitId, action.reason, key)
     case 'cancel':
       return visitsApi.cancel(action.visitId, action.reason, key)
-    case 'complete':
-      return visitsApi.complete(action.visitId, key)
   }
 }
 
-/** Facade de las solicitudes del agente: el estado y la página viven en la URL. */
+const NO_VISITS: Visit[] = []
+
+/**
+ * Facade de las solicitudes del agente: el estado y la página viven en la URL. Además trae su agenda
+ * (las visitas programadas) para avisar de los choques y mostrar las próximas.
+ */
 export function useAgentVisits() {
   const queryClient = useQueryClient()
   const keyFor = useIdempotencyKey()
@@ -38,6 +43,13 @@ export function useAgentVisits() {
     queryKey: ['agent-visits', status, page],
     queryFn: ({ signal }) => visitsApi.list({ status, page }, signal),
     placeholderData: keepPreviousData,
+  })
+
+  // 100 programadas alcanzan para la agenda de un agente; visit igual rechaza un choque.
+  const agenda = useQuery({
+    queryKey: ['agent-visits', 'agenda'],
+    queryFn: ({ signal }) => visitsApi.list({ status: 'SCHEDULED', page: 1, size: 100 }, signal),
+    select: (scheduled) => scheduled.data,
   })
 
   const action = useMutation({
@@ -61,6 +73,7 @@ export function useAgentVisits() {
     changeStatus,
     goToPage,
     page: result.data,
+    agenda: agenda.data ?? NO_VISITS,
     loading: result.isPending,
     error: result.isError ? errorMessage(result.error) : undefined,
     retry: result.refetch,

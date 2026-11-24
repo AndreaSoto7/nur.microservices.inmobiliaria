@@ -20,7 +20,8 @@ export function mockFetch(...responses: Response[]) {
   return fn
 }
 
-type RouteHandler = (init?: RequestInit) => Response
+/** Recibe también la URL, para responder según la query (por ejemplo, el filtro de estado). */
+type RouteHandler = (init?: RequestInit, url?: URL) => Response
 
 /**
  * Reemplaza fetch por un mock que responde según `MÉTODO /ruta`, sin importar el orden: sirve cuando
@@ -28,9 +29,10 @@ type RouteHandler = (init?: RequestInit) => Response
  */
 export function routeFetch(routes: Record<string, RouteHandler>) {
   const fn = vi.fn<typeof fetch>(async (input, init) => {
-    const key = `${init?.method ?? 'GET'} ${new URL(String(input)).pathname}`
+    const url = new URL(String(input))
+    const key = `${init?.method ?? 'GET'} ${url.pathname}`
     const handler = routes[key]
-    return handler ? handler(init) : jsonResponse(501, problem(501, 'NO_MOCK', key))
+    return handler ? handler(init, url) : jsonResponse(501, problem(501, 'NO_MOCK', key))
   })
   vi.stubGlobal('fetch', fn)
   return fn
@@ -62,9 +64,17 @@ export const tokens = (suffix = '1'): TokenPair => ({
 export const currentUser: CurrentUser = {
   id: '8a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d',
   email: 'ana@example.com',
+  firstName: 'Ana',
+  lastName: 'Pérez',
   fullName: 'Ana Pérez',
   roles: ['CLIENT'],
   registeredAt: '2026-10-16T14:30:00Z',
 }
 
-export const agentUser: CurrentUser = { ...currentUser, fullName: 'Carla Agente', roles: ['AGENT'] }
+export const agentUser: CurrentUser = {
+  ...currentUser,
+  firstName: 'Carla',
+  lastName: 'Agente',
+  fullName: 'Carla Agente',
+  roles: ['AGENT'],
+}

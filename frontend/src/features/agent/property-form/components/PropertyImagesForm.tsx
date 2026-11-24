@@ -1,84 +1,285 @@
 import { memo, useState } from 'react'
-import type { ChangeEvent, FormEvent } from 'react'
-import { gatewayUrl } from '../../../../core/config'
+import type { ChangeEvent, DragEvent, FormEvent } from 'react'
 import type { PropertyImage } from '../../../../core/models/listing'
 import { Button } from '../../../../shared/ui/Button'
 import { ErrorMessage } from '../../../../shared/ui/ErrorMessage'
-import { TextField } from '../../../../shared/ui/TextField'
-import { imagesError, MAX_IMAGES } from '../propertyRequirements'
+import { ChevronRightIcon, CloseIcon, TrashIcon, UploadIcon } from '../../../../shared/ui/icons'
+import { fileProblem, fileSizeLabel, MAX_IMAGES } from '../propertyRequirements'
 
 interface PropertyImagesFormProps {
   images: PropertyImage[]
-  previewable: boolean
+  /** De dónde sale cada miniatura; undefined mientras carga. */
+  sources: Record<string, string | undefined>
+  /** Publicada o reservada: no se puede quedar sin fotos. */
+  keepsOne: boolean
   uploading: boolean
   error?: string
+  removingId?: string
+  removeError?: string
+  /** La foto que se está moviendo: sus botones de orden esperan. */
+  movingId?: string
   onUpload: (files: File[]) => void
+  onRemove: (imageId: string) => void
+  onMove: (imageId: string, position: number) => void
 }
 
+interface Selected {
+  key: string
+  file: File
+  problem?: string
+  /** data: URL de la vista previa (la CSP del frontend no admite blob:). */
+  preview?: string
+}
+
+let nextKey = 0
+
+/**
+ * Dumb: la galería de una propiedad. Muestra las fotos subidas (la primera es la portada) y deja quitarlas;
+ * las nuevas se ven antes de subirlas, cada una con su problema si lo tiene.
+ */
 export const PropertyImagesForm = memo(function PropertyImagesForm({
   images,
-  previewable,
+  sources,
+  keepsOne,
   uploading,
   error,
+  removingId,
+  removeError,
+  movingId,
   onUpload,
+  onRemove,
+  onMove,
 }: PropertyImagesFormProps) {
-  const [files, setFiles] = useState<File[]>([])
-  const [selectionError, setSelectionError] = useState<string>()
+  const [selected, setSelected] = useState<Selected[]>([])
+  const [confirming, setConfirming] = useState<string>()
+  const [dragging, setDragging] = useState(false)
   const ordered = [...images].sort((a, b) => a.position - b.position)
+  const free = MAX_IMAGES - images.length
+  const overLimit = selected.length > free
+  const valid = selected.length > 0 && !overLimit && selected.every((item) => !item.problem)
+  const onlyPhotoLocked = keepsOne && images.length === 1
+
+  function add(files: File[]) {
+    const added = files.map((file) => ({
+      key: `${file.name}-${file.size}-${nextKey++}`,
+      file,
+      problem: fileProblem(file),
+    }))
+    setSelected((current) => [...current, ...added])
+    for (const item of added) {
+      if (item.problem) continue
+      const reader = new FileReader()
+      reader.onload = () =>
+        setSelected((current) =>
+          current.map((entry) =>
+            entry.key === item.key ? { ...entry, preview: String(reader.result) } : entry,
+          ),
+        )
+      reader.readAsDataURL(item.file)
+    }
+  }
 
   function handleSelect(event: ChangeEvent<HTMLInputElement>) {
-    const selected = Array.from(event.target.files ?? [])
-    const invalid = imagesError(selected, images.length)
-    setSelectionError(invalid)
-    setFiles(invalid ? [] : selected)
-    // Sin esto, volver a elegir el mismo archivo después de un error no dispara otro cambio.
-    if (invalid) event.target.value = ''
+    add(Array.from(event.target.files ?? []))
+    // Sin esto, volver a elegir el mismo archivo no dispara otro cambio.
+    event.target.value = ''
+  }
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault()
+    setDragging(false)
+    add(Array.from(event.dataTransfer.files))
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    onUpload(files)
+    if (valid) onUpload(selected.map((item) => item.file))
   }
 
   return (
-    <form className="form" onSubmit={handleSubmit}>
+    <div className="gallery-editor">
       <p className="results-count">
         {images.length} de {MAX_IMAGES} fotos
       </p>
-      {previewable && ordered.length > 0 && (
-        <ul className="gallery__thumbs">
-          {ordered.map((image) => (
-            <li key={image.id} className="gallery__thumb gallery__thumb--static">
-              <img src={gatewayUrl(image.url)} alt={`Foto ${image.position + 1}`} />
-            </li>
-          ))}
+
+      {ordered.length > 0 && (
+        <ul className="gallery-editor__grid" aria-label="Fotos subidas">
+          {ordered.map((image, index) => {
+            const source = sources[image.id]
+            const removing = removingId === image.id
+            const busy = removing || movingId !== undefined
+            const last = index === ordered.length - 1
+            return (
+              <li key={image.id} className="gallery-tile">
+                {source ? (
+                  <img className="gallery-tile__image" src={source} alt={`Foto ${index + 1}`} />
+                ) : (
+                  <div className="gallery-tile__image skeleton" aria-hidden="true" />
+                )}
+                {index === 0 && <span className="gallery-tile__badge">Portada</span>}
+                {confirming === image.id ? (
+                  <div className="gallery-tile__confirm">
+                    <p>¿Quitar esta foto?</p>
+                    <div className="action-bar">
+                      <Button
+                        disabled={removing}
+                        onClick={() => {
+                          onRemove(image.id)
+                          setConfirming(undefined)
+                        }}
+                      >
+                        Quitar
+                      </Button>
+                      <Button variant="secondary" onClick={() => setConfirming(undefined)}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  !onlyPhotoLocked && (
+                    <button
+                      type="button"
+                      className="gallery-tile__remove"
+                      aria-label={`Quitar la foto ${index + 1}`}
+                      disabled={removing}
+                      onClick={() => setConfirming(image.id)}
+                    >
+                      <TrashIcon className="gallery-tile__remove-icon" />
+                    </button>
+                  )
+                )}
+                {ordered.length > 1 && (
+                  <div className="gallery-tile__order">
+                    <button
+                      type="button"
+                      className="gallery-tile__move gallery-tile__move--back"
+                      aria-label={`Mover la foto ${index + 1} antes`}
+                      disabled={busy || index === 0}
+                      onClick={() => onMove(image.id, index - 1)}
+                    >
+                      <ChevronRightIcon className="gallery-tile__move-icon" />
+                    </button>
+                    {index === 0 ? (
+                      <span className="gallery-tile__order-label">Portada</span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="link-button gallery-tile__cover"
+                        disabled={busy}
+                        onClick={() => onMove(image.id, 0)}
+                      >
+                        Hacer portada
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="gallery-tile__move"
+                      aria-label={`Mover la foto ${index + 1} después`}
+                      disabled={busy || last}
+                      onClick={() => onMove(image.id, index + 1)}
+                    >
+                      <ChevronRightIcon className="gallery-tile__move-icon" />
+                    </button>
+                  </div>
+                )}
+              </li>
+            )
+          })}
         </ul>
       )}
-      {!previewable && images.length > 0 && (
-        <p className="row-card__meta">Las fotos se ven cuando la propiedad está publicada.</p>
+      {ordered.length > 1 && (
+        <p className="row-card__meta">
+          La portada es la foto que se ve en el catálogo. Cambia el orden con las flechas.
+        </p>
       )}
-      {images.length < MAX_IMAGES && (
-        <>
-          <TextField
-            label="Agregar fotos (JPG o PNG, hasta 5 MB cada una)"
-            type="file"
-            accept="image/jpeg,image/png"
-            multiple
-            error={selectionError}
-            onChange={handleSelect}
-          />
+      {onlyPhotoLocked && (
+        <p className="row-card__meta">
+          Es la única foto de una propiedad publicada: para cambiarla, sube otra y después quita
+          esta.
+        </p>
+      )}
+      {removeError && <ErrorMessage message={removeError} />}
+
+      {free > 0 && (
+        <form className="form" onSubmit={handleSubmit}>
+          <label
+            className={dragging ? 'dropzone is-dragging' : 'dropzone'}
+            onDragOver={(event) => {
+              event.preventDefault()
+              setDragging(true)
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+          >
+            <UploadIcon className="dropzone__icon" />
+            <span className="dropzone__title">
+              Arrastra las fotos aquí o <span className="dropzone__link">elígelas</span>
+            </span>
+            <span className="dropzone__hint">
+              JPG o PNG, hasta 5 MB cada una. Puedes agregar {free} más.
+            </span>
+            <input
+              className="visually-hidden"
+              type="file"
+              accept="image/jpeg,image/png"
+              multiple
+              aria-label="Agregar fotos (JPG o PNG, hasta 5 MB cada una)"
+              onChange={handleSelect}
+            />
+          </label>
+
+          {selected.length > 0 && (
+            <ul className="gallery-editor__grid" aria-label="Fotos por subir">
+              {selected.map((item) => (
+                <li
+                  key={item.key}
+                  className={item.problem ? 'gallery-tile gallery-tile--invalid' : 'gallery-tile'}
+                >
+                  {item.preview ? (
+                    <img className="gallery-tile__image" src={item.preview} alt="" />
+                  ) : (
+                    <div
+                      className="gallery-tile__image gallery-tile__image--empty"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <div className="gallery-tile__caption">
+                    <span className="gallery-tile__name">{item.file.name}</span>
+                    <span className="gallery-tile__size">{fileSizeLabel(item.file.size)}</span>
+                    {item.problem && <span className="field__error">{item.problem}</span>}
+                  </div>
+                  <button
+                    type="button"
+                    className="gallery-tile__remove"
+                    aria-label={`No subir ${item.file.name}`}
+                    onClick={() =>
+                      setSelected((current) => current.filter((entry) => entry.key !== item.key))
+                    }
+                  >
+                    <CloseIcon className="gallery-tile__remove-icon" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {overLimit && (
+            <p className="field__error" role="alert">
+              Puedes agregar hasta {free} {free === 1 ? 'foto' : 'fotos'}: quita{' '}
+              {selected.length - free} de la lista.
+            </p>
+          )}
           {error && <ErrorMessage message={error} />}
-          {files.length > 0 && (
+          {selected.length > 0 && (
             <div className="form__actions">
-              <Button type="submit" variant="secondary" disabled={uploading}>
+              <Button type="submit" disabled={uploading || !valid}>
                 {uploading
                   ? 'Subiendo…'
-                  : `Subir ${files.length} ${files.length === 1 ? 'foto' : 'fotos'}`}
+                  : `Subir ${selected.length} ${selected.length === 1 ? 'foto' : 'fotos'}`}
               </Button>
             </div>
           )}
-        </>
+        </form>
       )}
-    </form>
+    </div>
   )
 })

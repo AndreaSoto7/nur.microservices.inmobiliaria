@@ -5,6 +5,7 @@ import { UserMenu } from './UserMenu'
 interface AppHeaderProps {
   /** Nombre del usuario con sesión, o null si es anónimo. */
   userName: string | null
+  userEmail?: string
   loading: boolean
   onLogout: () => void
   /** Los links los pone el container: este componente no conoce el router. */
@@ -15,6 +16,7 @@ interface AppHeaderProps {
 
 export const AppHeader = memo(function AppHeader({
   userName,
+  userEmail,
   loading,
   onLogout,
   brand,
@@ -27,7 +29,7 @@ export const AppHeader = memo(function AppHeader({
       <nav aria-label="Principal" className="app-header__nav">
         {links}
         {!loading && userName && (
-          <UserMenu userName={userName} onLogout={onLogout}>
+          <UserMenu userName={userName} userEmail={userEmail} onLogout={onLogout}>
             {menuItems}
           </UserMenu>
         )}

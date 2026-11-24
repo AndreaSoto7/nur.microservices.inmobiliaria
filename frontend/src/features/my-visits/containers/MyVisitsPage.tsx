@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { Link } from 'react-router'
 import { VISIT_STATUSES } from '../../../core/models/visit'
+import { localInputToUtc } from '../../../shared/format/date'
 import { VISIT_STATUS_LABELS } from '../../../shared/format/visit'
 import { Button } from '../../../shared/ui/Button'
 import { EmptyState } from '../../../shared/ui/EmptyState'
@@ -20,14 +21,25 @@ export function MyVisitsPage() {
     loading,
     error,
     retry,
-    cancelVisit,
-    cancellingId,
-    cancelError,
+    runAction,
+    busyVisitId,
+    failedVisitId,
+    actionError,
   } = useMyVisits()
+  const now = new Date()
 
   const handleCancel = useCallback(
-    (visitId: string, reason: string | undefined) => cancelVisit({ visitId, reason }),
-    [cancelVisit],
+    (visitId: string, reason: string | undefined) => runAction({ kind: 'cancel', visitId, reason }),
+    [runAction],
+  )
+  const handleAccept = useCallback(
+    (visitId: string) => runAction({ kind: 'accept', visitId }),
+    [runAction],
+  )
+  const handlePropose = useCallback(
+    (visitId: string, localValue: string) =>
+      runAction({ kind: 'propose', visitId, proposedAt: localInputToUtc(localValue) }),
+    [runAction],
   )
 
   return (
@@ -53,7 +65,6 @@ export function MyVisitsPage() {
         </div>
       ) : page && page.data.length > 0 ? (
         <>
-          {cancelError && <ErrorMessage message={cancelError} />}
           <ul className="row-list">
             {page.data.map((visit) => (
               <MyVisitRow
@@ -61,8 +72,12 @@ export function MyVisitsPage() {
                 visit={visit}
                 title={visit.propertyTitle}
                 href={`/properties/${visit.propertyId}`}
-                cancelling={cancellingId === visit.id}
+                now={now}
+                busy={busyVisitId === visit.id}
+                error={failedVisitId === visit.id ? actionError : undefined}
                 onCancel={handleCancel}
+                onAccept={handleAccept}
+                onPropose={handlePropose}
               />
             ))}
           </ul>

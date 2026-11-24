@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import type { InquirySummary } from '../../../../core/models/visit'
 import { formatDateTime } from '../../../../shared/format/date'
 import { Button } from '../../../../shared/ui/Button'
+import { StatusBadge } from '../../../../shared/ui/StatusBadge'
 
 interface InquiryRowProps {
   inquiry: InquirySummary
@@ -25,8 +26,14 @@ export const InquiryRow = memo(function InquiryRow({
 }: InquiryRowProps) {
   return (
     <li className="card row-card">
-      <div>
+      <div className="row-card__head">
         <h2 className="row-card__title">{inquiry.contactName}</h2>
+        <StatusBadge
+          label={inquiry.repliedAt ? 'Respondida' : 'Sin responder'}
+          tone={inquiry.repliedAt ? 'success' : 'warning'}
+        />
+      </div>
+      <div>
         {title && (
           <p className="row-card__meta">
             Sobre <Link to={href}>{title}</Link>

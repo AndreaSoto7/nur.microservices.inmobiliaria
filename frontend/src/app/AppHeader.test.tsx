@@ -46,7 +46,7 @@ describe('app header', () => {
     expect(bell.querySelector('svg')).not.toBeNull()
   })
 
-  it('keeps favorites, account and logout closed until the menu is opened', async () => {
+  it('keeps favorites and logout closed until the menu is opened', async () => {
     signedIn()
 
     renderApp('/')
@@ -54,15 +54,24 @@ describe('app header', () => {
     const trigger = await screen.findByRole('button', { name: MENU })
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('link', { name: 'Favoritos' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Mi cuenta' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument()
 
     await userEvent.setup().click(trigger)
 
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('link', { name: 'Favoritos' })).toHaveAttribute('href', '/favorites')
-    expect(screen.getByRole('link', { name: 'Mi cuenta' })).toHaveAttribute('href', '/account')
     expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
+  })
+
+  it('shows who is signed in at the top of the menu, instead of an account page', async () => {
+    signedIn()
+    renderApp('/')
+
+    await openMenu()
+
+    expect(screen.getByText(currentUser.email)).toBeInTheDocument()
+    expect(screen.getByText('Ana Pérez', { selector: '.user-menu__who-name' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Mi cuenta' })).not.toBeInTheDocument()
   })
 
   it('no longer greets the user with a separate text', async () => {
@@ -79,9 +88,9 @@ describe('app header', () => {
     renderApp('/')
 
     const user = await openMenu()
-    await user.click(screen.getByRole('link', { name: 'Mi cuenta' }))
+    await user.click(screen.getByRole('link', { name: 'Favoritos' }))
 
-    expect(await screen.findByRole('heading', { name: 'Mi cuenta' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Favoritos' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument()
   })
 
@@ -92,7 +101,7 @@ describe('app header', () => {
     const user = await openMenu()
     await user.keyboard('{Escape}')
 
-    expect(screen.queryByRole('link', { name: 'Mi cuenta' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: MENU })).toHaveFocus()
   })
 
@@ -103,7 +112,7 @@ describe('app header', () => {
     const user = await openMenu()
     await user.click(screen.getByRole('main'))
 
-    expect(screen.queryByRole('link', { name: 'Mi cuenta' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cerrar sesión' })).not.toBeInTheDocument()
   })
 
   it('logs out from the menu', async () => {
@@ -126,7 +135,7 @@ describe('app header', () => {
     await openMenu()
 
     expect(screen.queryByRole('link', { name: 'Favoritos' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Mi cuenta' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
   })
 
   it('keeps the main section of each role visible in the header', async () => {

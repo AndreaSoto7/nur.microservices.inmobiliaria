@@ -54,6 +54,9 @@ export interface PropertySummary {
   status: PropertyStatus
   price: Money
   zone: string
+  /** Coordenadas para el mapa; null si el agente no las marcó. Van juntas. */
+  latitude?: number | null
+  longitude?: number | null
   bedrooms?: number | null
   bathrooms?: number | null
   areaM2?: number | null

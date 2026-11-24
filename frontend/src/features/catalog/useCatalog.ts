@@ -38,8 +38,6 @@ export function useCatalog() {
 
   return {
     filters,
-    /** Identifica el estado de la URL: sirve de `key` para reiniciar el formulario de filtros. */
-    filtersKey: search.toString(),
     applyFilters,
     goToPage,
     page: result.data,

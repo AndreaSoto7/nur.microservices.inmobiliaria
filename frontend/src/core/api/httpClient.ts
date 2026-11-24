@@ -36,6 +36,20 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   return parse<T>(response)
 }
 
+/** Como apiRequest, pero devuelve el body binario (una imagen privada, por ejemplo). */
+export async function apiBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+  const blobOptions = { ...options, headers: { Accept: 'image/*', ...options.headers } }
+  let response = await send(path, blobOptions)
+  if (response.status === 401 && options.auth && refreshHandler) {
+    const refreshed = await refreshHandler()
+    if (refreshed) {
+      response = await send(path, blobOptions)
+    }
+  }
+  if (response.ok) return response.blob()
+  return parse<never>(response)
+}
+
 async function send(path: string, options: RequestOptions): Promise<Response> {
   const headers: Record<string, string> = {
     Accept: 'application/json, application/problem+json',

@@ -63,4 +63,22 @@ describe('notificationLink', () => {
   it('offers no link on a welcome notice', () => {
     expect(notificationLink(notice('WELCOME', null))).toBeNull()
   })
+
+  it('takes a replied inquiry to the client inquiries', () => {
+    expect(notificationLink(notice('INQUIRY_REPLIED'))).toEqual({
+      href: '/my-inquiries',
+      label: 'Ver la respuesta',
+    })
+  })
+
+  it('takes a time proposed by the agent to the client visits', () => {
+    expect(notificationLink(notice('VISIT_TIME_PROPOSED'))?.href).toBe('/my-visits')
+  })
+
+  it.each(['VISIT_TIME_PROPOSED_BY_CLIENT', 'VISIT_PROPOSAL_ACCEPTED'])(
+    'takes %s to the agent visit requests',
+    (type) => {
+      expect(notificationLink(notice(type))?.href).toBe('/agent/visit-requests')
+    },
+  )
 })

@@ -1,5 +1,5 @@
-import { useCallback } from 'react'
-import { VISIT_STATUSES } from '../../../../core/models/visit'
+import { useCallback, useMemo } from 'react'
+import { VISIT_STATUSES, type Visit } from '../../../../core/models/visit'
 import { localInputToUtc } from '../../../../shared/format/date'
 import { VISIT_STATUS_LABELS } from '../../../../shared/format/visit'
 import { Button } from '../../../../shared/ui/Button'
@@ -8,8 +8,15 @@ import { ErrorMessage } from '../../../../shared/ui/ErrorMessage'
 import { FilterSelect } from '../../../../shared/ui/FilterSelect'
 import { Pagination } from '../../../../shared/ui/Pagination'
 import { RowListSkeleton } from '../../../../shared/ui/RowListSkeleton'
+import { AgentAgenda } from '../components/AgentAgenda'
 import { AgentVisitRow } from '../components/AgentVisitRow'
+import { VisitOutcomeDialog } from '../components/VisitOutcomeDialog'
 import { useAgentVisits } from '../useAgentVisits'
+import { useVisitOutcome } from '../useVisitOutcome'
+import { upcoming } from '../visitActions'
+
+// Lleva a la ficha pública: el título es para ver la propiedad, no para editarla.
+const propertyHref = (visit: Visit) => `/properties/${visit.propertyId}`
 
 export function AgentVisitsPage() {
   const {
@@ -17,6 +24,7 @@ export function AgentVisitsPage() {
     changeStatus,
     goToPage,
     page,
+    agenda,
     loading,
     error,
     retry,
@@ -25,11 +33,20 @@ export function AgentVisitsPage() {
     failedVisitId,
     actionError,
   } = useAgentVisits()
+  const outcome = useVisitOutcome()
   const now = new Date()
+  const nowMinute = Math.floor(now.getTime() / 60_000)
+  const next = useMemo(() => upcoming(agenda, new Date(nowMinute * 60_000)), [agenda, nowMinute])
+  const showAgenda = next.length > 0 && (!status || status === 'REQUESTED')
 
-  const handleSchedule = useCallback(
+  const handleAccept = useCallback(
+    (visitId: string, proposedAt: string) =>
+      runAction({ kind: 'accept', visitId, scheduledStart: proposedAt }),
+    [runAction],
+  )
+  const handlePropose = useCallback(
     (visitId: string, localValue: string) =>
-      runAction({ kind: 'schedule', visitId, scheduledStart: localInputToUtc(localValue) }),
+      runAction({ kind: 'propose', visitId, proposedAt: localInputToUtc(localValue) }),
     [runAction],
   )
   const handleReject = useCallback(
@@ -40,10 +57,15 @@ export function AgentVisitsPage() {
     (visitId: string, reason: string | undefined) => runAction({ kind: 'cancel', visitId, reason }),
     [runAction],
   )
+  const { open: openOutcome } = outcome
   const handleComplete = useCallback(
-    (visitId: string) => runAction({ kind: 'complete', visitId }),
-    [runAction],
+    (visitId: string) => {
+      const visit = page?.data.find((item) => item.id === visitId)
+      if (visit) openOutcome(visit)
+    },
+    [page, openOutcome],
   )
+  const showScheduled = useCallback(() => changeStatus('SCHEDULED'), [changeStatus])
 
   return (
     <section className="page">
@@ -57,6 +79,7 @@ export function AgentVisitsPage() {
           onChange={changeStatus}
         />
       </div>
+      {showAgenda && <AgentAgenda visits={next} hrefFor={propertyHref} onShowAll={showScheduled} />}
       {loading ? (
         <RowListSkeleton label="Cargando las solicitudes…" />
       ) : error ? (
@@ -68,17 +91,19 @@ export function AgentVisitsPage() {
         </div>
       ) : page && page.data.length > 0 ? (
         <>
-          <ul className="row-list">
+          <ul className="row-list row-list--visits">
             {page.data.map((visit) => (
               <AgentVisitRow
                 key={visit.id}
                 visit={visit}
                 title={visit.propertyTitle}
-                href={`/agent/properties/${visit.propertyId}`}
+                href={propertyHref(visit)}
+                agenda={agenda}
                 now={now}
                 busy={busyVisitId === visit.id}
                 error={failedVisitId === visit.id ? actionError : undefined}
-                onSchedule={handleSchedule}
+                onAccept={handleAccept}
+                onPropose={handlePropose}
                 onReject={handleReject}
                 onCancel={handleCancel}
                 onComplete={handleComplete}
@@ -99,6 +124,17 @@ export function AgentVisitsPage() {
         <EmptyState title="Todavía no recibiste solicitudes">
           Cuando un interesado pida visitar una de tus propiedades, aparecerá aquí.
         </EmptyState>
+      )}
+      {outcome.visit && (
+        <VisitOutcomeDialog
+          key={outcome.visit.id}
+          propertyName={outcome.visit.propertyTitle ?? 'Propiedad'}
+          lead={outcome.lead}
+          busy={outcome.busy}
+          error={outcome.error}
+          onSubmit={outcome.submit}
+          onClose={outcome.close}
+        />
       )}
     </section>
   )
