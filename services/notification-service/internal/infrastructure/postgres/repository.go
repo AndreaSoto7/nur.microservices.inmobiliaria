@@ -61,6 +61,15 @@ func (r *Repository) Save(ctx context.Context, notification *domain.Notification
 	return upsert(ctx, r.pool, notification)
 }
 
+// Delete borra el aviso; processed_events no se toca, así un reintento del evento no lo vuelve a crear.
+// Filtra también por destinatario: aunque el caso de uso ya lo comprobó, la consulta no borra uno ajeno.
+func (r *Repository) Delete(ctx context.Context, id, recipientID string) error {
+	if _, err := r.pool.Exec(ctx, `DELETE FROM notifications WHERE id = $1 AND recipient_id = $2`, id, recipientID); err != nil {
+		return fmt.Errorf("borrar el aviso: %w", err)
+	}
+	return nil
+}
+
 // pgxExecutor lo cumplen el pool y una transacción.
 type pgxExecutor interface {
 	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)

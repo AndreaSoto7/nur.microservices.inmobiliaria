@@ -219,6 +219,39 @@ func TestFindUnknownReturnsNotFound(t *testing.T) {
 	}
 }
 
+func TestDeleteRemovesTheNotificationButNotTheProcessedEvent(t *testing.T) {
+	repository, _ := newRepository(t)
+	notification := newNotification(t, userA, testNow)
+	if err := repository.SaveForEvent(context.Background(), eventOne, notification); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := repository.Delete(context.Background(), notification.ID(), userB); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.FindByID(context.Background(), notification.ID()); err != nil {
+		t.Fatalf("otro destinatario borró el aviso: %v", err)
+	}
+	if err := repository.Delete(context.Background(), notification.ID(), userA); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := repository.FindByID(context.Background(), notification.ID()); !errors.Is(err, domain.ErrNotificationNotFound) {
+		t.Errorf("error = %v", err)
+	}
+	// El mismo evento otra vez no lo recrea.
+	if err := repository.SaveForEvent(context.Background(), eventOne, newNotification(t, userA, testNow)); err != nil {
+		t.Fatal(err)
+	}
+	_, total, err := repository.ListByRecipient(context.Background(), application.ListNotificationsQuery{UserID: userA, Page: 1, Size: 20})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 0 {
+		t.Errorf("el evento repetido recreó el aviso: %d", total)
+	}
+}
+
 func TestSavePersistsReadAt(t *testing.T) {
 	repository, _ := newRepository(t)
 	notification := newNotification(t, userA, testNow)

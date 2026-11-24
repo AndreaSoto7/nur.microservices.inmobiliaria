@@ -17,6 +17,7 @@ type Dependencies struct {
 	Validator TokenValidator
 	List      ListUseCase
 	MarkRead  MarkReadUseCase
+	Delete    DeleteUseCase
 }
 
 // NewRouter arma las rutas de la API.
@@ -26,6 +27,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	mux.HandleFunc("GET /health/ready", readiness(deps))
 	mux.HandleFunc("GET /api/v1/notifications", requireUser(deps, listNotifications(deps)))
 	mux.HandleFunc("PATCH /api/v1/notifications/{notificationId}", requireUser(deps, markNotificationRead(deps)))
+	mux.HandleFunc("DELETE /api/v1/notifications/{notificationId}", requireUser(deps, deleteNotification(deps)))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		writeProblem(w, r, problemNotFound)
 	})

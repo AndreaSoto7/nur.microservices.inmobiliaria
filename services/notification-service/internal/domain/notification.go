@@ -143,6 +143,15 @@ func (n *Notification) MarkReadBy(userID string, now time.Time) error {
 	return nil
 }
 
+// CanBeDeletedBy: solo su destinatario borra un aviso. Para cualquier otro es como si no existiera.
+func (n *Notification) CanBeDeletedBy(userID string) error {
+	normalized, err := normalizeUUID(userID)
+	if err != nil || normalized != n.recipientID {
+		return ErrNotificationNotFound
+	}
+	return nil
+}
+
 // ID devuelve el identificador del aviso.
 func (n *Notification) ID() string { return n.id }
 
@@ -194,4 +203,7 @@ type NotificationRepository interface {
 	// FindByID devuelve ErrNotificationNotFound si no existe.
 	FindByID(ctx context.Context, id string) (*Notification, error)
 	Save(ctx context.Context, notification *Notification) error
+	// Delete borra el aviso de ese destinatario. El evento que lo creó sigue marcado como procesado: no
+	// vuelve a aparecer.
+	Delete(ctx context.Context, id, recipientID string) error
 }

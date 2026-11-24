@@ -38,6 +38,7 @@ Instrucciones para trabajar en este servicio. Complementa al `CLAUDE.md` raíz, 
 |---|---|---|
 | Política | `EventPolicies`, que decide a quién avisar y usa `NotifyOnEvent` | Un evento del catálogo (tabla de abajo) |
 | Comando | `MarkNotificationRead` | `PATCH /api/v1/notifications/{notificationId}` |
+| Comando | `DeleteNotification` (solo su destinatario; el evento no lo recrea) | `DELETE /api/v1/notifications/{notificationId}` |
 | Consulta | `ListNotifications` | `GET /api/v1/notifications`, con `page`, `size` y `unread` |
 
 ## Eventos que consume
