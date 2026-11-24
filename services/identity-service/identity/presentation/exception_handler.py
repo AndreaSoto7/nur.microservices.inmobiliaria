@@ -22,6 +22,16 @@ DOMAIN_ERRORS: dict[type[errors.DomainError], tuple[int, str]] = {
 }
 DEFAULT_DOMAIN_ERROR = (409, "Regla de negocio no cumplida")
 
+# Errores de dominio que son de un solo campo: van también en `errors`, así el formulario muestra
+# el mensaje junto a ese campo y no como un error general.
+DOMAIN_ERROR_FIELDS: dict[type[errors.DomainError], str] = {
+    errors.InvalidEmail: "email",
+    errors.InvalidFullName: "fullName",
+    errors.WeakPassword: "password",
+    errors.RoleNotAllowed: "role",
+    errors.EmailAlreadyRegistered: "email",
+}
+
 # Títulos fijos en español para las excepciones de DRF. El default_detail de DRF trae
 # placeholders sin formatear ("Método \"{method}\" no permitido.").
 API_ERROR_TITLES: dict[type[exceptions.APIException], str] = {
@@ -73,9 +83,15 @@ def problem_exception_handler(exc: Exception, context: dict) -> Response | None:
                 ),
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        field = DOMAIN_ERROR_FIELDS.get(type(exc))
         return _respond(
             problem(
-                status=status, code=exc.code, title=title, detail=exc.message, instance=instance
+                status=status,
+                code=exc.code,
+                title=title,
+                detail=exc.message,
+                instance=instance,
+                errors=[{"field": field, "message": exc.message}] if field else None,
             )
         )
 
