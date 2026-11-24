@@ -13,7 +13,7 @@ paths:
 ## Autenticación y tokens
 
 - identity firma los JWT con **RS256**. La clave privada solo la tiene identity; el resto valida con la clave pública publicada en el JWKS.
-- El access token dura 15 min, con refresh token. Claims: `sub` (UUID del usuario), `email`, `roles`, `iss=identity-service`, `aud=inmobiliaria`.
+- El access token dura 15 min, con refresh token. Claims: `sub` (UUID del usuario), `email`, `name` (nombre y apellido), `roles`, `iss=identity-service`, `aud=inmobiliaria`.
 - Cada servicio valida:
   - la firma con el JWKS, eligiendo la clave por `kid`;
   - `alg=RS256` fijo (se rechazan `none` y `HS256`);
