@@ -1,7 +1,7 @@
 # Progreso — visit-service
 
 - **Responsable:** _(completar)_
-- **En curso:** @JoseDani258 implementa el primer flujo de solicitudes de visita.
+- **Estado:** flujos de consultas, visitas y oportunidades integrados; verificación funcional registrada en [Arreglos](../arreglos.md#verificación-funcional--24-de-noviembre-de-2026).
 - **Stack:** NestJS
 - **Instrucciones:** [`services/visit-service/CLAUDE.md`](../../services/visit-service/CLAUDE.md)
 
@@ -10,27 +10,26 @@
 | Tipo | Qué se hizo | PR |
 |---|---|---|
 | feat | A quién contactar: `client_contacts` por cliente y agente, con lo último que dio al consultar o pedir una visita (`contactPhone` opcional y `name`/`email` del token). Visitas y oportunidades lo devuelven en `client`. Contrato 0.4.0, migración `1795700000000`. Probado por el gateway | _(pendiente)_ |
-| feat | Contrapropuesta de horario: el agente o el cliente proponen otro (`POST /visits/{id}/propose-time`, `VisitTimeProposed`) y el cliente acepta la del agente (`POST /visits/{id}/accept-proposal`, `VisitScheduled` con `actor: CLIENT`). No se propone un horario que choque con la agenda del agente. La visita trae `clientId` y `proposedBy`. Migración `1795620000000`. Probado de punta a punta por el gateway | _(pendiente)_ |
-| feat | Responder consultas (`POST /inquiries/{id}/reply`, una vez, publica `InquiryReplied`), el cliente lista sus consultas en `GET /inquiries`, listar las notas de una oportunidad (`GET /leads/{id}/follow-ups`) y validar el teléfono de una consulta (7 a 15 dígitos). Migración `1795540000000` | _(pendiente)_ |
+| test | Aislar la observación del outbox por ID de visita para evitar eventos de otras pruebas. 69 pruebas aprobadas con PostgreSQL y Kafka reales, sin omisiones; lint aprobado | local, pendiente de PR |
+| feat | Contrapropuesta de horario: el agente o el cliente proponen otro (`POST /visits/{id}/propose-time`, `VisitTimeProposed`) y el cliente acepta la del agente (`POST /visits/{id}/accept-proposal`, `VisitScheduled` con `actor: CLIENT`). No se propone un horario que choque con la agenda del agente. La visita trae `clientId` y `proposedBy`. Migración `1795620000000`. Probado de punta a punta por el gateway | #124 |
+| feat | Responder consultas (`POST /inquiries/{id}/reply`, una vez, publica `InquiryReplied`), el cliente lista sus consultas en `GET /inquiries`, listar las notas de una oportunidad (`GET /leads/{id}/follow-ups`) y validar el teléfono de una consulta (7 a 15 dígitos). Migración `1795540000000` | #124 |
 | feat | Contrato inicial para solicitar y consultar visitas y esquemas de VisitRequested y LeadOpened | #39 |
-| feat | Rechazar visitas pendientes, registrar el motivo y emitir VisitRejected | Pendiente |
-| feat | Cancelar visitas programadas antes del inicio y liberar el horario | Pendiente |
-| feat | Marcar visitas realizadas al llegar la hora de fin y emitir VisitCompleted | Pendiente |
-| feat | Enviar consultas sobre propiedades publicadas y abrir una oportunidad con el primer contacto | Pendiente |
-| feat | Listar las consultas del agente y las visitas de cada participante, con filtros y paginación | Pendiente |
-| feat | Listar oportunidades del agente y registrar notas de seguimiento | Pendiente |
-| feat | Cerrar oportunidades como ganadas o perdidas y emitir LeadClosed | Pendiente |
-| feat | Aplicar las políticas de reserva, venta y alquiler de Listing a las visitas | Pendiente |
+| feat | Rechazar visitas pendientes, registrar el motivo y emitir VisitRejected | #87 |
+| feat | Cancelar visitas programadas antes del inicio y liberar el horario | #87 |
+| feat | Marcar visitas realizadas al llegar la hora de fin y emitir VisitCompleted | #87 |
+| feat | Enviar consultas sobre propiedades publicadas y abrir una oportunidad con el primer contacto | #87 |
+| feat | Listar las consultas del agente y las visitas de cada participante, con filtros y paginación | #87 |
+| feat | Listar oportunidades del agente y registrar notas de seguimiento | #87 |
+| feat | Cerrar oportunidades como ganadas o perdidas y emitir LeadClosed | #87 |
+| feat | Aplicar las políticas de reserva, venta y alquiler de Listing a las visitas | #87 |
 | docs | Contrato: `propertyTitle` opcional en la visita | #111 |
 | feat | Las visitas devuelven `propertyTitle` desde la copia local de la propiedad | #112 |
 
 ## Pendientes
 
-> @JoseDani258 está preparando la base local de Visit en una rama separada.
-
 **Base**
 
-- [ ] Scaffold con `/scaffold-servicio visit`
+- [x] Scaffold con `/scaffold-servicio visit` (integrado en #87)
 - [x] Primera migración de PostgreSQL para las tablas de Visit y las claves de idempotencia
 - [x] Contrato `contracts/openapi/visit-service.yaml`
 

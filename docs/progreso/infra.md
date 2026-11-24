@@ -8,6 +8,8 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
+| chore | Arranque desde la raíz con Compose, reutilizando infraestructura y el frontend con mapa integrado en #137 | este PR |
+| fix | Demo compatible con Python 3.10, coordenadas en `chains` y comprobación de nueve avisos por tipo, destinatario y propiedad/visita; recorridos reales y balanceo verificados el 24 de noviembre ([evidencia](../arreglos.md#verificación-funcional--24-de-noviembre-de-2026)) | local, pendiente de PR |
 | feat | `demo.py admin`: crea la cuenta de administrador de la demo para el panel de usuarios | #118 |
 | feat | `demo.py balance`: réplicas sanas en Consul y reparto round robin del gateway, leído de su log por `X-Correlation-Id`; con `--failover`, Circuit Breaker ante una réplica caída y su recuperación | #103 |
 | feat | `infra/scripts/demo.py`: `seed` carga cuentas, propiedades con fotos, favoritos, una consulta y visitas; `chains` recorre en vivo las políticas del ADR 0005 (publicar, ganar la oportunidad, reservar y vender) y los avisos, a través del gateway | #102 |

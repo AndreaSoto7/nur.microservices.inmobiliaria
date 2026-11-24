@@ -86,5 +86,5 @@
   - [x] Ruta del gateway (`/api/v1/notifications/**`, #71).
   - [x] Contrato `contracts/openapi/notification-service.yaml` y consumidores en `contracts/events/README.md`.
   - [x] El servicio, su base y su lugar en el compose.
-  - [ ] Pantalla de avisos en el frontend (su responsable).
+  - [x] Pantalla de avisos en el frontend (#95).
   - [x] Asignar responsable: @Tiesol.

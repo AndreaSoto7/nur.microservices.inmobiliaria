@@ -1,8 +1,9 @@
 # Arreglos
 
 Lista de lo que salió de la revisión del proyecto, con lo que ya se hizo y lo que falta. Los cambios
-están en la rama `feat/listing-mapa-y-busqueda`, todavía sin commit. Hay que separarlos en PRs por
-componente: los contratos primero.
+de contratos, servicios e interfaz con mapa se integraron en `main` mediante los PRs #121 a #138.
+La verificación del 24 de noviembre y los ajustes de arranque y pruebas se proponen en
+`codex/run-frontend-map` para revisión del equipo.
 
 ## Hechos
 
@@ -128,8 +129,77 @@ Puntos que salieron al probar el flujo completo.
 
 - **Mosaicos del mapa en producción:** los de OpenStreetMap alcanzan para la demo; para más tráfico,
   un proveedor con cuenta (se configura con `VITE_MAP_TILE_URL`).
-- **Elegir la portada** de la galería: hoy es la primera foto que se subió.
 
 ## Mejora opcional
 
 - Recomendaciones, comparación de propiedades, agentes favoritos o métricas de visualización.
+
+## Verificación funcional — 24 de noviembre de 2026
+
+**Base revisada:** `origin/main` en `6e11b3f`, más los ajustes locales de arranque y pruebas descritos
+abajo. **Consigna utilizada:** [enunciado versionado](enunciado.md), que resume el PDF del docente,
+incluidos balanceo y discovery. El PDF original no está en el repositorio; la cobertura corresponde a
+ese resumen y a los contratos y ADR vigentes.
+
+Se ejecutó el proyecto real `inmobiliaria` mediante `docker compose up -d --build` desde la raíz.
+Las peticiones entraron por el gateway, usando cuentas y JWT emitidos por Identity, con Kafka y las
+cuatro bases PostgreSQL. La interfaz con mapa se sirvió en `http://localhost:5173`.
+
+| Requisito | Evidencia y resultado |
+|---|---|
+| Registro, acceso y roles | Registro e inicio de sesión reales; rutas protegidas con 401 sin token y 403 para roles incorrectos. Renovación, cierre de sesión y desactivar/reactivar un usuario comprobados por HTTP. |
+| Búsqueda de propiedades | Filtros de zona parcial y sin tildes, tipo, operación, precio, dormitorios y características; orden y dos páginas por el gateway. `%` se trata como texto. Coordenadas presentes. |
+| Fotos y detalle | Galería pública; fotos privadas accesibles al agente dueño y 404 público para borradores/pausadas. No se permite quitar la última foto de una publicación. Foto privada visible en el navegador. |
+| Favoritos | Guardar, listar y quitar por HTTP con la cuenta del interesado. |
+| Crear, editar, publicar y pausar | Propiedad con fotos, características y coordenadas; edición persistida tras recargar y publicación desde el editor del navegador. Pausa 409 con visita futura confirmada; tras cancelarla, pausa 204. |
+| Consultas y contactos | Envío, bandeja del agente, respuesta y lectura del cliente por HTTP, con avisos para los destinatarios correspondientes. |
+| Visitas | Solicitar, programar, rechazar, cancelar, proponer/contraproponer, aceptar y completar. Completar antes de tiempo devuelve 409; repetir la finalización con la misma clave conserva el resultado. |
+| Seguimiento comercial | Listado y registro de notas; cierre de oportunidad como ganada reserva la propiedad por Kafka. Venta y alquiler la retiran del catálogo. |
+| Políticas entre servicios | `PropertyPublished` alimenta Visit; reserva rechaza solicitudes pendientes y conserva las programadas; venta cancela la visita futura. Verificadas con `demo.py chains`. |
+| Avisos dentro de la app | Comprobados por tipo, propiedad/visita y destinatario: bienvenida, consulta, respuesta, solicitud, programación, rechazo, cancelación, realización, reserva y propuestas de horario. Lectura y filtro de no leídos por HTTP. |
+| Fiabilidad de Notification | Reenvío del mismo evento real `VisitCompleted`: un solo aviso y un registro en `processed_events`. Mensaje inválido en `visit.inquiry.events`: llega a su DLQ. Reiniciar Notification conserva el aviso y su fecha de lectura. |
+| Gateway, balanceo y discovery | Registro dinámico en Consul; con la caché actualizada, nueve peticiones 200, tres por cada una de las tres réplicas de Listing. Al forzar la caída de una réplica se observó un 504 inicial, después tráfico a las sanas y reincorporación de la recuperada. Se restauró una réplica al terminar. |
+| DDD, persistencia, CQRS y patrones | Revisión de capas y dominio sin dependencias de frameworks, PostgreSQL separado por servicio, proyección de catálogo en Listing y snapshot en Visit, outbox y consumidores idempotentes. Patrones documentados en [su catálogo](patrones-de-diseno.md). |
+
+### Pruebas automatizadas y correcciones
+
+- Identity: **362 pruebas aprobadas** con los settings de prueba SQLite; el recorrido integrado de
+  registro, acceso y sesión se hizo además contra PostgreSQL real.
+- Listing: **160 aprobadas, ninguna omitida**, incluidas las de integración con Testcontainers;
+  Checkstyle sin errores (`services/listing-service/mvnw.cmd -B test`).
+- Visit: **68 aprobadas, ninguna omitida**, con PostgreSQL y Kafka desechables; lint y formato aprobados
+  (`npm run lint` y `npm test`, con `VISIT_TEST_DATABASE_URL` y `VISIT_TEST_KAFKA_BROKER`).
+- Notification: `go test ./...` aprobado, incluidas las pruebas de repositorio con PostgreSQL;
+  Gateway: `go test ./...` aprobado.
+- Interfaz actual (`frontend-lab/`): **283 aprobadas**; build, ESLint y Prettier aprobados
+  (`npm test -- --run`, `npm run build`, `npm run lint`).
+
+Se corrigieron tres problemas de verificación: faltaban las coordenadas en el dato de prueba de
+`chains`; su comprobación de avisos aceptaba solo la bienvenida y ahora exige nueve avisos concretos;
+y el mock de la galería privada usaba un `Blob` de Node incompatible con `FileReader` de jsdom. Visit
+también recogía eventos de otras pruebas al verificar su outbox: ahora observa solo el ID de visita
+creado por ese caso. `timezone.utc` mantiene la compatibilidad de la demo con Python 3.10.
+
+**Límites de esta evidencia:** para comprobar la finalización sin esperar horas se ajustó únicamente
+el horario de una visita creada para la prueba, en su base de Visit. La finalización, los permisos,
+el evento y el aviso se ejecutaron por los mecanismos reales. Las pruebas crearon datos de QA.
+El 504 aislado al crear un borrador registrado en [progreso de frontend](progreso/frontend.md) sigue
+sin causa identificada y no se reprodujo en estos recorridos. El diseño visual y las mejoras
+opcionales quedan para una etapa posterior. Estos resultados cubren el alcance obligatorio del
+enunciado versionado; los ajustes locales todavía requieren revisión e integración.
+
+### Revalidación al preparar la publicación
+
+La rama se actualizó sobre `origin/main` en `c4fcdbb` (PR #138), conservando las incorporaciones
+#131 a #138. El frontend unificado y la CSP configurable de #137 sustituyen el empaquetado local de
+`frontend-lab/`; la corrección del test de fotos se trasladó a `frontend/`.
+
+- `frontend/`: **304 pruebas aprobadas**, build y lint aprobados.
+- Visit: **69 pruebas aprobadas**, ninguna omitida, con Kafka y PostgreSQL temporales; lint aprobado.
+- `docker compose up -d --build` construyó las imágenes nuevas. En esta instalación de Compose
+  `v2.38.1-desktop.1` conservó los contenedores anteriores; se aplicaron las imágenes con
+  `docker compose up -d --no-build`, manteniendo los volúmenes. Se compararon los IDs de las imágenes
+  construidas y ejecutadas para detectar esa diferencia. El arranque desde la raíz reutiliza el
+  Compose de infraestructura, sin duplicar la configuración.
+
+Los resultados de Identity y Listing indicados arriba corresponden a la base inicial `6e11b3f`.

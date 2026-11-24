@@ -9,6 +9,7 @@
 | Tipo | Qué se hizo | PR |
 |---|---|---|
 | feat | El frontend nuevo (antes `frontend-lab/`) reemplaza al anterior en `frontend/` y se sirve en el 5173: mapa, asistente de propiedad, visitas con contrapropuesta, contacto del interesado, aviso emergente de avisos nuevos, nombre y apellido. La CSP de nginx permite los mosaicos del mapa. Probado en Chrome contra el stack | _(pendiente)_ |
+| test | Corregir el `Blob` simulado de la galería privada para jsdom. Frontend unificado: 304 pruebas, build y lint aprobados; edición, foto privada y publicación verificadas en navegador contra el Compose con mapa | local, pendiente de PR |
 | feat | Cabecera más limpia: enlace a Inicio, campanita de avisos y menú con el nombre del usuario para Favoritos, Mi cuenta y Cerrar sesión. Probado en navegador y a 390 px | #119 |
 | feat | Panel de administrador: lista de usuarios con filtro por rol, cambiar roles, desactivar y activar. Probado contra el stack real, en navegador y con CSP | #117 |
 | feat | Las visitas muestran el título que trae `propertyTitle`: ya no sale "Propiedad no disponible" al venderse o alquilarse la propiedad, ni se pide cada título aparte. Probado contra el stack real | #114 |
@@ -68,7 +69,8 @@
 
 **Riesgos conocidos**
 
-- [ ] El contrato de visit no permite listar las notas de seguimiento ni trae el nombre del interesado en una oportunidad. Coordinar con su responsable si hacen falta.
+- [x] Listar las notas de seguimiento: endpoint integrado en #124 y pantalla en #128; verificado contra el stack real.
+- [x] Contacto del interesado en visitas y oportunidades: integrado en #135 y mostrado en #137.
 - [ ] Un `POST /api/v1/properties` tardó más de 10 s y el gateway respondió 504, aunque el borrador se guardó. Pasó una vez, con el stack levantado hace más de una hora y sin uso. Causa sin identificar: no se repitió con el servicio ya en uso (0,3 a 0,7 s) ni después de reiniciar listing (0,6 s). La UI avisa para que no se duplique el borrador.
 
 **Más adelante**

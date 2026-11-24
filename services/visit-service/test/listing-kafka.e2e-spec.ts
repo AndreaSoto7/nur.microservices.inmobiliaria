@@ -198,6 +198,7 @@ integration('Listing → Kafka → Visit', () => {
       await consumer.subscribe({ topics: [eventTopic], fromBeginning: true });
       await consumer.run({
         eachMessage: async ({ message }) => {
+          if (message.key?.toString() !== visitId) return;
           received.push({
             key: message.key?.toString(),
             value: message.value?.toString(),
