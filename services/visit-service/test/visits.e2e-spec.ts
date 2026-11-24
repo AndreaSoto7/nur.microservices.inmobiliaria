@@ -33,6 +33,7 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
   const agentId = randomUUID();
   const otherAgentId = randomUUID();
   const otherClientId = randomUUID();
+  const contactClientId = randomUUID();
   const path = '/api/v1/visits';
   const previousDatabaseUrl = process.env.DATABASE_URL;
   const previousJwksUrl = process.env.JWT_JWKS_URL;
@@ -45,6 +46,11 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
   let database: DataSource;
   let jwks: Server;
   let clientToken: string;
+  let signToken: (
+    id: string,
+    role: string,
+    claims?: Record<string, unknown>,
+  ) => Promise<string>;
   let agentToken: string;
   let otherToken: string;
   let otherAgentToken: string;
@@ -78,14 +84,19 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
     process.env.JWT_JWKS_URL = `http://127.0.0.1:${address.port}/jwks.json`;
     process.env.DATABASE_URL = databaseUrl;
 
-    const token = (id: string, role: string) =>
-      new SignJWT({ roles: [role] })
+    const token = (
+      id: string,
+      role: string,
+      claims: Record<string, unknown> = {},
+    ) =>
+      new SignJWT({ roles: [role], ...claims })
         .setProtectedHeader({ alg: 'RS256', typ: 'at+jwt', kid: key.kid })
         .setSubject(id)
         .setIssuer('identity-service')
         .setAudience('inmobiliaria')
         .setExpirationTime('5m')
         .sign(privateKey);
+    signToken = token;
     [clientToken, agentToken, otherToken, otherAgentToken] = await Promise.all([
       token(clientId, 'CLIENT'),
       token(agentId, 'AGENT'),
@@ -127,6 +138,10 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
         await manager.query(
           'DELETE FROM property_snapshots WHERE property_id = ANY($1::uuid[])',
           [propertyIds],
+        );
+        await manager.query(
+          'DELETE FROM client_contacts WHERE client_id IN ($1,$2,$3)',
+          [clientId, otherClientId, contactClientId],
         );
       });
       await database.destroy();
@@ -241,6 +256,76 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
       agentId,
     });
     expect(events[1].envelope.payload).toMatchObject({ actor: 'CLIENT' });
+  });
+
+  it('the agent sees how to contact the client in the visit and in the lead', async () => {
+    const http = request(app.getHttpServer());
+    const contactPropertyId = randomUUID();
+    propertyIds.push(contactPropertyId);
+    await database.query(
+      `INSERT INTO property_snapshots
+        (property_id, agent_id, title, zone, operation_type, status, last_event_at, updated_at)
+       VALUES ($1,$2,'Casa','Norte','SALE','PUBLISHED',now(),now())`,
+      [contactPropertyId, agentId],
+    );
+    const named = await signToken(contactClientId, 'CLIENT', {
+      name: 'Diego Interesado',
+      email: 'diego@example.com',
+    });
+    await http
+      .post(path)
+      .auth(named, { type: 'bearer' })
+      .set('Idempotency-Key', randomUUID())
+      .send({
+        ...body,
+        propertyId: contactPropertyId,
+        contactPhone: '+591 71234567',
+      })
+      .expect(201);
+    const client = {
+      name: 'Diego Interesado',
+      email: 'diego@example.com',
+      phone: '+591 71234567',
+    };
+
+    const visits = await http
+      .get(path + '?propertyId=' + contactPropertyId)
+      .auth(agentToken, { type: 'bearer' })
+      .expect(200);
+    expect(visits.body.data).toEqual([expect.objectContaining({ client })]);
+    const leads = await http
+      .get('/api/v1/leads?propertyId=' + contactPropertyId)
+      .auth(agentToken, { type: 'bearer' })
+      .expect(200);
+    expect(leads.body.data).toEqual([expect.objectContaining({ client })]);
+
+    // Otra solicitud sin teléfono no borra el que ya dejó.
+    await database.query('DELETE FROM visits WHERE property_id = $1', [
+      contactPropertyId,
+    ]);
+    await http
+      .post(path)
+      .auth(named, { type: 'bearer' })
+      .set('Idempotency-Key', randomUUID())
+      .send({ ...body, propertyId: contactPropertyId })
+      .expect(201);
+    const again = await http
+      .get(path + '?propertyId=' + contactPropertyId)
+      .auth(agentToken, { type: 'bearer' })
+      .expect(200);
+    expect(again.body.data[0].client).toEqual(client);
+    // Lo que el cliente le dio a este agente no lo ve otro.
+    const other = await http
+      .get('/api/v1/leads')
+      .auth(otherAgentToken, { type: 'bearer' })
+      .expect(200);
+    expect(JSON.stringify(other.body)).not.toContain('diego@example.com');
+    await http
+      .post(path)
+      .auth(named, { type: 'bearer' })
+      .set('Idempotency-Key', randomUUID())
+      .send({ ...body, propertyId: contactPropertyId, contactPhone: '12' })
+      .expect(400);
   });
 
   it('the client can counter-propose, but cannot accept their own proposal', async () => {
@@ -1221,6 +1306,8 @@ postgres('Solicitudes de visita en PostgreSQL', () => {
           id: closed,
           propertyId: inboxPropertyId,
           clientId,
+          // Lo que el cliente dejó en su consulta: así el agente sabe a quién llamar.
+          client: expect.objectContaining({ name: expect.any(String) }),
           status: 'CLOSED',
           outcome: 'LOST',
           openedAt: openedAt.toISOString(),

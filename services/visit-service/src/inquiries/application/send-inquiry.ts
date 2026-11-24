@@ -81,6 +81,16 @@ export class SendInquiryHandler implements ICommandHandler<SendInquiryCommand> {
         throw error;
       }
       await transaction.saveInquiry(inquiry);
+      await transaction.rememberClientContact(
+        inquiry.clientId,
+        inquiry.agentId,
+        {
+          name: inquiry.contactName,
+          email: inquiry.contactEmail,
+          phone: inquiry.contactPhone,
+        },
+        createdAt,
+      );
 
       const { id, clientId, agentId } = inquiry;
       const participants = { propertyId: property.id, clientId, agentId };

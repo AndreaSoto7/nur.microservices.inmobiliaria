@@ -1,6 +1,7 @@
 import { Inject } from '@nestjs/common';
 import { Command, CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { createHash, randomUUID } from 'node:crypto';
+import { isValidPhone } from '../../leads/domain/client-contact.js';
 import { openLeadOnContact } from '../../leads/application/open-lead-on-contact.js';
 import { VisitProblem } from '../../shared/visit-problem.js';
 import {
@@ -14,6 +15,8 @@ export type VisitRequestInput = {
   propertyId: string;
   proposedAt: string;
   clientNote?: string;
+  /** Opcional: para que el agente pueda llamar. */
+  contactPhone?: string;
 };
 
 export class RequestVisitCommand extends Command<VisitCreation> {
@@ -22,6 +25,8 @@ export class RequestVisitCommand extends Command<VisitCreation> {
     readonly idempotencyKey: string,
     readonly input: VisitRequestInput,
     readonly correlationId: string,
+    /** Nombre y email del token: con qué datos lo ve el agente. */
+    readonly contact: { name?: string; email?: string } = {},
   ) {
     super();
   }
@@ -34,9 +39,13 @@ export class RequestVisitHandler implements ICommandHandler<RequestVisitCommand>
   ) {}
 
   async execute(command: RequestVisitCommand): Promise<VisitCreation> {
-    const { propertyId, proposedAt, clientNote } = command.input;
+    const { propertyId, proposedAt, clientNote, contactPhone } = command.input;
+    if (contactPhone !== undefined && !isValidPhone(contactPhone))
+      throw new VisitProblem('VALIDATION_ERROR');
     const hash = createHash('sha256')
-      .update(JSON.stringify({ propertyId, proposedAt, clientNote }))
+      .update(
+        JSON.stringify({ propertyId, proposedAt, clientNote, contactPhone }),
+      )
       .digest('hex');
     const key = {
       actorId: command.clientId,
@@ -75,6 +84,12 @@ export class RequestVisitHandler implements ICommandHandler<RequestVisitCommand>
         throw error;
       }
       await transaction.saveVisit(visit, clientNote);
+      await transaction.rememberClientContact(
+        visit.clientId,
+        visit.agentId,
+        { ...command.contact, phone: contactPhone?.trim() },
+        visit.requestedAt,
+      );
 
       const { id, agentId, clientId, requestedAt } = visit;
       const participants = { propertyId: visit.propertyId, clientId, agentId };

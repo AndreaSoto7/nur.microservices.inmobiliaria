@@ -1,3 +1,4 @@
+import { PHONE_PATTERN } from '../../inquiries/domain/inquiry.js';
 import {
   Body,
   Controller,
@@ -56,6 +57,12 @@ class RequestVisitDto {
   @IsString()
   @MaxLength(500)
   clientNote?: string;
+
+  @ValidateIf((_, value: unknown) => value !== undefined)
+  @IsString()
+  @Matches(PHONE_PATTERN)
+  @MaxLength(20)
+  contactPhone?: string;
 }
 
 class ScheduleVisitDto {
@@ -139,6 +146,7 @@ export class VisitsController {
         key.toLowerCase(),
         body,
         correlationId,
+        { name: request.principal.name, email: request.principal.email },
       ),
     );
     response.setHeader('Location', '/api/v1/visits/' + created.id);

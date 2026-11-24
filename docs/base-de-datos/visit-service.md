@@ -6,6 +6,7 @@
   - `Visit`: tabla `visits`.
   - `Lead`: tablas `leads` y `lead_follow_ups` (los seguimientos son entidades hijas del aggregate).
 - **Modelo de lectura alimentado por eventos:** `property_snapshots`, la copia local de las propiedades de listing.
+- **Contacto del interesado:** `client_contacts`, por (cliente, agente). Lo escriben enviar una consulta y pedir una visita; lo leen los listados de visitas y oportunidades (migración `1795700000000`).
 - **Mensajería:** `outbox` (publica `visit.inquiry.events`, `visit.visit.events` y `visit.lead.events`) y `processed_events` (consume `listing.property.events`). Formato en el [README](README.md#tablas-comunes-de-mensajería).
 
 ## Diagrama
@@ -25,6 +26,14 @@ erDiagram
         varchar operation_type
         varchar status "PUBLISHED ... RENTED"
         timestamptz last_event_at "occurredAt aplicado"
+        timestamptz updated_at
+    }
+    client_contacts {
+        uuid client_id PK "sub del JWT"
+        uuid agent_id PK "a quién le dio estos datos"
+        varchar name "nullable"
+        varchar email "nullable"
+        varchar phone "nullable"
         timestamptz updated_at
     }
     inquiries {
