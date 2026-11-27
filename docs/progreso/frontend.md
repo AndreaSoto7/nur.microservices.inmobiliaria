@@ -8,10 +8,10 @@
 
 | Tipo | Qué se hizo | PR |
 |---|---|---|
-| feat | Ficha pública reorganizada: galería amplia, precio y contacto juntos, datos compactos y descripción/mapa separados. En celular, contacto después de las fotos. Se conservan galería, favoritos, consultas, visitas y permisos. 311 pruebas, build y lint aprobados; formularios y distribución revisados a 1440 y 390 px en Docker | este PR |
-| feat | Interfaz más intuitiva: portadas públicas y privadas en Mis propiedades, edición explícita, navegación del cliente, jerarquía de registros, avisos y formularios, adaptación a celular y teclado. Se conservan todos los flujos. 311 pruebas aprobadas; build y lint aprobados | este PR |
+| feat | Ficha pública reorganizada: galería amplia, precio y contacto juntos, datos compactos y descripción/mapa separados. En celular, contacto después de las fotos. Se conservan galería, favoritos, consultas, visitas y permisos. 311 pruebas, build y lint aprobados; formularios y distribución revisados a 1440 y 390 px en Docker | #140 |
+| feat | Interfaz más intuitiva: portadas públicas y privadas en Mis propiedades, edición explícita, navegación del cliente, jerarquía de registros, avisos y formularios, adaptación a celular y teclado. Se conservan todos los flujos. 311 pruebas aprobadas; build y lint aprobados | #140 |
 | feat | El frontend nuevo (antes `frontend-lab/`) reemplaza al anterior en `frontend/` y se sirve en el 5173: mapa, asistente de propiedad, visitas con contrapropuesta, contacto del interesado, aviso emergente de avisos nuevos, nombre y apellido. La CSP de nginx permite los mosaicos del mapa. Probado en Chrome contra el stack | _(pendiente)_ |
-| test | Corregir el `Blob` simulado de la galería privada para jsdom. Frontend unificado: 304 pruebas, build y lint aprobados; edición, foto privada y publicación verificadas en navegador contra el Compose con mapa | este PR |
+| test | Corregir el `Blob` simulado de la galería privada para jsdom. Frontend unificado: 304 pruebas, build y lint aprobados; edición, foto privada y publicación verificadas en navegador contra el Compose con mapa | #140 |
 | feat | Cabecera más limpia: enlace a Inicio, campanita de avisos y menú con el nombre del usuario para Favoritos, Mi cuenta y Cerrar sesión. Probado en navegador y a 390 px | #119 |
 | feat | Panel de administrador: lista de usuarios con filtro por rol, cambiar roles, desactivar y activar. Probado contra el stack real, en navegador y con CSP | #117 |
 | feat | Las visitas muestran el título que trae `propertyTitle`: ya no sale "Propiedad no disponible" al venderse o alquilarse la propiedad, ni se pide cada título aparte. Probado contra el stack real | #114 |
