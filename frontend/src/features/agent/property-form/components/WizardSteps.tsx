@@ -17,7 +17,7 @@ export const WizardSteps = memo(function WizardSteps({
   const currentIndex = WIZARD_STEPS.indexOf(current)
   return (
     <nav className="wizard-steps" aria-label="Pasos">
-      <p className="wizard-steps__caption" aria-hidden="true">
+      <p className="wizard-steps__caption">
         Paso {currentIndex + 1} de {WIZARD_STEPS.length} · {STEP_LABELS[current]}
       </p>
       <ol className="wizard-steps__list">

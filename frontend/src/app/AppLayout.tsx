@@ -5,6 +5,8 @@ import { NotificationToaster } from '../features/notifications/containers/Notifi
 import { NotificationsNavLink } from '../features/notifications/containers/NotificationsNavLink'
 import { HouseIcon } from '../shared/ui/icons'
 import { AppHeader } from './components/AppHeader'
+import { AccountNavigation } from './components/AccountNavigation'
+import { RouteScroll } from './components/RouteScroll'
 
 /** Smart: arma la cabecera según la sesión y maneja el cierre de sesión. */
 export function AppLayout() {
@@ -49,6 +51,7 @@ export function AppLayout() {
 
   return (
     <>
+      <RouteScroll />
       <AppHeader
         brand={
           <Link to="/" className="brand">
@@ -64,7 +67,8 @@ export function AppLayout() {
         onLogout={handleLogout}
       />
       {status === 'authenticated' && user && <NotificationToaster userId={user.id} />}
-      <main className="app-main">
+      <main id="main-content" className="app-main" tabIndex={-1}>
+        <AccountNavigation />
         <Outlet />
       </main>
     </>

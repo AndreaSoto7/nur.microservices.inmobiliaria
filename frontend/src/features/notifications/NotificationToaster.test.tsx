@@ -74,6 +74,7 @@ describe('new notification announcement', () => {
 
     await screen.findByRole('heading', { name: 'Avisos' })
     await screen.findByText('El agente respondió tu consulta.')
-    expect(screen.queryByText('Respondieron tu consulta')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Respondieron tu consulta' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cerrar aviso' })).not.toBeInTheDocument()
   })
 })

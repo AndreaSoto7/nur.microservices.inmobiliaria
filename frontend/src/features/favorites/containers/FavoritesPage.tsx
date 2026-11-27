@@ -16,7 +16,14 @@ export function FavoritesPage() {
 
   return (
     <section className="page page--wide">
-      <h1 className="account__title">Favoritos</h1>
+      <header className="page-header">
+        <div className="page-heading">
+          <h1>Favoritos</h1>
+          <p className="page-description">
+            Las propiedades que guardaste, listas para volver a consultarlas.
+          </p>
+        </div>
+      </header>
       {loading ? (
         <PropertyGridSkeleton label="Cargando tus favoritos…" />
       ) : error ? (

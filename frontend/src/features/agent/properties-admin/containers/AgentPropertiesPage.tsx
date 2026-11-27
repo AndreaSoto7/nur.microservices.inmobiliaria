@@ -12,12 +12,14 @@ import { RowListSkeleton } from '../../../../shared/ui/RowListSkeleton'
 import { PropertyAdminList } from '../components/PropertyAdminList'
 import { useAgentProperties } from '../useAgentProperties'
 import { usePropertyTransition } from '../usePropertyTransition'
+import { usePropertyCovers } from '../usePropertyCovers'
 
 const editHref = (property: PropertySummary) => `/agent/properties/${property.id}`
 
 export function AgentPropertiesPage() {
   const { status, changeStatus, goToPage, page, loading, error, retry } = useAgentProperties()
   const { runTransition, pendingPropertyId, error: transitionError } = usePropertyTransition()
+  const covers = usePropertyCovers(page?.data ?? [])
 
   const handleTransition = useCallback(
     (propertyId: string, transition: PropertyTransition) =>
@@ -30,7 +32,12 @@ export function AgentPropertiesPage() {
   return (
     <section className="page">
       <div className="page-header">
-        <h1>Mis propiedades</h1>
+        <div className="page-heading">
+          <h1>Mis propiedades</h1>
+          <p className="page-description">
+            Identifica cada inmueble por su foto y administra su publicación.
+          </p>
+        </div>
         <Link to="/agent/properties/new" className="button button--primary">
           Nueva propiedad
         </Link>
@@ -63,6 +70,7 @@ export function AgentPropertiesPage() {
             <>
               <PropertyAdminList
                 properties={page.data}
+                covers={covers}
                 hrefFor={editHref}
                 pendingPropertyId={pendingPropertyId}
                 onTransition={handleTransition}

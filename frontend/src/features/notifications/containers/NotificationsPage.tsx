@@ -25,7 +25,12 @@ export function NotificationsPage() {
   return (
     <section className="page">
       <div className="page-header">
-        <h1>Avisos</h1>
+        <div className="page-heading">
+          <h1>Avisos</h1>
+          <p className="page-description">
+            Las novedades de tus consultas, visitas y propiedades, en un solo lugar.
+          </p>
+        </div>
         <label className="chip">
           <input
             type="checkbox"

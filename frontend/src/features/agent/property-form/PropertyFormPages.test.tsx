@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   agentUser,
   jsonResponse,
@@ -477,11 +477,17 @@ describe('PropertyEditPage: photos', () => {
     const fetchMock = routeFetch({
       ...sessionRoutes(agentUser),
       [`GET ${PROPERTY_PATH}`]: () => jsonResponse(200, detail({ status: 'DRAFT', images })),
-      [`GET ${PROPERTY_PATH}/images/img-0`]: () =>
-        new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), {
+      [`GET ${PROPERTY_PATH}/images/img-0`]: () => {
+        const response = new Response(null, {
           status: 200,
           headers: { 'Content-Type': 'image/png' },
-        }),
+        })
+        // FileReader usa el Blob de jsdom; Response.blob() en Node devuelve otro tipo de Blob.
+        vi.spyOn(response, 'blob').mockResolvedValue(
+          new Blob([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], { type: 'image/png' }),
+        )
+        return response
+      },
     })
 
     renderApp(PHOTOS)

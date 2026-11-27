@@ -13,6 +13,7 @@ import './skin.css'
 import './catalog.css'
 import './editor.css'
 import './visits.css'
+import './management.css'
 
 const queryClient = new QueryClient({
   defaultOptions: {

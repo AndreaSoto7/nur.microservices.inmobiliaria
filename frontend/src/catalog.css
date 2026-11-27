@@ -474,10 +474,10 @@
   color: var(--color-zone);
 }
 
-/* Ficha: el precio a la altura del título y, en la tarjeta, la descripción antes de cómo contactar. */
+/* Ficha: fotos y datos en la columna principal; precio y contacto permanecen juntos. */
 
 .detail__header {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2) var(--space-8);
   align-items: end;
 }
@@ -488,27 +488,120 @@
   min-width: 0;
 }
 
-.detail__header .detail__price {
-  line-height: 1.1;
-  white-space: nowrap;
+.detail__layout {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-areas:
+    'gallery contact'
+    'information contact';
+  gap: var(--space-8);
 }
 
-.detail__aside .detail__description {
-  order: 0;
-  gap: var(--space-2);
-  padding: 0 0 var(--space-4);
-  border-top: 0;
+.detail__gallery {
+  grid-area: gallery;
+  min-width: 0;
+}
+
+.detail__information {
+  grid-area: information;
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.detail__information > section {
+  order: initial;
+}
+
+.detail__aside {
+  grid-area: contact;
+  min-width: 0;
+}
+
+.detail__offer {
+  display: grid;
+  gap: var(--space-1);
+  padding-bottom: var(--space-5);
   border-bottom: 1px solid var(--color-border);
 }
 
-.detail__aside .detail__description:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
+.detail__offer .detail__price {
+  font-size: var(--text-2xl);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
-.detail__aside .detail__description h2 {
-  font-size: var(--text-md);
+.detail__offer-operation,
+.detail__contact-heading p {
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+}
+
+.detail__contact-heading {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.detail__contact-heading h2 {
+  font-size: var(--text-lg);
   font-weight: 600;
+}
+
+.detail__aside .contact-panel {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.detail__aside .contact-panel > summary {
+  justify-content: space-between;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-field-border);
+  border-radius: var(--radius-md);
+}
+
+.detail__aside .contact-panel:first-of-type > summary {
+  border-color: transparent;
+}
+
+.detail__aside .contact-panel:not(:first-of-type) > summary:hover {
+  background: var(--color-bg);
+}
+
+.detail__information .specs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-6);
+}
+
+.detail__information .specs > div {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.detail__information .specs dt,
+.detail__information .specs dd {
+  padding: 0;
+  border: 0;
+  overflow-wrap: anywhere;
+}
+
+.detail__information .specs dt {
+  font-size: var(--text-sm);
+}
+
+.detail__information .detail__description {
+  order: initial;
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--color-border);
+}
+
+.detail__facts > h2,
+.detail__information .detail__description > h2,
+.detail__information .detail__location > h2 {
+  font-size: var(--text-xl);
+  font-weight: 500;
+  letter-spacing: -0.02em;
 }
 
 .detail__description-text {
@@ -522,15 +615,26 @@
   -webkit-line-clamp: 8;
 }
 
-/* Abierta entera, la tarjeta puede no entrar en la pantalla: deja de estar fija. */
-.detail__aside:has(.detail__description.is-expanded) {
-  position: static;
-}
-
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .detail__header {
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
+  }
+
+  .detail__layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'gallery' 'contact' 'information';
+    gap: var(--space-6);
+  }
+
+  .detail__aside.card {
+    position: static;
+  }
+}
+
+@media (max-width: 560px) {
+  .detail__information .specs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

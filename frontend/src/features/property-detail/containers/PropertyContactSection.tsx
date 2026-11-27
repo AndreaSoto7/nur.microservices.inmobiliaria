@@ -60,6 +60,10 @@ export function PropertyContactSection({
   // Los dos paneles comparten `name`: abrir uno cierra el otro, así no se apilan dos formularios.
   return (
     <>
+      <div className="detail__contact-heading">
+        <h2>Contactar al agente</h2>
+        <p>Coordina una visita o envía tus preguntas sobre esta propiedad.</p>
+      </div>
       <details className="contact-panel" name="property-contact">
         <summary>Solicitar una visita</summary>
         {visit.sent ? (
@@ -81,7 +85,8 @@ export function PropertyContactSection({
         <summary>Enviar una consulta</summary>
         {inquiry.sent ? (
           <p className="notice notice--success" role="status">
-            Consulta enviada. El agente la recibe con tus datos de contacto.
+            Consulta enviada. El agente la recibe con tus datos de contacto.{' '}
+            <Link to="/my-inquiries">Ver mis consultas</Link>
           </p>
         ) : (
           <InquiryForm

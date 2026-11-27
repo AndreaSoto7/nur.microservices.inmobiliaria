@@ -148,3 +148,7 @@ Si de verdad hace falta una excepción, ajusta la CSP en el mismo PR. Estos fall
 - [ ] Funciona con teclado y axe no marca nada.
 - [ ] `npm run test`, `npm run lint` y `npm run build` pasan.
 - [ ] Probado en el contenedor si tocaste imágenes, fuentes o estilos externos.
+
+## Portadas en el panel del agente
+
+La revisión visual vigente está en [frontend/DESIGN.md](../frontend/DESIGN.md). Los tokens de geometría de la lista son `--owner-cover-width` (160 px), `--owner-cover-mobile-width` (96 px) y `--owner-actions-width` (320 px), definidos en `frontend/src/index.css`.

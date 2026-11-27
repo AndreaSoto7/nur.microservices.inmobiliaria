@@ -22,7 +22,12 @@ export function MyInquiriesPage() {
 
   return (
     <section className="page">
-      <h1 className="account__title">Mis consultas</h1>
+      <header className="page-header">
+        <div className="page-heading">
+          <h1>Mis consultas</h1>
+          <p className="page-description">Revisa tus preguntas y las respuestas de los agentes.</p>
+        </div>
+      </header>
       {loading ? (
         <RowListSkeleton label="Cargando tus consultas…" />
       ) : error ? (

@@ -32,7 +32,7 @@ export const AdminUserRow = memo(function AdminUserRow({
   const name = user.fullName
 
   return (
-    <li className="card row-card">
+    <li className="card row-card admin-user-row">
       <div className="row-card__head">
         <h2 className="row-card__title">
           {name}

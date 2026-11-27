@@ -24,19 +24,20 @@ describe('public property detail', () => {
     expect(screen.getByText(/Casa de dos plantas/)).toBeInTheDocument()
   })
 
-  it('puts the price next to the title and the description in the side card, before signing in', async () => {
+  it('groups the price with contact and keeps the description with the property information', async () => {
     mockFetch(jsonResponse(200, detail()))
 
     renderApp(`/properties/${PROPERTY_ID}`)
 
-    const title = await screen.findByRole('heading', { level: 1 })
-    expect(within(title.closest('header') as HTMLElement).getByText('Bs 1.285.000')).toBeVisible()
+    await screen.findByRole('heading', { level: 1 })
     const card = screen.getByRole('complementary', { name: 'Sobre la propiedad' })
-    const description = within(card).getByText(/Casa de dos plantas/)
-    const signIn = within(card).getByRole('link', { name: /Ingresa para guardarla/ })
-    expect(
-      description.compareDocumentPosition(signIn) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+    expect(within(card).getByText('Bs 1.285.000')).toBeVisible()
+    expect(within(card).getByRole('link', { name: /Ingresa para guardarla/ })).toBeVisible()
+    expect(within(card).queryByText(/Casa de dos plantas/)).not.toBeInTheDocument()
+    expect(screen.getByText(/Casa de dos plantas/)).toBeVisible()
+    const facts = screen.getByRole('region', { name: 'Detalles de la propiedad' })
+    expect(within(facts).getByText('240.5 m²')).toBeVisible()
+    expect(within(facts).getByText('Garaje')).toBeVisible()
   })
 
   it('goes through the photos with the arrows, wrapping around', async () => {
