@@ -45,7 +45,12 @@ export function MyVisitsPage() {
   return (
     <section className="page">
       <div className="page-header">
-        <h1>Mis visitas</h1>
+        <div className="page-heading">
+          <h1>Mis visitas</h1>
+          <p className="page-description">
+            Consulta el estado de tus visitas y responde a las propuestas de horario.
+          </p>
+        </div>
         <FilterSelect
           label="Estado"
           value={status}

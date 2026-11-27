@@ -14,32 +14,38 @@ export const PropertySpecs = memo(function PropertySpecs({
   return (
     <>
       <dl className="specs">
-        <dt>Tipo</dt>
-        <dd>{PROPERTY_TYPE_LABELS[property.propertyType]}</dd>
-        <dt>Operación</dt>
-        <dd>{OPERATION_LABELS[property.operationType]}</dd>
-        <dt>Zona</dt>
-        <dd>
-          {property.location.zone}
-          {property.location.address && ` · ${property.location.address}`}
-        </dd>
+        <div>
+          <dt>Tipo</dt>
+          <dd>{PROPERTY_TYPE_LABELS[property.propertyType]}</dd>
+        </div>
+        <div>
+          <dt>Operación</dt>
+          <dd>{OPERATION_LABELS[property.operationType]}</dd>
+        </div>
+        <div>
+          <dt>Zona</dt>
+          <dd>
+            {property.location.zone}
+            {property.location.address && ` · ${property.location.address}`}
+          </dd>
+        </div>
         {property.bedrooms != null && (
-          <>
+          <div>
             <dt>Dormitorios</dt>
             <dd>{property.bedrooms}</dd>
-          </>
+          </div>
         )}
         {property.bathrooms != null && (
-          <>
+          <div>
             <dt>Baños</dt>
             <dd>{property.bathrooms}</dd>
-          </>
+          </div>
         )}
         {property.areaM2 != null && (
-          <>
+          <div>
             <dt>Superficie</dt>
             <dd>{property.areaM2} m²</dd>
-          </>
+          </div>
         )}
       </dl>
       {property.features.length > 0 && (

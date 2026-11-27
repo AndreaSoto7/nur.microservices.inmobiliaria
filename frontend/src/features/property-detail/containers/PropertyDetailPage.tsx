@@ -56,24 +56,35 @@ export function PropertyDetailPage() {
                 {OPERATION_LABELS[property.operationType].toLowerCase()} · {property.location.zone}
               </p>
             </div>
-            <p className="detail__price">{formatPrice(property.price, property.operationType)}</p>
           </header>
           <div className="detail__layout">
-            <div className="detail__main">
+            <div className="detail__gallery">
               <ImageGallery images={property.images} title={property.title} />
-              <div className="detail__facts">
-                <PropertySpecs property={property} />
-              </div>
-              <LocationMap location={property.location} title={property.title} />
             </div>
             <aside className="card detail__aside" aria-label="Sobre la propiedad">
-              {property.description && <PropertyDescription text={property.description} />}
+              <div className="detail__offer">
+                <p className="detail__price">
+                  {formatPrice(property.price, property.operationType)}
+                </p>
+                <p className="detail__offer-operation">
+                  {PROPERTY_TYPE_LABELS[property.propertyType]} en{' '}
+                  {OPERATION_LABELS[property.operationType].toLowerCase()}
+                </p>
+              </div>
               {property.status === 'RESERVED' && (
                 <p className="notice notice--warning">Reservada: no recibe visitas nuevas</p>
               )}
               <PropertyContactSection propertyId={property.id} propertyStatus={property.status} />
               <FavoriteControl propertyId={property.id} propertyStatus={property.status} />
             </aside>
+            <div className="detail__information">
+              <section className="detail__facts" aria-labelledby="detail-facts-title">
+                <h2 id="detail-facts-title">Detalles de la propiedad</h2>
+                <PropertySpecs property={property} />
+              </section>
+              {property.description && <PropertyDescription text={property.description} />}
+              <LocationMap location={property.location} title={property.title} />
+            </div>
           </div>
         </article>
       )}

@@ -43,7 +43,10 @@ export function AdminUsersPage() {
   return (
     <section className="page">
       <div className="page-header">
-        <h1>Usuarios</h1>
+        <div className="page-heading">
+          <h1>Usuarios</h1>
+          <p className="page-description">Administra los roles y el acceso de cada cuenta.</p>
+        </div>
         <FilterSelect
           label="Rol"
           value={role}

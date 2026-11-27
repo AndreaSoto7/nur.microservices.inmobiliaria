@@ -134,7 +134,7 @@ frontend/src/
 - **Zona:** listing busca por parte del nombre, sin tildes ni mayúsculas (`uru` encuentra Urubó). `ZoneChips` ofrece las zonas de los resultados.
 - `keepPreviousData`: al cambiar de página se sigue viendo la anterior hasta que llega la nueva.
 - Las rutas de imágenes vienen relativas al gateway: `gatewayUrl()` de `core/config.ts` las vuelve absolutas. Si una foto no carga, la tarjeta muestra "Sin foto".
-- Detalle en `/properties/:propertyId` (`GET /api/v1/catalog/properties/{id}`): solo `PUBLISHED` o `RESERVED`; un 404 se muestra como "no disponible" y no se reintenta. El precio va junto al título; la tarjeta de al lado lleva la descripción ("Leer más" si es larga) y, debajo, cómo contactar. La galería tiene flechas y se desliza en el celular. "Solicitar una visita" y "Enviar una consulta" comparten `name` en `<details>`: abrir uno cierra el otro.
+- Detalle en `/properties/:propertyId` (`GET /api/v1/catalog/properties/{id}`): solo `PUBLISHED` o `RESERVED`; un 404 se muestra como "no disponible" y no se reintenta. La galería y los datos, descripción ampliable y mapa ocupan la columna principal; precio y contacto se agrupan en la lateral. En celular: galería, precio/contacto y datos completos. La galería tiene flechas y se desliza en el celular. "Solicitar una visita" y "Enviar una consulta" comparten `name` en `<details>`: abrir uno cierra el otro. Con un formulario abierto el contacto deja de ser fijo.
 
 ## Mis propiedades (agente)
 
@@ -178,6 +178,18 @@ frontend/src/
 
 - A la vista: Inicio, la sección principal de cada rol y la campanita de avisos. El menú con el nombre del usuario muestra arriba el nombre y el email, y lleva a Mis consultas, Favoritos y Cerrar sesión (no hay página "Mi cuenta").
 - El menú es un botón con `aria-expanded` que despliega enlaces. Se cierra al elegir una opción, con Escape (el foco vuelve al botón) y al hacer clic afuera.
+- El primer enlace permite saltar al contenido con el teclado. En las páginas privadas del cliente,
+  `AccountNavigation` hace visibles visitas, consultas, favoritos y avisos, conservando el menú.
+
+## Presentación y portadas del agente
+
+- `management.css` unifica navegación, encabezados, registros y acciones de las pantallas privadas.
+  Las decisiones visuales están en [DESIGN.md](DESIGN.md).
+- «Mis propiedades» muestra `coverImageUrl` del resumen. `usePropertyCovers` solo descarga con token
+  las portadas privadas de la página actual, sin consultar el detalle por cada propiedad. La conversión
+  a `data:` se comparte con el editor en `shared/images/imageDataUrl.ts`.
+- `PropertyCover` conserva espacio mientras carga y muestra «Sin foto» si falta o falla la imagen.
+  Editar/completar es explícito y las transiciones existentes siguen disponibles y con confirmación.
 
 ## Avisos
 

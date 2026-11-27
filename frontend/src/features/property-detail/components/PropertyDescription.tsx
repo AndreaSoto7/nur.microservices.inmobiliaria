@@ -1,9 +1,9 @@
 import { memo, useState } from 'react'
 
-/** Más de esto se corta con "Leer más": la tarjeta de al lado tiene que dejar ver cómo contactar. */
+/** Las descripciones largas se pueden ampliar sin desplazar el formulario de contacto. */
 const LONG_DESCRIPTION = 420
 
-/** Dumb: la descripción de la propiedad, en la tarjeta de contacto. */
+/** Dumb: la descripción de la propiedad, junto a sus datos y ubicación. */
 export const PropertyDescription = memo(function PropertyDescription({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false)
   const long = text.length > LONG_DESCRIPTION

@@ -188,6 +188,9 @@ describe('NotificationsPage', () => {
 })
 
 describe('notification counter in the header', () => {
+  const favoritesRoute = {
+    'GET /api/v1/favorites': () => jsonResponse(200, pageOf([])),
+  }
   const withUnread = (total: number) => () =>
     jsonResponse(200, {
       data: [],
@@ -195,7 +198,7 @@ describe('notification counter in the header', () => {
     })
 
   it('says how many notifications are unread', async () => {
-    routeFetch({ ...sessionRoutes(currentUser), [LIST]: withUnread(3) })
+    routeFetch({ ...sessionRoutes(currentUser), ...favoritesRoute, [LIST]: withUnread(3) })
 
     renderApp('/favorites')
 
@@ -206,23 +209,32 @@ describe('notification counter in the header', () => {
   })
 
   it('shows no counter when nothing is unread', async () => {
-    routeFetch({ ...sessionRoutes(currentUser), [LIST]: withUnread(0) })
+    routeFetch({ ...sessionRoutes(currentUser), ...favoritesRoute, [LIST]: withUnread(0) })
 
     renderApp('/favorites')
 
-    expect(await screen.findByRole('link', { name: 'Avisos' })).toBeInTheDocument()
+    expect(
+      await within(screen.getByRole('navigation', { name: 'Principal' })).findByRole('link', {
+        name: 'Avisos',
+      }),
+    ).toBeInTheDocument()
   })
 
   it('if notification does not respond, the link stays without a counter', async () => {
     routeFetch({
       ...sessionRoutes(currentUser),
+      ...favoritesRoute,
       [LIST]: () =>
         jsonResponse(503, problem(503, 'GATEWAY_SERVICE_UNAVAILABLE', 'No disponible.')),
     })
 
     renderApp('/favorites')
 
-    expect(await screen.findByRole('link', { name: 'Avisos' })).toBeInTheDocument()
+    expect(
+      await within(screen.getByRole('navigation', { name: 'Principal' })).findByRole('link', {
+        name: 'Avisos',
+      }),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 

@@ -70,7 +70,12 @@ export function AgentVisitsPage() {
   return (
     <section className="page">
       <div className="page-header">
-        <h1>Solicitudes de visita</h1>
+        <div className="page-heading">
+          <h1>Solicitudes de visita</h1>
+          <p className="page-description">
+            Revisa tu agenda y acuerda los horarios con cada interesado.
+          </p>
+        </div>
         <FilterSelect
           label="Estado"
           value={status}

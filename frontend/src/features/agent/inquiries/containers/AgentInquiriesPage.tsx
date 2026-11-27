@@ -20,7 +20,14 @@ export function AgentInquiriesPage() {
 
   return (
     <section className="page">
-      <h1 className="account__title">Consultas</h1>
+      <header className="page-header">
+        <div className="page-heading">
+          <h1>Consultas</h1>
+          <p className="page-description">
+            Responde a los interesados y revisa el detalle de cada consulta.
+          </p>
+        </div>
+      </header>
       {loading ? (
         <RowListSkeleton label="Cargando las consultas…" />
       ) : error ? (

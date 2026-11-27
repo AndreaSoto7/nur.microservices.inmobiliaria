@@ -44,7 +44,12 @@ export function AgentLeadsPage() {
   return (
     <section className="page">
       <div className="page-header">
-        <h1>Oportunidades</h1>
+        <div className="page-heading">
+          <h1>Oportunidades</h1>
+          <p className="page-description">
+            Registra notas de seguimiento y el resultado de cada oportunidad.
+          </p>
+        </div>
         <FilterSelect
           label="Estado"
           value={status}

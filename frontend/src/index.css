@@ -61,6 +61,9 @@
   --header-height: 4.25rem;
   --control-height: 2.75rem;
   --textarea-height: 8rem;
+  --owner-cover-width: 10rem;
+  --owner-cover-mobile-width: 6rem;
+  --owner-actions-width: 20rem;
 
   /* Movimiento */
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);

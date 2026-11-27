@@ -3,6 +3,7 @@ import { ApiError, errorMessage } from '../../../core/api/problem'
 import { propertiesApi } from '../../../core/api/propertiesApi'
 import { gatewayUrl } from '../../../core/config'
 import type { PropertyDetail } from '../../../core/models/listing'
+import { imageDataUrl } from '../../../shared/images/imageDataUrl'
 import { invalidateProperty } from '../properties-admin/usePropertyTransition'
 
 /** Facade de la propiedad que se edita. Un 404 es "no encontrada", no un error técnico. */
@@ -68,7 +69,7 @@ export function useImageSources(
     queries: images.map((image) => ({
       queryKey: ['owner-image', image.id],
       queryFn: async ({ signal }: { signal: AbortSignal }) =>
-        toDataUrl(await propertiesApi.imageBlob(image.url, signal)),
+        imageDataUrl(await propertiesApi.imageBlob(image.url, signal)),
       enabled: !visible,
       staleTime: Infinity,
     })),
@@ -79,15 +80,6 @@ export function useImageSources(
       visible ? gatewayUrl(image.url) : results[index]?.data,
     ]),
   )
-}
-
-function toDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(blob)
-  })
 }
 
 /** Facade de la subida de fotos. */

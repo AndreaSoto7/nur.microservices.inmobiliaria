@@ -3,9 +3,10 @@ import { Link } from 'react-router'
 import type { AppNotification } from '../../../core/models/notification'
 import { formatDateTime } from '../../../shared/format/date'
 import { Button } from '../../../shared/ui/Button'
-import { TrashIcon } from '../../../shared/ui/icons'
+import { BellIcon, TrashIcon } from '../../../shared/ui/icons'
 import { StatusBadge } from '../../../shared/ui/StatusBadge'
 import type { NotificationLink } from '../notificationLink'
+import { notificationTitle } from '../notificationToast'
 
 interface NotificationListProps {
   notifications: AppNotification[]
@@ -29,9 +30,14 @@ export const NotificationList = memo(function NotificationList({
         const link = linkFor(notification)
         const unread = notification.readAt === null
         return (
-          <li key={notification.id} className="card row-card">
+          <li
+            key={notification.id}
+            className={`card row-card notification-row${unread ? ' is-unread' : ''}`}
+          >
             <div className="row-card__head">
-              <div>
+              <BellIcon className="notification-row__icon" />
+              <div className="notification-row__content">
+                <h2 className="notification-row__title">{notificationTitle(notification.type)}</h2>
                 <p className={unread ? 'row-card__title' : undefined}>{notification.message}</p>
                 <p className="row-card__meta">{formatDateTime(notification.createdAt)}</p>
               </div>

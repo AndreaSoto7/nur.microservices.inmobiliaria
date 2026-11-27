@@ -25,6 +25,9 @@ export const AppHeader = memo(function AppHeader({
 }: AppHeaderProps) {
   return (
     <header className="app-header">
+      <a className="skip-link" href="#main-content">
+        Saltar al contenido
+      </a>
       {brand}
       <nav aria-label="Principal" className="app-header__nav">
         {links}

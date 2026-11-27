@@ -18,6 +18,8 @@ const TITLES: Record<string, string> = {
   PROPERTY_RESERVED: 'Tu propiedad quedó reservada',
 }
 
+export const notificationTitle = (type: string) => TITLES[type] ?? 'Novedad de tu actividad'
+
 export interface ToastContent {
   /** El aviso más nuevo: si cambia, es otro anuncio. */
   id: string
